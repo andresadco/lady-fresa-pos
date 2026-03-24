@@ -1175,12 +1175,52 @@ function renderHistLocal() {
     <div class="res-stat"><span class="res-val">${n}</span><span class="res-label">Órdenes</span></div>
     <div class="res-stat"><span class="res-val">$${tp}</span><span class="res-label">Ticket prom.</span></div>`;
   if (!sales.length) { document.getElementById('hist-list').innerHTML='<div style="text-align:center;padding:30px;color:var(--text-3);font-size:13px;">Sin ventas aún</div>'; return; }
-  document.getElementById('hist-list').innerHTML=[...sales].reverse().map(s=>`
-    <div class="hist-item">
-      <div class="hist-head"><span class="hist-id">Orden #${String(s.id).padStart(3,'0')}</span><span class="hist-amt">$${s.total.toLocaleString('es-MX',{minimumFractionDigits:2})}</span></div>
-      <div class="hist-meta">${new Date(s.date).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})} · ${s.payMethod==='efectivo'?'Efectivo':s.payMethod==='tarjeta'?'Tarjeta':'Transferencia'}${s.client?' · '+s.client:''}</div>
-      <div class="hist-prods">${s.items.map(i=>`${i.emoji} ${i.name} x${i.qty} · $${i.unitPrice*i.qty}`).join(' · ')}</div>
-    </div>`).join('');
+  document.getElementById('hist-list').innerHTML=[...sales].reverse().map((s,idx)=>{
+    const payLabel = s.payMethod==='efectivo'?'💵 Efectivo':s.payMethod==='tarjeta'?'💳 Tarjeta':'📲 Transferencia';
+    const svcLabel = s.svcType==='para-llevar'?'🛍 Para llevar':s.svcType==='delivery'?'🛵 Delivery':'🏪 Mostrador';
+    const itemsHtml = s.items.map(i=>{
+      const tops = [...(i.sel?.['Toppings Incluidos']||[]),...(i.sel?.['Toppings Extra Básicos']||[]),...(i.sel?.['Toppings Extra Premium']||[])];
+      const size = i.sel?.['Tamaño'] ? `<span style="font-size:10px;background:var(--purple-light);color:var(--purple);padding:1px 6px;border-radius:6px;">${i.sel['Tamaño']}</span>` : '';
+      const base = i.sel?.['Bases'] ? `<span style="font-size:10px;background:#FAECE7;color:#993C1D;padding:1px 6px;border-radius:6px;">${i.sel['Bases']}</span>` : '';
+      const topsHtml = tops.length ? `<span style="font-size:10px;color:var(--text-3);">+ ${tops.slice(0,3).join(', ')}${tops.length>3?'...':''}</span>` : '';
+      return `<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);">
+        <span style="font-size:15px;">${i.emoji}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:12px;font-weight:500;">${i.qty>1?i.qty+'x ':''} ${i.name}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px;">${size}${base}${topsHtml}</div>
+          ${i.note?`<div style="font-size:10px;color:var(--text-3);font-style:italic;">📝 ${i.note}</div>`:''}
+        </div>
+        <div style="font-size:12px;font-weight:600;color:var(--pink);flex-shrink:0;">$${i.unitPrice*i.qty}</div>
+      </div>`;
+    }).join('');
+    const realIdx = sales.length - 1 - idx;
+    return `<div class="hist-item">
+      <div class="hist-head" onclick="toggleHistItem('hi-${realIdx}')" style="cursor:pointer;">
+        <span class="hist-id">Orden #${String(s.id).padStart(3,'0')}</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="hist-amt">$${s.total.toLocaleString('es-MX',{minimumFractionDigits:2})}</span>
+          <span style="font-size:11px;color:var(--text-3);" id="hi-arrow-${realIdx}">▼</span>
+        </div>
+      </div>
+      <div class="hist-meta">${new Date(s.date).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})} · ${payLabel} · ${svcLabel}${s.client?' · '+s.client:''}</div>
+      <div id="hi-${realIdx}" style="display:none;margin-top:8px;">
+        ${itemsHtml}
+        <div style="display:flex;gap:6px;margin-top:10px;">
+          <button onclick="printSale(sales[${realIdx}],'ticket')" style="flex:1;height:32px;border:1px solid var(--border-2);border-radius:8px;background:transparent;font-size:11px;font-weight:500;color:var(--text-2);cursor:pointer;font-family:DM Sans,sans-serif;">🖨️ Ticket</button>
+          <button onclick="printSale(sales[${realIdx}],'comanda')" style="flex:1;height:32px;border:1px solid var(--border-2);border-radius:8px;background:transparent;font-size:11px;font-weight:500;color:var(--text-2);cursor:pointer;font-family:DM Sans,sans-serif;">📋 Comanda</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleHistItem(id) {
+  const el = document.getElementById(id);
+  const arrow = document.getElementById('hi-arrow-' + id.replace('hi-',''));
+  if (!el) return;
+  const open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : 'block';
+  if (arrow) arrow.textContent = open ? '▼' : '▲';
 }
 function renderHistDB(dbSales) {
   const tv=dbSales.reduce((s,v)=>s+(v.total||0),0), n=dbSales.length, tp=n?Math.round(tv/n):0;
