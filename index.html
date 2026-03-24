@@ -434,7 +434,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       <div class="topbar-right">
         <button class="top-action" onclick="toggleHist()">📋 Historial</button>
         <button class="top-action" id="btn-print-cfg" onclick="openPrintCfg()" title="Configurar impresora">🖨️</button>
-        <button class="top-action" onclick="openCierre()" style="border-color:var(--pink-mid);color:var(--pink);" id="btn-cierre-turno">🔒 Cerrar turno</button>
+        <button class="top-action" onclick="openCierre()" style="border-color:var(--pink-mid);color:var(--pink);" id="btn-cierre-turno">🔒 Cierre del día</button>
         <a href="admin.html" id="admin-link" style="padding:6px 12px;border:1px solid var(--border-2);border-radius:20px;background:transparent;font-size:12px;font-weight:500;color:var(--text-2);cursor:pointer;font-family:DM Sans,sans-serif;text-decoration:none;transition:all 0.15s;display:none" onmouseover="this.style.borderColor="#D4537E";this.style.color="#D4537E"" onmouseout="this.style.borderColor="";this.style.color=""">🔧 Admin</a>
         <a href="dashboard.html" style="padding:6px 12px;border:1px solid var(--border-2);border-radius:20px;background:transparent;font-size:12px;font-weight:500;color:var(--text-2);cursor:pointer;font-family:DM Sans,sans-serif;text-decoration:none;transition:all 0.15s;" onmouseover="this.style.borderColor="#D4537E";this.style.color="#D4537E"" onmouseout="this.style.borderColor="";this.style.color=""">📊 Dashboard</a>
         <div id="db-status" style="font-size:11px;font-weight:500;padding:4px 12px;border-radius:20px;background:#FAEEDA;color:#BA7517;transition:background 0.3s,color 0.3s;">⟳ Conectando...</div>
@@ -546,8 +546,21 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 <div class="ov" id="ov-cierre">
   <div id="modal-cierre">
     <div class="cierre-header">
-      <div class="cierre-title">Cierre de turno</div>
-      <div class="cierre-sub" id="cierre-sub">Resumen del turno actual</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="cierre-title">Cierre del día</div>
+        <button onclick="toggleCierreConfig()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-3);" title="Configurar horario">⚙️</button>
+      </div>
+      <div class="cierre-sub" id="cierre-sub">Resumen del día actual</div>
+      <div id="cierre-config" style="display:none;margin-top:12px;background:rgba(0,0,0,0.1);border-radius:8px;padding:10px 12px;">
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Cierre automático</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <input type="time" id="cierre-hora" value="22:00" style="height:32px;border:1px solid var(--pink-mid);border-radius:8px;background:transparent;color:var(--text);padding:0 8px;font-family:DM Sans,sans-serif;font-size:13px;outline:none;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-2);cursor:pointer;">
+            <input type="checkbox" id="cierre-activo" style="accent-color:var(--pink);"> Activar
+          </label>
+          <button onclick="saveCierreCfg()" style="padding:6px 12px;border:none;background:var(--pink);color:white;border-radius:8px;font-size:12px;font-family:DM Sans,sans-serif;cursor:pointer;">Guardar</button>
+        </div>
+      </div>
     </div>
     <div class="cierre-body" id="cierre-body">
       <div style="text-align:center;padding:30px;color:var(--text-3);">Calculando...</div>
@@ -1129,6 +1142,7 @@ async function confirmarPago() {
   // Reset completo
   orderN++; order=[]; discount=0; payMethod='efectivo'; svcType='mostrador';
   document.getElementById('order-num').textContent=String(orderN).padStart(3,'0');
+  localStorage.setItem('lf_order_n', orderN);
   document.getElementById('client-input').value='';
   document.getElementById('efectivo-input').value='';
   // Descuento
@@ -1400,7 +1414,11 @@ async function doLogin(creds) {
     document.getElementById('user-name-disp').textContent = user.name;
     document.getElementById('user-role-disp').textContent = ROLE_LABELS[user.role] || user.role;
     document.getElementById('login-screen').style.display = 'none';
-    localStorage.setItem('lf_user', JSON.stringify({ id:user.id, name:user.name, role:user.role, sucursal:user.sucursal }));
+    // Guardar sesión con fecha del día
+    localStorage.setItem('lf_session', JSON.stringify({
+      date: new Date().toDateString(),
+      user: { id:user.id, name:user.name, role:user.role, sucursal:user.sucursal }
+    }));
 
   } catch(e) {
     document.getElementById('login-error').textContent = 'Error de conexión';
@@ -1425,14 +1443,41 @@ function logout() {
   if (!confirm('¿Cerrar sesión de ' + (currentUser?.name||'') + '?')) return;
   currentUser = null;
   pinBuffer = ''; updatePinDots();
-  localStorage.removeItem('lf_user');
+  localStorage.removeItem('lf_session');
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('login-error').textContent = '';
 }
 
-// Intentar restaurar sesión desde localStorage (opcional — quita esto si quieres PIN siempre)
-// const saved = localStorage.getItem('lf_user');
-// if (saved) { currentUser = JSON.parse(saved); applyPermissions(currentUser); document.getElementById('login-screen').style.display='none'; }
+// ── SESIÓN PERSISTENTE POR DÍA ──
+// La sesión se mantiene mientras sea el mismo día calendario.
+// Al día siguiente se limpia automáticamente y pide PIN de nuevo.
+(function restoreSession() {
+  try {
+    const saved = localStorage.getItem('lf_session');
+    if (!saved) return;
+    const session = JSON.parse(saved);
+    const today = new Date().toDateString();
+    // Si es otro día, limpiar sesión y estado
+    if (session.date !== today) {
+      localStorage.removeItem('lf_session');
+      localStorage.removeItem('lf_order_n');
+      return;
+    }
+    // Restaurar usuario
+    currentUser = session.user;
+    applyPermissions(currentUser);
+    document.getElementById('user-avatar').textContent = currentUser.name.charAt(0).toUpperCase();
+    document.getElementById('user-name-disp').textContent = currentUser.name;
+    document.getElementById('user-role-disp').textContent = ROLE_LABELS[currentUser.role] || currentUser.role;
+    document.getElementById('login-screen').style.display = 'none';
+    // Restaurar número de orden del día
+    const savedN = localStorage.getItem('lf_order_n');
+    if (savedN) {
+      orderN = parseInt(savedN) || 1;
+      document.getElementById('order-num').textContent = String(orderN).padStart(3,'0');
+    }
+  } catch(e) { localStorage.removeItem('lf_session'); }
+})();
 
 
 // ═══════════════════════════════════════════════════
@@ -1595,15 +1640,21 @@ async function confirmarCierre() {
 
 function finalizarCierre() {
   closeCierre();
-  // Reset turno
+  // Limpiar todo el estado del día
   sales = [];
   turnoStartTime = new Date();
   orderN = 1;
   document.getElementById('order-num').textContent = '001';
+  // Limpiar sesión y número de orden del día para que mañana arranque limpio
+  localStorage.removeItem('lf_session');
+  localStorage.removeItem('lf_order_n');
   renderOrder();
   renderProducts();
-  // Logout
-  logout();
+  // Volver al login
+  currentUser = null;
+  pinBuffer = ''; updatePinDots();
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-error').textContent = '';
 }
 
 
@@ -1844,6 +1895,56 @@ async function printSale(saleData) {
     }
   }
 }
+
+// ── CONFIG CIERRE ──
+function toggleCierreConfig() {
+  const el = document.getElementById('cierre-config');
+  if (!el) return;
+  const visible = el.style.display !== 'none';
+  el.style.display = visible ? 'none' : 'block';
+  if (!visible) {
+    const cfg = JSON.parse(localStorage.getItem('lf_cierre_cfg') || '{"hora":"22:00","activo":false}');
+    document.getElementById('cierre-hora').value = cfg.hora || '22:00';
+    document.getElementById('cierre-activo').checked = cfg.activo || false;
+  }
+}
+
+function saveCierreCfg() {
+  const hora = document.getElementById('cierre-hora').value || '22:00';
+  const activo = document.getElementById('cierre-activo').checked;
+  localStorage.setItem('lf_cierre_cfg', JSON.stringify({ hora, activo }));
+  document.getElementById('cierre-config').style.display = 'none';
+  const msg = activo ? `Cierre automático activado a las ${hora}` : 'Cierre automático desactivado';
+  alert(msg);
+}
+
+// ── CIERRE AUTOMÁTICO POR HORARIO ──
+(function checkAutoClose() {
+  const cfg = JSON.parse(localStorage.getItem('lf_cierre_cfg') || '{"hora":"22:00","activo":false}');
+  if (!cfg.activo) return;
+
+  function checkTime() {
+    const now = new Date();
+    const [hh, mm] = cfg.hora.split(':').map(Number);
+    const target = new Date(); target.setHours(hh, mm, 0, 0);
+    // Si pasó la hora de cierre y hay ventas del día, disparar cierre
+    if (now >= target && sales.length > 0 && currentUser) {
+      const lastCierre = localStorage.getItem('lf_last_auto_cierre');
+      const today = now.toDateString();
+      if (lastCierre !== today) {
+        localStorage.setItem('lf_last_auto_cierre', today);
+        // Abrir modal de cierre automáticamente
+        buildCierreData();
+        renderCierreModal();
+        document.getElementById('ov-cierre').classList.add('open');
+        document.getElementById('cierre-sub').textContent = '⚠️ Cierre automático por horario configurado';
+      }
+    }
+  }
+
+  checkTime();
+  setInterval(checkTime, 60000); // revisar cada minuto
+})();
 
 // Restaurar config desde localStorage
 (function() {
