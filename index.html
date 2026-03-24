@@ -1020,14 +1020,12 @@ function calcTotals() {
 
 function renderOrder() {
   const container = document.getElementById('order-items');
-  const empty = document.getElementById('empty-state');
   const { sub, desc, iva, total } = calcTotals();
   document.getElementById('btn-cobrar').disabled = order.length===0;
 
   if (!order.length) {
-    container.innerHTML=''; container.appendChild(empty); empty.style.display='flex';
+    container.innerHTML = '<div id="empty-state" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;color:var(--text-3)"><div style="font-size:36px">🍓</div><div style="font-size:13px">Agrega productos a la orden</div></div>';
   } else {
-    empty.style.display='none';
     container.innerHTML = order.map((item,idx) => {
       const tagHtml = item.tags.map(t => {
         const modKey = t.modKey;
