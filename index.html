@@ -1127,10 +1127,21 @@ async function confirmarPago() {
   document.getElementById('sf-sub').textContent=(client?client+' · ':'')+'$'+total.toLocaleString('es-MX',{minimumFractionDigits:2});
   document.getElementById('sf-cambio').textContent=cambio>0?'Cambio: $'+cambio.toLocaleString('es-MX',{minimumFractionDigits:2}):'';
   const sf=document.getElementById('success-flash'); sf.classList.add('open'); setTimeout(()=>sf.classList.remove('open'),1800);
-  orderN++; order=[]; discount=0;
+
+  // Reset completo
+  orderN++; order=[]; discount=0; payMethod='efectivo'; svcType='mostrador';
   document.getElementById('order-num').textContent=String(orderN).padStart(3,'0');
   document.getElementById('client-input').value='';
+  document.getElementById('efectivo-input').value='';
+  // Descuento
   document.querySelectorAll('.disc-btn').forEach((b,i)=>{ if(i===0)b.classList.add('active'); else b.classList.remove('active'); });
+  // Método de pago → efectivo
+  document.querySelectorAll('.pay-btn').forEach((b,i)=>{ if(i===0)b.classList.add('active'); else b.classList.remove('active'); });
+  // Tipo de servicio → mostrador
+  document.querySelectorAll('.svc-btn').forEach((b,i)=>{ if(i===0)b.classList.add('active'); else b.classList.remove('active'); });
+  // Mostrar sección efectivo
+  document.getElementById('efec-section').style.display='block';
+
   renderOrder(); renderProducts();
 }
 
