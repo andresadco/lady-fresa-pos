@@ -1214,6 +1214,58 @@ function renderHistLocal() {
   }).join('');
 }
 
+async function printHistDB(orderData) {
+  // Cargar items desde Supabase antes de imprimir
+  try {
+    const res = await fetch(SB_URL + '/rest/v1/order_items?order_id=eq.' + orderData.dbId + '&select=*', {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    });
+    const dbItems = res.ok ? await res.json() : [];
+
+    // Convertir items de DB al formato que espera buildTicketHTML
+    const items = dbItems.map(i => {
+      let sel = {};
+      try {
+        const t = JSON.parse(i.toppings || '{}');
+        if (i.size) sel['Tamaño'] = i.size;
+        if (i.base) sel['Bases'] = i.base;
+        if (t.incluidos?.length) sel['Toppings Incluidos'] = t.incluidos;
+        if (t.basicos?.length) sel['Toppings Extra Básicos'] = t.basicos;
+        if (t.premium?.length) sel['Toppings Extra Premium'] = t.premium;
+        if (t.shots?.length) sel['Shots Extra'] = t.shots;
+      } catch {}
+      return {
+        name: i.product_name,
+        emoji: emoji(i.product_name),
+        qty: i.qty,
+        unitPrice: i.unit_price,
+        sel,
+        note: i.note || '',
+        tags: []
+      };
+    });
+
+    const saleData = {
+      id: orderData.order_number,
+      date: orderData.created_at,
+      items,
+      sub: orderData.subtotal || orderData.total,
+      desc: orderData.discount_amt || 0,
+      iva: orderData.iva || 0,
+      total: orderData.total,
+      payMethod: orderData.pay_method,
+      svcType: orderData.service_type,
+      client: orderData.client_name || '',
+      cambio: orderData.change_given || 0,
+      discount: orderData.discount_pct || 0,
+      cashReceived: orderData.cash_received || orderData.total
+    };
+    showPrintTicket(saleData, orderData.printType || 'ticket');
+  } catch(e) {
+    alert('Error cargando detalle de la orden');
+  }
+}
+
 function toggleHistItem(id) {
   const el = document.getElementById(id);
   const arrow = document.getElementById('hi-arrow-' + id.replace('hi-',''));
@@ -1244,7 +1296,8 @@ function renderHistDB(dbSales) {
       <div id="hi-${uid}" style="display:none;margin-top:8px;">
         <div style="font-size:11px;color:var(--text-3);padding:8px 0;">Detalle guardado en base de datos ✓</div>
         <div style="display:flex;gap:6px;margin-top:6px;">
-          <button onclick="showPrintTicket({id:${s.order_number},date:'${s.created_at}',items:[],sub:${s.subtotal||0},desc:${s.discount_amt||0},iva:${s.iva||0},total:${s.total},payMethod:'${s.pay_method}',svcType:'${s.service_type}',client:'${s.client_name||''}',cambio:${s.change_given||0},discount:${s.discount_pct||0},cashReceived:${s.cash_received||s.total}},'ticket')" style="flex:1;height:32px;border:1px solid var(--border-2);border-radius:8px;background:transparent;font-size:11px;font-weight:500;color:var(--text-2);cursor:pointer;font-family:DM Sans,sans-serif;">🖨️ Ticket</button>
+          <button onclick="printHistDB({dbId:${s.id},order_number:${s.order_number},created_at:'${s.created_at}',subtotal:${s.subtotal||s.total},discount_amt:${s.discount_amt||0},discount_pct:${s.discount_pct||0},iva:${s.iva||0},total:${s.total},pay_method:'${s.pay_method}',service_type:'${s.service_type||'mostrador'}',client_name:'${(s.client_name||'').replace(/'/g,'')}',change_given:${s.change_given||0},cash_received:${s.cash_received||s.total},printType:'ticket'})" style="flex:1;height:32px;border:1px solid var(--border-2);border-radius:8px;background:transparent;font-size:11px;font-weight:500;color:var(--text-2);cursor:pointer;font-family:DM Sans,sans-serif;">🖨️ Ticket</button>
+          <button onclick="printHistDB({dbId:${s.id},order_number:${s.order_number},created_at:'${s.created_at}',subtotal:${s.subtotal||s.total},discount_amt:${s.discount_amt||0},discount_pct:${s.discount_pct||0},iva:${s.iva||0},total:${s.total},pay_method:'${s.pay_method}',service_type:'${s.service_type||'mostrador'}',client_name:'${(s.client_name||'').replace(/'/g,'')}',change_given:${s.change_given||0},cash_received:${s.cash_received||s.total},printType:'comanda'})" style="flex:1;height:32px;border:1px solid var(--border-2);border-radius:8px;background:transparent;font-size:11px;font-weight:500;color:var(--text-2);cursor:pointer;font-family:DM Sans,sans-serif;">📋 Comanda</button>
         </div>
       </div>
     </div>`;
