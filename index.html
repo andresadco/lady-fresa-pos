@@ -1228,12 +1228,27 @@ function renderHistDB(dbSales) {
     <div class="res-stat"><span class="res-val">$${tv.toLocaleString('es-MX')}</span><span class="res-label">Ventas hoy</span></div>
     <div class="res-stat"><span class="res-val">${n}</span><span class="res-label">Órdenes</span></div>
     <div class="res-stat"><span class="res-val">$${tp}</span><span class="res-label">Ticket prom.</span></div>`;
-  document.getElementById('hist-list').innerHTML = dbSales.map(s=>`
-    <div class="hist-item">
-      <div class="hist-head"><span class="hist-id">Orden #${String(s.order_number).padStart(3,'0')}</span><span class="hist-amt">$${Number(s.total).toLocaleString('es-MX',{minimumFractionDigits:2})}</span></div>
-      <div class="hist-meta">${new Date(s.created_at).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})} · ${s.pay_method==='efectivo'?'Efectivo':s.pay_method==='tarjeta'?'Tarjeta':'Transferencia'}${s.client_name?' · '+s.client_name:''}</div>
-      <div class="hist-prods" style="color:var(--text-3);font-size:10px;">Guardado en base de datos ✓</div>
-    </div>`).join('');
+  document.getElementById('hist-list').innerHTML = dbSales.map((s, idx)=>{
+    const payLabel = s.pay_method==='efectivo'?'💵 Efectivo':s.pay_method==='tarjeta'?'💳 Tarjeta':'📲 Transferencia';
+    const svcLabel = s.service_type==='para-llevar'?'🛍 Para llevar':s.service_type==='delivery'?'🛵 Delivery':'🏪 Mostrador';
+    const uid = 'db-'+idx;
+    return `<div class="hist-item">
+      <div class="hist-head" onclick="toggleHistItem('hi-${uid}')" style="cursor:pointer;">
+        <span class="hist-id">Orden #${String(s.order_number).padStart(3,'0')}</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="hist-amt">$${Number(s.total).toLocaleString('es-MX',{minimumFractionDigits:2})}</span>
+          <span style="font-size:11px;color:var(--text-3);" id="hi-arrow-${uid}">▼</span>
+        </div>
+      </div>
+      <div class="hist-meta">${new Date(s.created_at).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})} · ${payLabel} · ${svcLabel}${s.client_name?' · '+s.client_name:''}</div>
+      <div id="hi-${uid}" style="display:none;margin-top:8px;">
+        <div style="font-size:11px;color:var(--text-3);padding:8px 0;">Detalle guardado en base de datos ✓</div>
+        <div style="display:flex;gap:6px;margin-top:6px;">
+          <button onclick="showPrintTicket({id:${s.order_number},date:'${s.created_at}',items:[],sub:${s.subtotal||0},desc:${s.discount_amt||0},iva:${s.iva||0},total:${s.total},payMethod:'${s.pay_method}',svcType:'${s.service_type}',client:'${s.client_name||''}',cambio:${s.change_given||0},discount:${s.discount_pct||0},cashReceived:${s.cash_received||s.total}},'ticket')" style="flex:1;height:32px;border:1px solid var(--border-2);border-radius:8px;background:transparent;font-size:11px;font-weight:500;color:var(--text-2);cursor:pointer;font-family:DM Sans,sans-serif;">🖨️ Ticket</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // ═══════════════════════════════════════════════════
