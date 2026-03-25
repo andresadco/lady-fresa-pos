@@ -731,12 +731,11 @@ const MODS = {
   },
 };
 
-const PRODUCTS = [
-  // ── FRUTAS ──
+// Catálogo de fallback (se usa si Supabase no responde)
+const PRODUCTS_FALLBACK = [
   { id:1,  name:'Fresas',    cat:'Frutas', price:99,  desc:'Elige base, y toppings. Arma tus fresas justo como se te antojen.', mods:['Tamaño','Bases','Toppings Incluidos','Doble Topping','Toppings Extra Básicos','Toppings Extra Premium','Shots Extra'] },
   { id:2,  name:'Platanos',  cat:'Frutas', price:99,  desc:'Elige base, toppings y salsa. Arma tus platanos justo como se te antojen.', mods:['Tamaño','Bases','Toppings Incluidos','Toppings Extra Básicos','Toppings Extra Premium','Shots Extra','Doble Topping'] },
   { id:3,  name:'Combinado', cat:'Frutas', price:99,  desc:'Elige base, toppings y salsa. Arma tus fresas y platanos justo como se te antojen.', mods:['Tamaño','Bases','Toppings Incluidos','Toppings Extra Básicos','Toppings Extra Premium','Shots Extra','Doble Topping'] },
-  // ── ESPECIALES LFM ──
   { id:4,  name:'La Caramelita',  cat:'Especiales LFM', price:149, desc:'Capas de plátano suave, crema especial y caramelo de nuestra fuente infinita, con nuestra granola de la casa y galleta lotus.', mods:['Shots Extra','Toppings Extra Básicos','Toppings Extra Premium'] },
   { id:5,  name:'La Cookie Lover',cat:'Especiales LFM', price:159, desc:'Fresas, crema especial, doble Oreo y chocolate caliente de la fuente, coronada con Oreo y chocolate Kit Kat.', mods:['Shots Extra','Toppings Extra Básicos','Toppings Extra Premium'] },
   { id:6,  name:'Lady Lotus',     cat:'Especiales LFM', price:159, desc:'Fresas frescas con crema especial, caramelo de la fuente infinita, crumble crujiente de lotus y salsa Lotus irresistible.', mods:['Toppings Extra Básicos','Toppings Extra Premium','Shots Extra'] },
@@ -744,7 +743,6 @@ const PRODUCTS = [
   { id:8,  name:'La Mil Leches',  cat:'Especiales LFM', price:169, desc:'El clásico elevado a su máxima expresión.', mods:['Shots Extra','Toppings Extra Básicos','Toppings Extra Premium'] },
   { id:9,  name:'La Pistachona',  cat:'Especiales LFM', price:189, desc:'Fresas frescas, crema especial, nuestro kataifi crujiente con crema de pistache premium y chocolate de nuestra fuente.', mods:['Toppings Extra Básicos','Toppings Extra Premium','Shots Extra'] },
   { id:10, name:'La Presumida',   cat:'Especiales LFM', price:159, desc:'Crema artesanal de avellana, crumble de nutella, nuestra crema especial y coronamos con ferrero.', mods:['Shots Extra','Toppings Extra Básicos','Toppings Extra Premium'] },
-  // ── BEBIDAS ──
   { id:11, name:'Agua Mineral',                cat:'Bebidas', price:50, desc:'Agua mineral, captada con responsabilidad.', mods:[] },
   { id:12, name:'agua mineral Jengibre',       cat:'Bebidas', price:50, desc:'Jengibre revitalizante con vitamina C y minerales.', mods:[] },
   { id:13, name:'agua mineral Limón - Menta',  cat:'Bebidas', price:50, desc:'Agua funcional sabor limón menta.', mods:[] },
@@ -753,6 +751,8 @@ const PRODUCTS = [
   { id:16, name:'Agua Natural',                cat:'Bebidas', price:50, desc:'Agua natural alcalina 355 ml.', mods:[] },
   { id:17, name:'Cafe de Olla (12 oz)',        cat:'Bebidas', price:45, desc:'Café con canela y piloncillo.', mods:[] },
 ];
+// PRODUCTS arranca vacío — se llena desde Supabase al arrancar
+const PRODUCTS = [];
 
 // Emojis para toppings
 const TOP_EMOJI = {
@@ -1504,7 +1504,8 @@ async function loadCatalogFromDB() {
     return true;
   } catch(e) {
     console.error('Error cargando catálogo desde Supabase, usando catálogo local:', e);
-    renderProducts(); // usar hardcoded como fallback
+    PRODUCTS.push(...PRODUCTS_FALLBACK);
+    renderProducts();
     return false;
   }
 }
@@ -1521,13 +1522,13 @@ async function loadCatalogFromDB() {
     if (res.ok) {
       if (offlineQueue.length > 0) flushOfflineQueue();
       const loaded = await loadCatalogFromDB();
-      if (!loaded) renderProducts(); // fallback hardcoded
+      if (!loaded) { PRODUCTS.push(...PRODUCTS_FALLBACK); renderProducts(); }
     } else {
-      renderProducts(); // sin conexión, usar hardcoded
+      PRODUCTS.push(...PRODUCTS_FALLBACK); renderProducts();
     }
   } catch {
     setDbStatus('error');
-    renderProducts(); // fallback hardcoded
+    PRODUCTS.push(...PRODUCTS_FALLBACK); renderProducts();
   }
 })();
 
