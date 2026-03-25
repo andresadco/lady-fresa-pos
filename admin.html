@@ -1026,12 +1026,13 @@ async function toggleOpcion(id, activo) {
   } catch { showToast('Error', 'error'); }
 }
 
-// Cargar modificadores cuando se va a esa página
-const _origGoPage = goPage;
-function goPage(page, btn) {
-  _origGoPage(page, btn);
-  if (page === 'modificadores') loadModificadores();
-}
+// Cargar modificadores cuando se va a esa página — hook sin recursión
+document.querySelectorAll('.nav-item').forEach(btn => {
+  const orig = btn.getAttribute('onclick');
+  if (orig && orig.includes("'modificadores'")) {
+    btn.setAttribute('onclick', "goPage('modificadores',this);loadModificadores()");
+  }
+});
 </script>
 </body>
 </html>
