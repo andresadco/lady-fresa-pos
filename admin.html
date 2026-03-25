@@ -979,6 +979,7 @@ function renderGrupos() {
           <button class="btn btn-secondary btn-sm" onclick="openModalGrupoEdit(${g.id})">✏️</button>
           <button class="btn btn-sm" style="border:1px solid var(--border-2);background:${g.activo?'var(--amber-light)':'var(--green-light)'};color:${g.activo?'var(--amber)':'var(--green)'}" 
             onclick="toggleGrupo(${g.id}, ${g.activo})">${g.activo ? 'Desactivar' : 'Activar'}</button>
+          <button class="btn btn-sm btn-danger" onclick="eliminarGrupo(${g.id},'${g.nombre}')" title="Eliminar grupo">🗑</button>
         </div>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;">
@@ -988,6 +989,7 @@ function renderGrupos() {
             ${o.precio_extra > 0 ? `<span style="font-size:11px;color:var(--green);font-weight:600;">+$${o.precio_extra}</span>` : '<span style="font-size:11px;color:var(--text-3);">gratis</span>'}
             <button onclick="openModalOpcionEdit(${o.id},${g.id},'${o.nombre.replace(/'/g,"\'")}',${o.precio_extra})" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--text-3);padding:0 2px;" title="Editar">✏️</button>
             <button onclick="toggleOpcion(${o.id},${o.activo})" style="background:none;border:none;cursor:pointer;font-size:11px;color:${o.activo?'var(--amber)':'var(--green)'};padding:0 2px;" title="${o.activo?'Desactivar':'Activar'}">${o.activo?'⏸':'▶'}</button>
+            <button onclick="eliminarOpcion(${o.id},'${o.nombre.replace(/'/g,"\'")}',${g.id})" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--red);padding:0 2px;" title="Eliminar">🗑</button>
           </div>`).join('') : '<div style="color:var(--text-3);font-size:13px;padding:4px;">Sin opciones — agrega con el botón + Opción</div>'}
       </div>
     </div>`).join('');
@@ -1099,6 +1101,26 @@ async function toggleOpcion(id, activo) {
     });
     loadModificadores();
   } catch { showToast('Error', 'error'); }
+}
+
+async function eliminarGrupo(id, nombre) {
+  if (!confirm(`¿Eliminar el grupo "${nombre}" y todas sus opciones? Esta acción no se puede deshacer.`)) return;
+  try {
+    await fetch(`${SB_URL}/rest/v1/modificadores_opciones?grupo_id=eq.${id}`, { method:'DELETE', headers:SB_H });
+    await fetch(`${SB_URL}/rest/v1/productos_modificadores?grupo_id=eq.${id}`, { method:'DELETE', headers:SB_H });
+    await fetch(`${SB_URL}/rest/v1/modificadores_grupos?id=eq.${id}`, { method:'DELETE', headers:SB_H });
+    showToast('✓ Grupo eliminado');
+    loadModificadores();
+  } catch(e) { showToast('⚠ Error eliminando grupo', 'error'); }
+}
+
+async function eliminarOpcion(id, nombre, grupoId) {
+  if (!confirm(`¿Eliminar la opción "${nombre}"?`)) return;
+  try {
+    await fetch(`${SB_URL}/rest/v1/modificadores_opciones?id=eq.${id}`, { method:'DELETE', headers:SB_H });
+    showToast('✓ Opción eliminada');
+    loadModificadores();
+  } catch(e) { showToast('⚠ Error eliminando opción', 'error'); }
 }
 
 // Cargar modificadores cuando se va a esa página — hook sin recursión
