@@ -402,7 +402,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 
 <!-- MODAL PRODUCTO -->
 <div class="modal-overlay" id="modal-producto">
-  <div class="modal-box">
+  <div class="modal-box" style="max-width:560px;">
     <div class="modal-title" id="modal-prod-title">Editar producto</div>
     <input type="hidden" id="p-id">
     <div class="form-grid">
@@ -417,6 +417,10 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
       </div>
       <div class="form-group"><label class="form-label">Emoji</label><input class="form-input" id="p-emoji" placeholder="🍓"></div>
       <div class="form-group full"><label class="form-label">Descripción</label><input class="form-input" id="p-desc" placeholder="Descripción del producto"></div>
+      <div class="form-group full">
+        <label class="form-label">Modificadores que aplican</label>
+        <div id="p-mods-checks" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;"></div>
+      </div>
       <div class="form-group full">
         <div class="toggle-wrap">
           <button class="toggle on" id="p-active-toggle" onclick="toggleActive()"></button>
@@ -559,7 +563,7 @@ async function loadPage(page) {
   if (page==='overview') loadOverview();
   else if (page==='usuarios') loadUsuarios();
   else if (page==='sucursales') loadSucursales();
-  else if (page==='menu') renderMenu();
+  else if (page==='menu') { todosGrupos=[]; renderMenu(); }
   else if (page==='turnos') loadTurnos();
   else if (page==='config') loadConfig();
 }
@@ -730,7 +734,9 @@ async function toggleSucursal(id, active) {
   loadSucursales();
 }
 
-// ── MENÚ ──
+// ── MENÚ (Supabase) ──
+let todosGrupos = [];
+
 function filterMenuCat(cat, btn) {
   menuCatFilter = cat;
   document.querySelectorAll('#menu-cat-filter .btn').forEach(b=>b.classList.remove('active-cat'));
@@ -738,7 +744,16 @@ function filterMenuCat(cat, btn) {
   renderMenu();
 }
 
-function renderMenu() {
+async function renderMenu() {
+  // Cargar productos desde Supabase
+  try {
+    const prods = await sbGet('productos', 'order=orden.asc&select=*');
+    productsData = prods.map(p => ({
+      id: p.id, name: p.nombre, cat: p.categoria, price: p.precio,
+      emoji: p.emoji, desc: p.descripcion, active: p.activo
+    }));
+  } catch(e) { toast('Error cargando productos'); return; }
+
   const filtered = productsData.filter(p => menuCatFilter==='all' || p.cat===menuCatFilter);
   document.getElementById('menu-grid').innerHTML = filtered.map(p=>`
     <div class="prod-admin-card ${p.active?'':'inactive'}">
@@ -747,17 +762,18 @@ function renderMenu() {
         <div><div class="prod-admin-name">${p.name}</div><div class="prod-admin-cat">${p.cat}</div></div>
       </div>
       <div class="prod-admin-price">$${p.price}</div>
-      <div style="font-size:11px;color:var(--text-3);line-height:1.4;">${p.desc||''}</div>
+      <div style="font-size:11px;color:var(--text-3);line-height:1.4;margin-bottom:8px;">${p.desc||''}</div>
       <div class="prod-admin-actions">
         <button class="btn btn-secondary btn-sm" style="flex:1" onclick="openModalProducto(${p.id})">✏️ Editar</button>
-        <button class="btn btn-sm ${p.active?'btn-danger':'btn-secondary'}" onclick="toggleProducto(${p.id})">${p.active?'Ocultar':'Mostrar'}</button>
+        <button class="btn btn-sm ${p.active?'btn-danger':'btn-secondary'}" onclick="toggleProducto(${p.id},${p.active})">${p.active?'Ocultar':'Mostrar'}</button>
       </div>
     </div>`).join('');
 }
 
-function openModalProducto(id=null) {
+async function openModalProducto(id=null) {
   const p = id ? productsData.find(x=>x.id===id) : null;
   editingProdId = id;
+
   document.getElementById('modal-prod-title').textContent = p ? 'Editar producto' : 'Nuevo producto';
   document.getElementById('p-id').value = p?.id || '';
   document.getElementById('p-name').value = p?.name || '';
@@ -768,6 +784,28 @@ function openModalProducto(id=null) {
   const tog = document.getElementById('p-active-toggle');
   tog.className = 'toggle ' + (p?.active !== false ? 'on' : '');
   document.getElementById('p-active-label').textContent = p?.active !== false ? 'Producto activo' : 'Producto oculto';
+
+  // Cargar grupos disponibles y cuáles ya tiene este producto
+  try {
+    if (!todosGrupos.length) {
+      todosGrupos = await sbGet('modificadores_grupos', 'activo=eq.true&order=orden.asc&select=*');
+    }
+    let gruposDelProd = [];
+    if (id) {
+      const pm = await sbGet('productos_modificadores', `producto_id=eq.${id}&select=grupo_id`);
+      gruposDelProd = pm.map(x => x.grupo_id);
+    }
+    document.getElementById('p-mods-checks').innerHTML = todosGrupos.map(g => `
+      <label style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--border-2);border-radius:8px;cursor:pointer;font-size:12px;background:${gruposDelProd.includes(g.id)?'var(--pink-light)':'white'};">
+        <input type="checkbox" value="${g.id}" ${gruposDelProd.includes(g.id)?'checked':''} 
+          onchange="this.closest('label').style.background=this.checked?'var(--pink-light)':'white'"
+          style="accent-color:var(--pink);">
+        ${g.nombre}
+      </label>`).join('');
+  } catch(e) {
+    document.getElementById('p-mods-checks').innerHTML = '<div style="color:var(--text-3);font-size:12px;">Error cargando modificadores</div>';
+  }
+
   document.getElementById('modal-producto').classList.add('open');
 }
 
@@ -777,33 +815,55 @@ function toggleActive() {
   document.getElementById('p-active-label').textContent = tog.classList.contains('on') ? 'Producto activo' : 'Producto oculto';
 }
 
-function saveProducto() {
+async function saveProducto() {
   const data = {
-    name: document.getElementById('p-name').value.trim(),
-    price: parseInt(document.getElementById('p-price').value),
-    cat: document.getElementById('p-cat').value,
+    nombre: document.getElementById('p-name').value.trim(),
+    precio: parseFloat(document.getElementById('p-price').value),
+    categoria: document.getElementById('p-cat').value,
     emoji: document.getElementById('p-emoji').value.trim() || '🍓',
-    desc: document.getElementById('p-desc').value.trim(),
-    active: document.getElementById('p-active-toggle').classList.contains('on'),
+    descripcion: document.getElementById('p-desc').value.trim(),
+    activo: document.getElementById('p-active-toggle').classList.contains('on'),
   };
-  if (!data.name || !data.price) { toast('⚠ Nombre y precio requeridos'); return; }
+  if (!data.nombre || !data.precio) { toast('⚠ Nombre y precio requeridos'); return; }
 
-  if (editingProdId) {
-    const idx = productsData.findIndex(p=>p.id===editingProdId);
-    if (idx>=0) productsData[idx] = { ...productsData[idx], ...data };
-    toast('✓ Producto actualizado');
-  } else {
-    const newId = Math.max(...productsData.map(p=>p.id)) + 1;
-    productsData.push({ id:newId, ...data, mods:[] });
-    toast('✓ Producto creado');
+  // Obtener grupos seleccionados
+  const checks = document.querySelectorAll('#p-mods-checks input[type=checkbox]');
+  const gruposSeleccionados = [...checks].filter(c=>c.checked).map(c=>parseInt(c.value));
+
+  try {
+    let prodId = editingProdId;
+    if (prodId) {
+      await sbPatch('productos', prodId, data);
+      toast('✓ Producto actualizado');
+    } else {
+      const res = await sbPost('productos', { ...data, orden: productsData.length + 1 });
+      const [created] = await res.json();
+      prodId = created.id;
+      toast('✓ Producto creado');
+    }
+
+    // Actualizar modificadores: borrar los anteriores e insertar los nuevos
+    await fetch(`${SB_URL}/rest/v1/productos_modificadores?producto_id=eq.${prodId}`, {
+      method: 'DELETE', headers: SB_H
+    });
+    if (gruposSeleccionados.length) {
+      await sbPost('productos_modificadores',
+        gruposSeleccionados.map((gid, i) => ({ producto_id: prodId, grupo_id: gid, orden: i+1 }))
+      );
+    }
+
+    closeModal('modal-producto');
+    renderMenu();
+  } catch(e) {
+    toast('⚠ Error guardando producto');
+    console.error(e);
   }
-  closeModal('modal-producto');
-  renderMenu();
 }
 
-function toggleProducto(id) {
-  const p = productsData.find(x=>x.id===id);
-  if (p) { p.active = !p.active; renderMenu(); toast(p.active?'Producto visible':'Producto oculto'); }
+async function toggleProducto(id, active) {
+  await sbPatch('productos', id, { activo: !active });
+  toast(!active ? 'Producto visible' : 'Producto oculto');
+  renderMenu();
 }
 
 // ── TURNOS ──

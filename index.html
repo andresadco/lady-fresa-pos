@@ -1430,14 +1430,95 @@ document.getElementById('ov-cobro').addEventListener('click',e=>{if(e.target===d
 document.getElementById('ov-custom').addEventListener('click',e=>{if(e.target===document.getElementById('ov-custom'))closeCustom();});
 document.getElementById('efec-section').style.display='block';
 
-// Verificar conexión a Supabase al arrancar
+// ── CARGAR CATÁLOGO DESDE SUPABASE ──
+async function loadCatalogFromDB() {
+  try {
+    // Cargar productos
+    const pRes = await fetch(SB_URL + '/rest/v1/productos?activo=eq.true&order=orden.asc&select=*', {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    });
+    if (!pRes.ok) return false;
+    const dbProds = await pRes.json();
+
+    // Cargar grupos de modificadores
+    const gRes = await fetch(SB_URL + '/rest/v1/modificadores_grupos?activo=eq.true&order=orden.asc&select=*', {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    });
+    const dbGrupos = gRes.ok ? await gRes.json() : [];
+
+    // Cargar opciones
+    const oRes = await fetch(SB_URL + '/rest/v1/modificadores_opciones?activo=eq.true&order=orden.asc&select=*', {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    });
+    const dbOpciones = oRes.ok ? await oRes.json() : [];
+
+    // Cargar relaciones producto-modificador
+    const pmRes = await fetch(SB_URL + '/rest/v1/productos_modificadores?order=orden.asc&select=*', {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    });
+    const dbPM = pmRes.ok ? await pmRes.json() : [];
+
+    if (!dbProds.length) return false;
+
+    // Reconstruir MODS desde DB
+    dbGrupos.forEach(g => {
+      MODS[g.nombre] = {
+        required: g.requerido,
+        min: g.min_seleccion,
+        max: g.max_seleccion,
+        label: g.label || g.nombre,
+        options: dbOpciones
+          .filter(o => o.grupo_id === g.id)
+          .map(o => ({ name: o.nombre, extra: parseFloat(o.precio_extra) || 0 }))
+      };
+    });
+
+    // Reconstruir PRODUCTS desde DB
+    PRODUCTS.length = 0;
+    dbProds.forEach(p => {
+      const modsDelProd = dbPM
+        .filter(pm => pm.producto_id === p.id)
+        .sort((a,b) => a.orden - b.orden)
+        .map(pm => {
+          const g = dbGrupos.find(g => g.id === pm.grupo_id);
+          return g ? g.nombre : null;
+        })
+        .filter(Boolean);
+
+      PRODUCTS.push({
+        id: p.id,
+        name: p.nombre,
+        cat: p.categoria,
+        price: parseFloat(p.precio),
+        desc: p.descripcion || '',
+        emoji: p.emoji || '🍓',
+        mods: modsDelProd
+      });
+    });
+
+    // Actualizar EMOJI_MAP
+    dbProds.forEach(p => { EMOJI_MAP[p.nombre] = p.emoji || '🍓'; });
+
+    renderProducts();
+    return true;
+  } catch(e) {
+    console.error('Error cargando catálogo:', e);
+    return false;
+  }
+}
+
+// Verificar conexión a Supabase al arrancar y cargar catálogo
 (async () => {
   try {
     const res = await fetch(SB_URL + '/rest/v1/orders?limit=1', {
       headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer '+SB_KEY }
     });
     setDbStatus(res.ok ? 'ok' : 'error');
-    if (res.ok && offlineQueue.length > 0) flushOfflineQueue();
+    if (res.ok) {
+      if (offlineQueue.length > 0) flushOfflineQueue();
+      // Cargar catálogo dinámico desde Supabase
+      await loadCatalogFromDB();
+    }
   } catch { setDbStatus('error'); }
 })();
 
