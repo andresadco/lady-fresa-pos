@@ -604,18 +604,23 @@ function setPeriod(p, btn) {
 }
 
 // ── SUCURSALES ──
+let sucursalesLoaded = false;
 async function loadSucursales() {
+  if (sucursalesLoaded) return;
   try {
     const res = await fetch(`${SB_URL}/rest/v1/sucursales?select=name&order=name.asc`, { headers: HEADERS });
     if (!res.ok) return;
     const subs = await res.json();
     const sel = document.getElementById('sucursal-filter');
+    // Limpiar opciones excepto "Todas"
+    while (sel.options.length > 1) sel.remove(1);
     subs.forEach(s => {
       const opt = document.createElement('option');
       opt.value = s.name;
       opt.textContent = '🏪 ' + s.name;
       sel.appendChild(opt);
     });
+    sucursalesLoaded = true;
   } catch {}
 }
 

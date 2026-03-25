@@ -438,6 +438,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         <a href="admin.html" id="admin-link" style="padding:6px 12px;border:1px solid var(--border-2);border-radius:20px;background:transparent;font-size:12px;font-weight:500;color:var(--text-2);cursor:pointer;font-family:DM Sans,sans-serif;text-decoration:none;transition:all 0.15s;display:none" onmouseover="this.style.borderColor='#D4537E';this.style.color='#D4537E'" onmouseout="this.style.borderColor='';this.style.color=''">🔧 Admin</a>
         <a href="dashboard.html" style="padding:6px 12px;border:1px solid var(--border-2);border-radius:20px;background:transparent;font-size:12px;font-weight:500;color:var(--text-2);cursor:pointer;font-family:DM Sans,sans-serif;text-decoration:none;transition:all 0.15s;" onmouseover="this.style.borderColor='#D4537E';this.style.color='#D4537E'" onmouseout="this.style.borderColor='';this.style.color=''">📊 Dashboard</a>
         <div id="db-status" style="font-size:11px;font-weight:500;padding:4px 12px;border-radius:20px;background:#FAEEDA;color:#BA7517;transition:background 0.3s,color 0.3s;">⟳ Conectando...</div>
+        <div id="sucursal-badge" style="font-size:11px;font-weight:500;padding:4px 10px;border-radius:12px;background:var(--purple-light);color:var(--purple);display:none;">🏪 <span id="sucursal-disp">—</span></div>
         <div id="user-badge" onclick="logout()" title="Cerrar sesión">
           <div class="user-avatar" id="user-avatar">?</div>
           <div><div class="user-name" id="user-name-disp">—</div><div class="user-role" id="user-role-disp">—</div></div>
@@ -1636,6 +1637,13 @@ function applyPermissions(user) {
   if (dashLink) dashLink.style.display = p.dashboard ? '' : 'none';
   const adminLink = document.querySelector('a[href="admin.html"]');
   if (adminLink) adminLink.style.display = user.role==='admin' ? '' : 'none';
+  // Mostrar sucursal activa
+  const sucBadge = document.getElementById('sucursal-badge');
+  const sucDisp = document.getElementById('sucursal-disp');
+  if (sucBadge && sucDisp && user.sucursal) {
+    sucDisp.textContent = user.sucursal;
+    sucBadge.style.display = '';
+  }
 }
 
 function logout() {

@@ -1165,12 +1165,16 @@ function startPolling() {
 // ═══════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════
+let mobileSucursalesLoaded = false;
 async function loadMobileSucursales() {
+  if (mobileSucursalesLoaded) return;
   try {
     const res = await fetch(`${SB_URL}/rest/v1/sucursales?select=name&order=name.asc`, { headers: HEADERS });
     if (!res.ok) return;
     const subs = await res.json();
     const container = document.getElementById('suc-filters');
+    // Limpiar excepto "Todas"
+    while (container.children.length > 1) container.removeChild(container.lastChild);
     subs.forEach(s => {
       const btn = document.createElement('button');
       btn.className = 'filter-chip';
@@ -1178,6 +1182,7 @@ async function loadMobileSucursales() {
       btn.onclick = () => setMobileSucursal(s.name, btn);
       container.appendChild(btn);
     });
+    mobileSucursalesLoaded = true;
   } catch {}
 }
 
