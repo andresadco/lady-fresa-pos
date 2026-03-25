@@ -301,18 +301,31 @@ async function fetchOrders(period) {
   else { from = new Date(now); from.setDate(1); from.setHours(0,0,0,0); }
 
   const sucFilter = currentSucursal !== 'all' ? `&sucursal=eq.${currentSucursal}` : '';
-  const [ordRes, itmRes] = await Promise.all([
-    fetch(`${SB_URL}/rest/v1/orders?created_at=gte.${from.toISOString()}${sucFilter}&order=created_at.desc&limit=500`, { headers: HEADERS }),
-    fetch(`${SB_URL}/rest/v1/order_items?select=*,orders!inner(created_at)&orders.created_at=gte.${from.toISOString()}&limit=2000`, { headers: HEADERS }),
-  ]);
+  const fromISO = from.toISOString();
+
+  // Fetch orders first (fast) — items only if we have orders
+  const ordRes = await fetch(
+    `${SB_URL}/rest/v1/orders?created_at=gte.${fromISO}${sucFilter}&order=created_at.desc&limit=500&select=id,order_number,sucursal,pay_method,service_type,client_name,subtotal,discount_amt,discount_pct,iva,total,created_at`,
+    { headers: HEADERS }
+  );
 
   if (!ordRes.ok) throw new Error('orders fetch failed');
   allOrders = await ordRes.json();
 
-  try {
-    const itmData = await itmRes.json();
-    allItems = Array.isArray(itmData) ? itmData : [];
-  } catch { allItems = []; }
+  // Only fetch items if we have orders (avoids slow join query when empty)
+  if (allOrders.length > 0) {
+    const orderIds = allOrders.map(o => o.id).join(',');
+    try {
+      const itmRes = await fetch(
+        `${SB_URL}/rest/v1/order_items?order_id=in.(${orderIds})&select=order_id,product_name,qty,unit_price,subtotal`,
+        { headers: HEADERS }
+      );
+      const itmData = await itmRes.json();
+      allItems = Array.isArray(itmData) ? itmData : [];
+    } catch { allItems = []; }
+  } else {
+    allItems = [];
+  }
 
   // Detectar nueva orden para alerta
   if (allOrders.length > 0) {
