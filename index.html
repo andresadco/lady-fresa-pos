@@ -1425,7 +1425,8 @@ function updateClock() {
   document.getElementById('clock').textContent=n.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
   document.getElementById('order-date').textContent=n.toLocaleDateString('es-MX',{weekday:'short',day:'numeric',month:'short'});
 }
-renderProducts(); renderOrder(); updateClock(); setInterval(updateClock,30000);
+// No renderizar productos aquí — se cargan desde Supabase en el startup
+renderOrder(); updateClock(); setInterval(updateClock,30000);
 document.getElementById('ov-cobro').addEventListener('click',e=>{if(e.target===document.getElementById('ov-cobro'))closeCobro();});
 document.getElementById('ov-custom').addEventListener('click',e=>{if(e.target===document.getElementById('ov-custom'))closeCustom();});
 document.getElementById('efec-section').style.display='block';
@@ -1502,13 +1503,16 @@ async function loadCatalogFromDB() {
     renderProducts();
     return true;
   } catch(e) {
-    console.error('Error cargando catálogo:', e);
+    console.error('Error cargando catálogo desde Supabase, usando catálogo local:', e);
+    renderProducts(); // usar hardcoded como fallback
     return false;
   }
 }
 
 // Verificar conexión a Supabase al arrancar y cargar catálogo
 (async () => {
+  // Mostrar loading en productos mientras carga
+  document.getElementById('products-grid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-3);">⟳ Cargando catálogo...</div>';
   try {
     const res = await fetch(SB_URL + '/rest/v1/orders?limit=1', {
       headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer '+SB_KEY }
@@ -1516,10 +1520,15 @@ async function loadCatalogFromDB() {
     setDbStatus(res.ok ? 'ok' : 'error');
     if (res.ok) {
       if (offlineQueue.length > 0) flushOfflineQueue();
-      // Cargar catálogo dinámico desde Supabase
-      await loadCatalogFromDB();
+      const loaded = await loadCatalogFromDB();
+      if (!loaded) renderProducts(); // fallback hardcoded
+    } else {
+      renderProducts(); // sin conexión, usar hardcoded
     }
-  } catch { setDbStatus('error'); }
+  } catch {
+    setDbStatus('error');
+    renderProducts(); // fallback hardcoded
+  }
 })();
 
 // ═══════════════════════════════════════════════════
