@@ -167,6 +167,10 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
     <button class="per-btn" onclick="setPeriod('month', this)">Mes</button>
   </div>
 
+  <select id="sucursal-filter" onchange="setSucursal(this.value)" style="height:30px;border:1px solid var(--border-2);border-radius:16px;padding:0 12px;font-size:12px;font-family:'DM Sans',sans-serif;color:var(--text-2);background:var(--surface);cursor:pointer;outline:none;">
+    <option value="all">🏪 Todas las sucursales</option>
+  </select>
+
   <div class="nav-right">
     <div class="live-dot"><div class="dot"></div>En vivo</div>
     <div id="last-update">—</div>
@@ -286,6 +290,7 @@ let allItems = [];
 let chartVentas = null, chartPay = null, chartSvc = null;
 let lastOrderId = null;
 let refreshInterval = null;
+let currentSucursal = 'all';
 
 // ── FETCH ──
 async function fetchOrders(period) {
@@ -295,8 +300,9 @@ async function fetchOrders(period) {
   else if (period === 'week') { from = new Date(now); from.setDate(from.getDate()-7); }
   else { from = new Date(now); from.setDate(1); from.setHours(0,0,0,0); }
 
+  const sucFilter = currentSucursal !== 'all' ? `&sucursal=eq.${encodeURIComponent(currentSucursal)}` : '';
   const [ordRes, itmRes] = await Promise.all([
-    fetch(`${SB_URL}/rest/v1/orders?created_at=gte.${from.toISOString()}&order=created_at.desc&limit=500`, { headers: HEADERS }),
+    fetch(`${SB_URL}/rest/v1/orders?created_at=gte.${from.toISOString()}${sucFilter}&order=created_at.desc&limit=500`, { headers: HEADERS }),
     fetch(`${SB_URL}/rest/v1/order_items?select=*,orders!inner(created_at)&orders.created_at=gte.${from.toISOString()}&limit=2000`, { headers: HEADERS }),
   ]);
 
@@ -595,6 +601,28 @@ function setPeriod(p, btn) {
   const labels = { today:'Hoy', week:'Últimos 7 días', month:'Este mes' };
   document.getElementById('chart-sub').textContent = labels[p];
   refresh();
+}
+
+// ── SUCURSALES ──
+async function loadSucursales() {
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/sucursales?select=name&order=name.asc`, { headers: HEADERS });
+    if (!res.ok) return;
+    const subs = await res.json();
+    const sel = document.getElementById('sucursal-filter');
+    subs.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.name;
+      opt.textContent = '🏪 ' + s.name;
+      sel.appendChild(opt);
+    });
+  } catch {}
+}
+
+function setSucursal(val) {
+  currentSucursal = val;
+  loadSucursales();
+  loadData();
 }
 
 // ── INIT ──

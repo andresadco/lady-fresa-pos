@@ -362,6 +362,9 @@ body { padding-top: env(safe-area-inset-top); }
   <button class="filter-chip" onclick="setFilter('week',this)">Esta semana</button>
   <button class="filter-chip" onclick="setFilter('month',this)">Este mes</button>
 </div>
+<div id="suc-filters" style="padding:8px 20px;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--border);">
+  <button class="filter-chip active" onclick="setMobileSucursal('all',this)">🏪 Todas</button>
+</div>
 
 
 <div id="view-dashboard" class="view active">
@@ -565,6 +568,7 @@ let lastOrderId = null;
 let todayData = null;
 let yesterdayData = null;
 let pollingInterval = null;
+let currentSucursal = 'all';
 
 // ═══════════════════════════════════════
 // DATE HELPERS
@@ -604,7 +608,8 @@ function fmtDate(iso) {
 // ═══════════════════════════════════════
 async function fetchOrders(from, to) {
   try {
-    const url = `${SB_URL}/rest/v1/orders?created_at=gte.${from.toISOString()}&created_at=lt.${to.toISOString()}&order=created_at.desc&limit=200`;
+    const sucFilter = currentSucursal !== 'all' ? `&sucursal=eq.${encodeURIComponent(currentSucursal)}` : '';
+    const url = `${SB_URL}/rest/v1/orders?created_at=gte.${from.toISOString()}&created_at=lt.${to.toISOString()}${sucFilter}&order=created_at.desc&limit=200`;
     const res = await fetch(url, { headers: HEADERS });
     if (!res.ok) return [];
     return await res.json();
@@ -1160,10 +1165,34 @@ function startPolling() {
 // ═══════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════
+async function loadMobileSucursales() {
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/sucursales?select=name&order=name.asc`, { headers: HEADERS });
+    if (!res.ok) return;
+    const subs = await res.json();
+    const container = document.getElementById('suc-filters');
+    subs.forEach(s => {
+      const btn = document.createElement('button');
+      btn.className = 'filter-chip';
+      btn.textContent = '🏪 ' + s.name;
+      btn.onclick = () => setMobileSucursal(s.name, btn);
+      container.appendChild(btn);
+    });
+  } catch {}
+}
+
+function setMobileSucursal(val, btn) {
+  currentSucursal = val;
+  document.querySelectorAll('#suc-filters .filter-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  loadData();
+}
+
 function init() {
   const now = new Date();
   document.getElementById('header-date').textContent = now.toLocaleDateString('es-MX', {weekday:'short', day:'numeric', month:'short'});
   document.getElementById('hero-period').textContent = 'Hoy';
+  loadMobileSucursales();
   loadData();
   startPolling();
 }

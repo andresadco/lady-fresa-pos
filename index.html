@@ -1328,7 +1328,7 @@ async function saveToSupabase(saleData) {
     // 1. Insertar orden
     const orderPayload = {
       order_number: saleData.id,
-      sucursal: 'Principal',
+      sucursal: currentUser ? (currentUser.sucursal || 'Principal') : 'Principal',
       cajero_id: currentUser ? currentUser.id : null,
       cajero_name: currentUser ? currentUser.name : 'Sistema',
       service_type: saleData.svcType,
