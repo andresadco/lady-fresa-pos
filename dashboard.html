@@ -300,7 +300,7 @@ async function fetchOrders(period) {
   else if (period === 'week') { from = new Date(now); from.setDate(from.getDate()-7); }
   else { from = new Date(now); from.setDate(1); from.setHours(0,0,0,0); }
 
-  const sucFilter = currentSucursal !== 'all' ? `&sucursal=eq.${encodeURIComponent(currentSucursal)}` : '';
+  const sucFilter = currentSucursal !== 'all' ? `&sucursal=eq.${currentSucursal}` : '';
   const [ordRes, itmRes] = await Promise.all([
     fetch(`${SB_URL}/rest/v1/orders?created_at=gte.${from.toISOString()}${sucFilter}&order=created_at.desc&limit=500`, { headers: HEADERS }),
     fetch(`${SB_URL}/rest/v1/order_items?select=*,orders!inner(created_at)&orders.created_at=gte.${from.toISOString()}&limit=2000`, { headers: HEADERS }),
@@ -626,11 +626,11 @@ async function loadSucursales() {
 
 function setSucursal(val) {
   currentSucursal = val;
-  loadSucursales();
   loadData();
 }
 
 // ── INIT ──
+loadSucursales();
 refresh();
 // Auto-refresh cada 30 segundos
 setInterval(refresh, 30000);
