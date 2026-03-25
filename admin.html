@@ -344,6 +344,16 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
       </div>
     </div>
 
+    <!-- MODIFICADORES -->
+    <div class="page" id="page-modificadores">
+      <div class="page-title">Modificadores</div>
+      <div class="page-sub">Gestiona grupos de opciones y sus precios</div>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+        <button class="btn btn-primary btn-sm" onclick="openModalGrupo()">+ Nuevo grupo</button>
+      </div>
+      <div id="grupos-list"></div>
+    </div>
+
   </div>
 </div>
 
@@ -372,16 +382,6 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
       <button class="btn btn-primary" onclick="saveUsuario()">Guardar</button>
     </div>
   </div>
-</div>
-
-<!-- MODIFICADORES -->
-<div class="page" id="page-modificadores">
-  <div class="page-title">Modificadores</div>
-  <div class="page-sub">Gestiona grupos de opciones y sus precios</div>
-  <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
-    <button class="btn btn-primary btn-sm" onclick="openModalGrupo()">+ Nuevo grupo</button>
-  </div>
-  <div id="grupos-list"></div>
 </div>
 
 <!-- MODAL SUCURSAL -->
