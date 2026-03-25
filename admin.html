@@ -927,7 +927,7 @@ function openModalGrupo() {
   document.getElementById('g-max').value = '1';
   document.getElementById('g-label').value = '';
   document.getElementById('g-req-toggle').className = 'toggle';
-  openModal('modal-grupo');
+  document.getElementById('modal-grupo').classList.add('open');
 }
 
 function openModalGrupoEdit(id) {
@@ -940,7 +940,7 @@ function openModalGrupoEdit(id) {
   document.getElementById('g-max').value = g.max_seleccion;
   document.getElementById('g-label').value = g.label || '';
   document.getElementById('g-req-toggle').className = 'toggle' + (g.requerido ? ' on' : '');
-  openModal('modal-grupo');
+  document.getElementById('modal-grupo').classList.add('open');
 }
 
 async function saveGrupo() {
@@ -982,7 +982,7 @@ function openModalOpcion(grupoId, grupoNombre) {
   document.getElementById('op-grupo-id').value = grupoId;
   document.getElementById('op-nombre').value = '';
   document.getElementById('op-precio').value = '0';
-  openModal('modal-opcion');
+  document.getElementById('modal-opcion').classList.add('open');
 }
 
 function openModalOpcionEdit(id, grupoId, nombre, precio) {
@@ -991,7 +991,7 @@ function openModalOpcionEdit(id, grupoId, nombre, precio) {
   document.getElementById('op-grupo-id').value = grupoId;
   document.getElementById('op-nombre').value = nombre;
   document.getElementById('op-precio').value = precio;
-  openModal('modal-opcion');
+  document.getElementById('modal-opcion').classList.add('open');
 }
 
 async function saveOpcion() {
