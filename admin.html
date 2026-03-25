@@ -766,6 +766,7 @@ async function renderMenu() {
       <div class="prod-admin-actions">
         <button class="btn btn-secondary btn-sm" style="flex:1" onclick="openModalProducto(${p.id})">✏️ Editar</button>
         <button class="btn btn-sm ${p.active?'btn-danger':'btn-secondary'}" onclick="toggleProducto(${p.id},${p.active})">${p.active?'Ocultar':'Mostrar'}</button>
+        <button class="btn btn-sm btn-danger" onclick="eliminarProducto(${p.id},'${p.name.replace(/'/g,"\\'")}')" title="Eliminar">🗑</button>
       </div>
     </div>`).join('');
 }
@@ -864,6 +865,20 @@ async function toggleProducto(id, active) {
   await sbPatch('productos', id, { activo: !active });
   toast(!active ? 'Producto visible' : 'Producto oculto');
   renderMenu();
+}
+
+async function eliminarProducto(id, nombre) {
+  if (!confirm(`¿Eliminar "${nombre}"? Esta acción no se puede deshacer.`)) return;
+  try {
+    // Borrar modificadores del producto primero
+    await fetch(`${SB_URL}/rest/v1/productos_modificadores?producto_id=eq.${id}`, { method:'DELETE', headers:SB_H });
+    // Borrar producto
+    await fetch(`${SB_URL}/rest/v1/productos?id=eq.${id}`, { method:'DELETE', headers:SB_H });
+    toast('✓ Producto eliminado');
+    renderMenu();
+  } catch(e) {
+    toast('⚠ Error eliminando producto');
+  }
 }
 
 // ── TURNOS ──
