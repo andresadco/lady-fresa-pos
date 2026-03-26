@@ -376,6 +376,31 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
       <div class="form-group full"><label class="form-label">Sucursal</label>
         <select class="form-select" id="u-sucursal"></select>
       </div>
+      <div class="form-group full">
+        <label class="form-label">Permisos</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:8px;border:1px solid var(--border);border-radius:8px;">
+            <input type="checkbox" id="p-cierre" style="width:15px;height:15px;accent-color:#D4537E;">
+            <span>🔒 Cierre del día</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:8px;border:1px solid var(--border);border-radius:8px;">
+            <input type="checkbox" id="p-discount" style="width:15px;height:15px;accent-color:#D4537E;">
+            <span>🏷 Descuentos</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:8px;border:1px solid var(--border);border-radius:8px;">
+            <input type="checkbox" id="p-cancel" style="width:15px;height:15px;accent-color:#D4537E;">
+            <span>🗑 Cancelar órdenes</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:8px;border:1px solid var(--border);border-radius:8px;">
+            <input type="checkbox" id="p-dashboard" style="width:15px;height:15px;accent-color:#D4537E;">
+            <span>📊 Dashboard</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:8px;border:1px solid var(--border);border-radius:8px;">
+            <input type="checkbox" id="p-admin" style="width:15px;height:15px;accent-color:#D4537E;">
+            <span>🔧 Admin</span>
+          </label>
+        </div>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('modal-usuario')">Cancelar</button>
@@ -662,7 +687,25 @@ async function openModalUsuario(user=null) {
   const suc = await sbGet('sucursales','active=eq.true&select=name');
   document.getElementById('u-sucursal').innerHTML = suc.map(s=>`<option value="${s.name}" ${user?.sucursal===s.name?'selected':''}>${s.name}</option>`).join('');
 
+  // Cargar permisos del usuario (o defaults por rol si no tiene)
+  const p = user?.permissions || defaultPermsForRole(user?.role || 'cajero');
+  document.getElementById('p-cierre').checked    = !!p.cierre;
+  document.getElementById('p-discount').checked  = !!p.discount;
+  document.getElementById('p-cancel').checked    = !!p.cancel;
+  document.getElementById('p-dashboard').checked = !!p.dashboard;
+  document.getElementById('p-admin').checked     = !!p.admin;
+
   document.getElementById('modal-usuario').classList.add('open');
+}
+
+function defaultPermsForRole(role) {
+  const defaults = {
+    cajero:    { cierre:false, discount:false, cancel:false, dashboard:false, admin:false },
+    encargado: { cierre:false, discount:true,  cancel:true,  dashboard:false, admin:false },
+    gerente:   { cierre:true,  discount:true,  cancel:true,  dashboard:true,  admin:false },
+    admin:     { cierre:true,  discount:true,  cancel:true,  dashboard:true,  admin:true  },
+  };
+  return defaults[role] || defaults.cajero;
 }
 
 async function saveUsuario() {
@@ -673,6 +716,13 @@ async function saveUsuario() {
     role: document.getElementById('u-role').value,
     sucursal: document.getElementById('u-sucursal').value,
     active: true,
+    permissions: {
+      cierre:    document.getElementById('p-cierre').checked,
+      discount:  document.getElementById('p-discount').checked,
+      cancel:    document.getElementById('p-cancel').checked,
+      dashboard: document.getElementById('p-dashboard').checked,
+      admin:     document.getElementById('p-admin').checked,
+    },
   };
   if (!data.name || data.pin.length !== 4) { toast('⚠ Nombre y PIN de 4 dígitos requeridos'); return; }
 
