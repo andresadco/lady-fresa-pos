@@ -1877,10 +1877,8 @@ function setRecetasVista(vista, btn) {
 async function loadResumenCostos() {
   const container = document.getElementById('resumen-costos-container');
   container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-3);">Calculando...</div>';
-
   if (!allInsumos.length) await loadInventario();
 
-  // Load all recetas
   const todasRecetas = await sbGet('recetas', 'order=producto_nombre.asc,tipo_componente.asc');
   if (!Array.isArray(todasRecetas) || !todasRecetas.length) {
     container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-3);">No hay recetas capturadas aún</div>';
@@ -1890,160 +1888,139 @@ async function loadResumenCostos() {
   const insMap = {};
   allInsumos.forEach(function(i){ insMap[i.id] = i; });
 
-  // Group by producto
   const porProducto = {};
   todasRecetas.forEach(function(r) {
     if (!porProducto[r.producto_nombre]) porProducto[r.producto_nombre] = [];
     porProducto[r.producto_nombre].push(r);
   });
 
-  let html = '';
+  var fmt = function(n){ return '$'+(n < 0.01 ? n.toFixed(3) : n.toFixed(2)); };
+
+  function calcCosto(l) {
+    var ins = insMap[l.insumo_id];
+    if (!ins) return 0;
+    var uu = l.unidad_uso || ins.unidad;
+    var f = getConversionFactor(uu, ins.unidad);
+    var cantBase = f ? l.cantidad * f : l.cantidad;
+    return ins.costo_unitario * cantBase;
+  }
+
+  var html = '';
 
   Object.keys(porProducto).sort().forEach(function(producto) {
-    const lines = porProducto[producto];
-
-    // Separate by tipo
-    const frutas   = lines.filter(function(l){ return l.tipo_componente === 'fruta'; });
-    const bases    = lines.filter(function(l){ return l.tipo_componente === 'base'; });
-    const toppings = lines.filter(function(l){ return l.tipo_componente === 'topping'; });
-    const ingredientes = lines.filter(function(l){ return !l.tipo_componente || l.tipo_componente === 'ingrediente'; });
+    var lines = porProducto[producto];
+    var frutas      = lines.filter(function(l){ return l.tipo_componente === 'fruta'; });
+    var bases       = lines.filter(function(l){ return l.tipo_componente === 'base'; });
+    var toppings    = lines.filter(function(l){ return l.tipo_componente === 'topping'; });
+    var ingredientes = lines.filter(function(l){ return !l.tipo_componente || l.tipo_componente === 'ingrediente'; });
 
     html += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:20px;overflow:hidden;">';
-    html += '<div style="padding:12px 18px;border-bottom:1px solid var(--border);background:var(--pink-light);">';
-    html += '<strong style="font-size:15px;color:var(--pink);">🍓 ' + producto + '</strong>';
-    html += '</div>';
+    html += '<div style="padding:12px 18px;border-bottom:1px solid var(--border);background:var(--pink-light);">'
+          + '<strong style="font-size:15px;color:var(--pink);">🍓 ' + producto + '</strong></div>';
 
-    // If has sizes (fruta or base) — show combination table
     if (frutas.length || bases.length) {
-      // Get all tamaños
-      const tamSet = {};
-      frutas.forEach(function(l){ tamSet[l.modificador_opcion] = true; });
+      // ── Productos con tamaños (Fresas, Plátano) ──
+      var tamSet = {};
+      frutas.forEach(function(l){ if (l.modificador_opcion) tamSet[l.modificador_opcion] = true; });
       bases.forEach(function(l){
-        const parts = (l.modificador_opcion||'').split(' · ');
-        if (parts[0]) tamSet[parts[0]] = true;
+        var p = (l.modificador_opcion||'').split(' · ');
+        if (p[0]) tamSet[p[0]] = true;
       });
-      const tamanos = Object.keys(tamSet).sort(function(a,b){
-        const order = {Chico:0,Mediano:1,Grande:2};
-        return (order[a]||99)-(order[b]||99);
+      var tamanos = Object.keys(tamSet).sort(function(a,b){
+        var o = {Chico:0, Mediano:1, Grande:2};
+        return (o[a]||99) - (o[b]||99);
       });
 
-      // Get all bases
-      const baseSet = {};
+      var baseSet = {};
       bases.forEach(function(l){
-        const parts = (l.modificador_opcion||'').split(' · ');
-        if (parts[1]) baseSet[parts[1]] = true;
+        var p = (l.modificador_opcion||'').split(' · ');
+        if (p[1]) baseSet[p[1]] = true;
       });
-      const baseNames = Object.keys(baseSet).sort();
+      var baseNames = Object.keys(baseSet).sort();
 
-      // Toppings cost (fixed)
-      let costoToppings = 0;
-      const toppingRows = toppings.map(function(l){
-        const ins = insMap[l.insumo_id];
-        if (!ins) return null;
-        const uu = l.unidad_uso || ins.unidad;
-        const f = getConversionFactor(uu, ins.unidad);
-        const cantBase = f ? l.cantidad * f : l.cantidad;
-        const c = ins.costo_unitario * cantBase;
-        costoToppings += c;
-        return { nombre: l.modificador_opcion || ins.nombre, costo: c };
-      }).filter(Boolean);
-
-      // Build combination table
+      // ── Tabla costo base (fruta + base) sin toppings ──
       if (tamanos.length && baseNames.length) {
-        html += '<div style="overflow-x:auto;"><table class="data-table" style="font-size:12px;">';
-        // Header
-        html += '<thead><tr><th>Combinación</th><th>Costo Fruta</th><th>Costo Base</th>';
-        if (toppingRows.length) html += '<th>Toppings (fijos)</th>';
-        html += '<th style="color:var(--pink);font-weight:700;">Total estimado</th></tr></thead><tbody>';
+        html += '<div style="padding:10px 18px 0;font-size:12px;font-weight:600;color:var(--text-3);">COSTO BASE (fruta + base) — sin toppings</div>';
+        html += '<div style="overflow-x:auto;"><table class="data-table" style="font-size:12px;">'
+              + '<thead><tr><th>Combinación</th><th>Costo Fruta</th><th>Costo Base</th>'
+              + '<th style="color:var(--pink);font-weight:700;">Subtotal base</th></tr></thead><tbody>';
 
         tamanos.forEach(function(tam) {
           baseNames.forEach(function(base) {
-            // Costo fruta para este tamaño
-            let costoFruta = 0;
-            frutas.filter(function(l){ return l.modificador_opcion === tam; }).forEach(function(l){
-              const ins = insMap[l.insumo_id];
-              if (!ins) return;
-              const uu = l.unidad_uso || ins.unidad;
-              const f = getConversionFactor(uu, ins.unidad);
-              costoFruta += ins.costo_unitario * (f ? l.cantidad * f : l.cantidad);
-            });
+            var costoFruta = 0;
+            frutas.filter(function(l){ return l.modificador_opcion === tam; })
+              .forEach(function(l){ costoFruta += calcCosto(l); });
 
-            // Costo base para tamaño+base
-            let costoBase = 0;
-            bases.filter(function(l){ return l.modificador_opcion === tam+' · '+base; }).forEach(function(l){
-              const ins = insMap[l.insumo_id];
-              if (!ins) return;
-              const uu = l.unidad_uso || ins.unidad;
-              const f = getConversionFactor(uu, ins.unidad);
-              costoBase += ins.costo_unitario * (f ? l.cantidad * f : l.cantidad);
-            });
+            var costoBase = 0;
+            bases.filter(function(l){ return l.modificador_opcion === tam + ' · ' + base; })
+              .forEach(function(l){ costoBase += calcCosto(l); });
 
-            const total = costoFruta + costoBase + costoToppings;
-            const fmt = function(n){ return '$'+(n<0.01?n.toFixed(3):n.toFixed(2)); };
-
+            var subtotal = costoFruta + costoBase;
             html += '<tr>'
-              + '<td><strong>'+tam+'</strong> + '+base+'</td>'
-              + '<td>'+(costoFruta>0?fmt(costoFruta):'<span style="color:var(--text-3);">—</span>')+'</td>'
-              + '<td>'+(costoBase>0?fmt(costoBase):'<span style="color:var(--text-3);">—</span>')+'</td>';
-            if (toppingRows.length) {
-              html += '<td style="color:var(--text-3);font-size:11px;">'
-                + toppingRows.map(function(t){ return t.nombre+' '+fmt(t.costo); }).join(' / ')
-                + '</td>';
-            }
-            html += '<td style="font-weight:700;color:var(--pink);">'+fmt(total)+'</td>'
+              + '<td><strong>' + tam + '</strong> + ' + base + '</td>'
+              + '<td>' + (costoFruta > 0 ? fmt(costoFruta) : '<span style="color:var(--text-3);">—</span>') + '</td>'
+              + '<td>' + (costoBase > 0 ? fmt(costoBase) : '<span style="color:var(--text-3);">—</span>') + '</td>'
+              + '<td style="font-weight:700;color:var(--pink);">' + fmt(subtotal) + '</td>'
               + '</tr>';
           });
         });
         html += '</tbody></table></div>';
-
-        // Toppings summary
-        if (toppingRows.length) {
-          html += '<div style="padding:10px 18px;border-top:1px solid var(--border);font-size:12px;color:var(--text-3);">';
-          html += '✨ Toppings fijos incluidos: ' + toppingRows.map(function(t){ return t.nombre+' ($'+(t.costo<0.01?t.costo.toFixed(3):t.costo.toFixed(2))+')'; }).join(' · ');
-          html += '</div>';
-        }
-
       } else if (tamanos.length) {
-        // Only sizes, no bases (like fruit only)
-        html += '<div style="overflow-x:auto;"><table class="data-table" style="font-size:12px;">';
-        html += '<thead><tr><th>Tamaño</th><th>Costo</th></tr></thead><tbody>';
+        html += '<div style="overflow-x:auto;"><table class="data-table" style="font-size:12px;">'
+              + '<thead><tr><th>Tamaño</th><th>Costo Fruta</th></tr></thead><tbody>';
         tamanos.forEach(function(tam) {
-          let costo = 0;
-          frutas.filter(function(l){ return l.modificador_opcion===tam; }).forEach(function(l){
-            const ins = insMap[l.insumo_id];
-            if (!ins) return;
-            const uu = l.unidad_uso||ins.unidad;
-            const f = getConversionFactor(uu, ins.unidad);
-            costo += ins.costo_unitario*(f?l.cantidad*f:l.cantidad);
-          });
-          html += '<tr><td>'+tam+'</td><td style="font-weight:700;color:var(--pink);">$'+(costo<0.01?costo.toFixed(3):costo.toFixed(2))+'</td></tr>';
+          var c = 0;
+          frutas.filter(function(l){ return l.modificador_opcion === tam; })
+            .forEach(function(l){ c += calcCosto(l); });
+          html += '<tr><td>' + tam + '</td><td style="font-weight:700;color:var(--pink);">' + fmt(c) + '</td></tr>';
         });
         html += '</tbody></table></div>';
       }
 
+      // ── Tabla toppings individuales ──
+      if (toppings.length) {
+        html += '<div style="padding:10px 18px 0;font-size:12px;font-weight:600;color:var(--text-3);margin-top:8px;">TOPPINGS — costo individual (se suma solo el que pida el cliente)</div>';
+        html += '<div style="overflow-x:auto;"><table class="data-table" style="font-size:12px;">'
+              + '<thead><tr><th>Topping</th><th>Insumo</th><th>Cantidad</th><th>Unidad</th><th>Costo unitario</th></tr></thead><tbody>';
+        toppings.forEach(function(l) {
+          var ins = insMap[l.insumo_id];
+          var uu = l.unidad_uso || (ins ? ins.unidad : '—');
+          var c = calcCosto(l);
+          html += '<tr>'
+            + '<td><strong>' + (l.modificador_opcion || '—') + '</strong></td>'
+            + '<td>' + (ins ? ins.nombre : '—') + '</td>'
+            + '<td>' + l.cantidad + '</td>'
+            + '<td>' + uu + '</td>'
+            + '<td style="color:var(--green);font-weight:600;">' + fmt(c) + '</td>'
+            + '</tr>';
+        });
+        html += '</tbody></table></div>';
+        html += '<div style="padding:8px 18px 12px;font-size:11px;color:var(--text-3);">💡 El costo real de cada orden = Subtotal base + suma de los toppings que eligió el cliente</div>';
+      }
+
     } else {
-      // Especiales — flat recipe
-      let costoTotal = 0;
-      const rows = ingredientes.concat(toppings).map(function(l){
-        const ins = insMap[l.insumo_id];
+      // ── Especiales — receta plana ──
+      var costoTotal = 0;
+      var rows = ingredientes.map(function(l){
+        var ins = insMap[l.insumo_id];
         if (!ins) return null;
-        const uu = l.unidad_uso||ins.unidad;
-        const f = getConversionFactor(uu, ins.unidad);
-        const cantBase = f?l.cantidad*f:l.cantidad;
-        const c = ins.costo_unitario*cantBase;
+        var uu = l.unidad_uso || ins.unidad;
+        var c = calcCosto(l);
         costoTotal += c;
-        return '<tr><td>'+ins.nombre+'</td><td>'+l.cantidad+' '+uu+'</td><td>$'+(c<0.01?c.toFixed(4):c.toFixed(2))+'</td></tr>';
+        return '<tr><td>' + ins.nombre + '</td><td>' + l.cantidad + ' ' + uu + '</td>'
+          + '<td>' + fmt(c) + '</td></tr>';
       }).filter(Boolean);
 
-      html += '<div style="overflow-x:auto;"><table class="data-table" style="font-size:12px;">';
-      html += '<thead><tr><th>Insumo</th><th>Cantidad</th><th>Costo</th></tr></thead><tbody>';
+      html += '<div style="overflow-x:auto;"><table class="data-table" style="font-size:12px;">'
+            + '<thead><tr><th>Insumo</th><th>Cantidad</th><th>Costo</th></tr></thead><tbody>';
       html += rows.join('');
-      html += '<tr style="border-top:2px solid var(--border);"><td colspan="2" style="text-align:right;font-weight:600;">Total:</td>'
-        + '<td style="font-weight:700;color:var(--pink);">$'+(costoTotal<0.01?costoTotal.toFixed(3):costoTotal.toFixed(2))+'</td></tr>';
+      html += '<tr style="border-top:2px solid var(--border);">'
+            + '<td colspan="2" style="text-align:right;font-weight:600;">Total receta:</td>'
+            + '<td style="font-weight:700;color:var(--pink);">' + fmt(costoTotal) + '</td></tr>';
       html += '</tbody></table></div>';
     }
 
-    html += '</div>'; // card
+    html += '</div>';
   });
 
   container.innerHTML = html;
