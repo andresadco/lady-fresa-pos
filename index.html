@@ -1166,13 +1166,16 @@ async function confirmarPago() {
 
 async function descontarInventario(saleData) {
   try {
+    console.log('[INV] Iniciando descuento para', saleData.items.length, 'items');
     // Load all recetas once
     const recetas = await sbFetch('recetas', 'select=*');
-    if (!Array.isArray(recetas) || !recetas.length) return;
+    console.log('[INV] Recetas cargadas:', Array.isArray(recetas) ? recetas.length : 'ERROR', recetas);
+    if (!Array.isArray(recetas) || !recetas.length) { console.log('[INV] Sin recetas, abortando'); return; }
 
     // Load current insumos stock
     const insumos = await sbFetch('insumos', 'select=id,nombre,stock_actual,unidad,costo_unitario&activo=eq.true');
-    if (!Array.isArray(insumos)) return;
+    console.log('[INV] Insumos cargados:', Array.isArray(insumos) ? insumos.length : 'ERROR');
+    if (!Array.isArray(insumos)) { console.log('[INV] Error cargando insumos'); return; }
     const insMap = {};
     insumos.forEach(function(i){ insMap[i.id] = i; });
 
