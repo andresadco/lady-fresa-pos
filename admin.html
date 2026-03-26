@@ -54,6 +54,9 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 .sidebar-logo-text { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--pink); }
 .sidebar-logo-sub { font-size: 10px; color: var(--text-3); margin-top: 1px; }
 .nav-section { padding: 16px 12px 8px; }
+.btn-sm { height: 30px; padding: 0 12px; font-size: 12px; }
+.btn-ghost { background: var(--surface); border: 1px solid var(--border-2); color: var(--text-2); }
+.btn-ghost:hover { border-color: var(--pink); color: var(--pink); background: var(--pink-light); }
 .nav-section-label { font-size: 10px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.7px; padding: 0 8px; margin-bottom: 4px; }
 .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 400; color: var(--text-2); transition: all 0.15s; margin-bottom: 2px; border: none; background: none; width: 100%; text-align: left; font-family: 'DM Sans', sans-serif; }
 .nav-item:hover { background: var(--bg); color: var(--text); }
@@ -103,8 +106,6 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 .btn-danger { background: transparent; border: 1px solid var(--border-2); color: var(--red); }
 .btn-danger:hover { background: var(--red-light); border-color: var(--red); }
 .btn-sm { height: 30px; padding: 0 12px; font-size: 12px; }
-.btn-ghost { background: var(--surface); border: 1px solid var(--border-2); color: var(--text-2); }
-.btn-ghost:hover { border-color: var(--pink); color: var(--pink); background: var(--pink-light); }
 
 /* FORMS */
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -234,7 +235,6 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
       <button class="nav-item" onclick="goPage('recetas',this)"><span class="nav-icon">📋</span>Recetas</button>
       <button class="nav-item" onclick="goPage('movimientos',this)"><span class="nav-icon">↕️</span>Movimientos</button>
     </div>
-
     <div class="nav-section">
       <div class="nav-section-label">Reportes</div>
       <button class="nav-item" onclick="goPage('turnos',this)"><span class="nav-icon">🔒</span>Turnos cerrados</button>
@@ -328,24 +328,24 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
       </div>
     </div>
 
-    <!-- TURNOS -->
+
     <!-- INVENTARIO - INSUMOS -->
     <div class="page" id="page-inventario">
       <div class="page-title">Insumos</div>
       <div class="page-sub">Ingredientes, empaques y desechables</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <div style="display:flex;gap:8px;">
-          <button class="btn btn-ghost" onclick="filterInsumos('all')" id="fi-all" style="background:var(--pink-light);color:var(--pink);">Todos</button>
-          <button class="btn btn-ghost" onclick="filterInsumos('ingrediente')" id="fi-ingrediente">Ingredientes</button>
-          <button class="btn btn-ghost" onclick="filterInsumos('empaque')" id="fi-empaque">Empaques</button>
-          <button class="btn btn-ghost" onclick="filterInsumos('desechable')" id="fi-desechable">Desechables</button>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-ghost btn-sm" id="fi-all" onclick="filterInsumos('all')" style="background:var(--pink-light);color:var(--pink);">Todos</button>
+          <button class="btn btn-ghost btn-sm" id="fi-ingrediente" onclick="filterInsumos('ingrediente')">Ingredientes</button>
+          <button class="btn btn-ghost btn-sm" id="fi-empaque" onclick="filterInsumos('empaque')">Empaques</button>
+          <button class="btn btn-ghost btn-sm" id="fi-desechable" onclick="filterInsumos('desechable')">Desechables</button>
         </div>
-        <button class="btn btn-primary" onclick="openModalInsumo()">+ Nuevo insumo</button>
+        <button class="btn btn-primary btn-sm" onclick="openModalInsumo()">+ Nuevo insumo</button>
       </div>
       <div class="table-wrap">
         <table class="data-table">
-          <thead><tr><th>Insumo</th><th>Categoría</th><th>Unidad uso</th><th>Unidad compra</th><th>Stock actual</th><th>Stock mínimo</th><th>Costo unit.</th><th>Estado</th><th></th></tr></thead>
-          <tbody id="tbody-insumos"><tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-3);">Cargando...</td></tr></tbody>
+          <thead><tr><th>Nombre</th><th>Categoría</th><th>Unidad uso</th><th>Unidad compra</th><th>Stock</th><th>Mínimo</th><th>Costo</th><th>Estado</th><th></th></tr></thead>
+          <tbody id="tbody-insumos"><tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text-3);">Cargando...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -353,22 +353,26 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
     <!-- INVENTARIO - RECETAS -->
     <div class="page" id="page-recetas">
       <div class="page-title">Recetas</div>
-      <div class="page-sub">Qué insumos consume cada producto al venderse</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <div id="recetas-producto-sel" style="font-size:13px;color:var(--text-3);">Selecciona un producto para ver su receta</div>
-        <button class="btn btn-primary" onclick="openModalReceta()">+ Nueva línea de receta</button>
-      </div>
-      <div style="display:grid;grid-template-columns:240px 1fr;gap:16px;">
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
-          <div style="padding:12px 14px;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.5px;">Productos</div>
-          <div id="recetas-productos-list" style="overflow-y:auto;max-height:500px;"></div>
+      <div class="page-sub">Ingredientes por producto y variante</div>
+      <div style="display:grid;grid-template-columns:220px 1fr;gap:16px;height:calc(100vh - 200px);">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;">
+          <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.5px;">Productos</div>
+          <div id="recetas-productos-list" style="overflow-y:auto;flex:1;"></div>
         </div>
-        <div>
-          <div class="table-wrap">
+        <div style="display:flex;flex-direction:column;gap:10px;min-height:0;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div id="recetas-titulo" style="font-size:14px;font-weight:600;color:var(--text-3);">← Selecciona un producto</div>
+            <button class="btn btn-primary btn-sm" id="btn-nueva-receta" onclick="openModalReceta()" style="display:none;">+ Agregar ingrediente</button>
+          </div>
+          <div id="recetas-variantes-tabs" style="display:flex;gap:6px;flex-wrap:wrap;min-height:30px;"></div>
+          <div class="table-wrap" style="flex:1;overflow-y:auto;">
             <table class="data-table">
-              <thead><tr><th>Insumo</th><th>Cantidad</th><th>Unidad</th><th>Costo estimado</th><th></th></tr></thead>
-              <tbody id="tbody-receta"><tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text-3);">← Selecciona un producto</td></tr></tbody>
+              <thead><tr><th>Insumo</th><th>Cantidad</th><th>Unidad</th><th>Equivale a</th><th>Costo est.</th><th></th></tr></thead>
+              <tbody id="tbody-receta"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-3);">← Selecciona un producto</td></tr></tbody>
             </table>
+          </div>
+          <div id="receta-costo-total" style="display:none;text-align:right;font-size:13px;padding:8px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+            Costo total: <strong id="receta-costo-val" style="color:var(--pink);">$0.00</strong>
           </div>
         </div>
       </div>
@@ -377,16 +381,16 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
     <!-- INVENTARIO - MOVIMIENTOS -->
     <div class="page" id="page-movimientos">
       <div class="page-title">Movimientos</div>
-      <div class="page-sub">Entradas, salidas, mermas y ajustes de inventario</div>
+      <div class="page-sub">Entradas, salidas, mermas y ajustes</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <div style="display:flex;gap:8px;">
-          <button class="btn btn-ghost" onclick="filterMovs('all')" id="fm-all" style="background:var(--pink-light);color:var(--pink);">Todos</button>
-          <button class="btn btn-ghost" onclick="filterMovs('entrada')" id="fm-entrada">Entradas</button>
-          <button class="btn btn-ghost" onclick="filterMovs('salida')" id="fm-salida">Salidas</button>
-          <button class="btn btn-ghost" onclick="filterMovs('merma')" id="fm-merma">Mermas</button>
-          <button class="btn btn-ghost" onclick="filterMovs('ajuste')" id="fm-ajuste">Ajustes</button>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-ghost btn-sm" id="fm-all" onclick="filterMovs('all')" style="background:var(--pink-light);color:var(--pink);">Todos</button>
+          <button class="btn btn-ghost btn-sm" id="fm-entrada" onclick="filterMovs('entrada')">Entradas</button>
+          <button class="btn btn-ghost btn-sm" id="fm-salida" onclick="filterMovs('salida')">Salidas</button>
+          <button class="btn btn-ghost btn-sm" id="fm-merma" onclick="filterMovs('merma')">Mermas</button>
+          <button class="btn btn-ghost btn-sm" id="fm-ajuste" onclick="filterMovs('ajuste')">Ajustes</button>
         </div>
-        <button class="btn btn-primary" onclick="openModalMovimiento()">+ Registrar movimiento</button>
+        <button class="btn btn-primary btn-sm" onclick="openModalMovimiento()">+ Registrar movimiento</button>
       </div>
       <div class="table-wrap">
         <table class="data-table">
@@ -396,6 +400,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
       </div>
     </div>
 
+    <!-- TURNOS -->
     <div class="page" id="page-turnos">
       <div class="page-title">Turnos cerrados</div>
       <div class="page-sub">Historial de cierres de turno</div>
@@ -451,31 +456,6 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
       </div>
       <div class="form-group full"><label class="form-label">Sucursal</label>
         <select class="form-select" id="u-sucursal"></select>
-      </div>
-      <div class="form-group full">
-        <label class="form-label">Permisos</label>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;">
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:8px;border:1px solid var(--border);border-radius:8px;">
-            <input type="checkbox" id="p-cierre" style="width:15px;height:15px;accent-color:#D4537E;">
-            <span>🔒 Cierre del día</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:8px;border:1px solid var(--border);border-radius:8px;">
-            <input type="checkbox" id="p-discount" style="width:15px;height:15px;accent-color:#D4537E;">
-            <span>🏷 Descuentos</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:8px;border:1px solid var(--border);border-radius:8px;">
-            <input type="checkbox" id="p-cancel" style="width:15px;height:15px;accent-color:#D4537E;">
-            <span>🗑 Cancelar órdenes</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:8px;border:1px solid var(--border);border-radius:8px;">
-            <input type="checkbox" id="p-dashboard" style="width:15px;height:15px;accent-color:#D4537E;">
-            <span>📊 Dashboard</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:8px;border:1px solid var(--border);border-radius:8px;">
-            <input type="checkbox" id="p-admin" style="width:15px;height:15px;accent-color:#D4537E;">
-            <span>🔧 Admin</span>
-          </label>
-        </div>
       </div>
     </div>
     <div class="modal-actions">
@@ -766,25 +746,7 @@ async function openModalUsuario(user=null) {
   const suc = await sbGet('sucursales','active=eq.true&select=name');
   document.getElementById('u-sucursal').innerHTML = suc.map(s=>`<option value="${s.name}" ${user?.sucursal===s.name?'selected':''}>${s.name}</option>`).join('');
 
-  // Cargar permisos del usuario (o defaults por rol si no tiene)
-  const p = user?.permissions || defaultPermsForRole(user?.role || 'cajero');
-  document.getElementById('p-cierre').checked    = !!p.cierre;
-  document.getElementById('p-discount').checked  = !!p.discount;
-  document.getElementById('p-cancel').checked    = !!p.cancel;
-  document.getElementById('p-dashboard').checked = !!p.dashboard;
-  document.getElementById('p-admin').checked     = !!p.admin;
-
   document.getElementById('modal-usuario').classList.add('open');
-}
-
-function defaultPermsForRole(role) {
-  const defaults = {
-    cajero:    { cierre:false, discount:false, cancel:false, dashboard:false, admin:false },
-    encargado: { cierre:false, discount:true,  cancel:true,  dashboard:false, admin:false },
-    gerente:   { cierre:true,  discount:true,  cancel:true,  dashboard:true,  admin:false },
-    admin:     { cierre:true,  discount:true,  cancel:true,  dashboard:true,  admin:true  },
-  };
-  return defaults[role] || defaults.cajero;
 }
 
 async function saveUsuario() {
@@ -795,13 +757,6 @@ async function saveUsuario() {
     role: document.getElementById('u-role').value,
     sucursal: document.getElementById('u-sucursal').value,
     active: true,
-    permissions: {
-      cierre:    document.getElementById('p-cierre').checked,
-      discount:  document.getElementById('p-discount').checked,
-      cancel:    document.getElementById('p-cancel').checked,
-      dashboard: document.getElementById('p-dashboard').checked,
-      admin:     document.getElementById('p-admin').checked,
-    },
   };
   if (!data.name || data.pin.length !== 4) { toast('⚠ Nombre y PIN de 4 dígitos requeridos'); return; }
 
@@ -1261,12 +1216,15 @@ document.querySelectorAll('.nav-item').forEach(btn => {
 });
 </script>
 
+
+<!-- ═══ MODALES INVENTARIO ═══ -->
+
 <!-- MODAL INSUMO -->
 <div class="modal-overlay" id="modal-insumo">
   <div class="modal-box">
     <div class="modal-title" id="modal-insumo-title">Nuevo insumo</div>
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">Nombre</label><input class="form-input" id="ins-nombre" placeholder="Fresa kg"></div>
+      <div class="form-group"><label class="form-label">Nombre</label><input class="form-input" id="ins-nombre" placeholder="Fresa, crema, vaso..."></div>
       <div class="form-group"><label class="form-label">Categoría</label>
         <select class="form-select" id="ins-categoria">
           <option value="ingrediente">Ingrediente</option>
@@ -1274,29 +1232,27 @@ document.querySelectorAll('.nav-item').forEach(btn => {
           <option value="desechable">Desechable</option>
         </select>
       </div>
-      <div class="form-group"><label class="form-label">Unidad</label>
-        <select class="form-select" id="ins-unidad">
-          <option value="kg">kg</option>
-          <option value="g">g</option>
-          <option value="l">l</option>
-          <option value="ml">ml</option>
-          <option value="pz">pz</option>
-          <option value="caja">caja</option>
-          <option value="bolsa">bolsa</option>
-          <option value="rollo">rollo</option>
+      <div class="form-group"><label class="form-label">Unidad de uso</label>
+        <select class="form-select" id="ins-unidad" onchange="syncUnidadUso()">
+          <option value="g">g</option><option value="kg">kg</option>
+          <option value="ml">ml</option><option value="l">l</option>
+          <option value="pz">pz</option><option value="caja">caja</option>
+          <option value="bolsa">bolsa</option><option value="rollo">rollo</option>
         </select>
       </div>
-      <div class="form-group"><label class="form-label" id="ins-costo-label">Costo por unidad ($)</label><input class="form-input" id="ins-costo" type="number" placeholder="0.00" step="0.01" oninput="updateCostoPreview()"></div>
+      <div class="form-group"><label class="form-label" id="ins-costo-label">Costo ($)</label>
+        <input class="form-input" id="ins-costo" type="number" placeholder="0.00" step="0.01" oninput="updateCostoPreview()">
+      </div>
       <div class="form-group"><label class="form-label">Stock actual</label><input class="form-input" id="ins-stock" type="number" placeholder="0" step="0.01"></div>
-      <div class="form-group"><label class="form-label">Stock mínimo (alerta)</label><input class="form-input" id="ins-minimo" type="number" placeholder="0" step="0.01"></div>
-      <div class="form-group full" style="background:var(--bg);border-radius:10px;padding:12px 14px;margin-top:4px;">
+      <div class="form-group"><label class="form-label">Stock mínimo</label><input class="form-input" id="ins-minimo" type="number" placeholder="0" step="0.01"></div>
+      <div class="form-group full" style="background:var(--bg);border-radius:10px;padding:12px 14px;">
         <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">📦 Unidad de compra (opcional)</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
-          <div><label class="form-label">Compro en</label><input class="form-input" id="ins-unidad-compra" placeholder="caja, paquete, costal…" oninput="updateCompraLabel()"></div>
-          <div><label class="form-label">1 <span id="ins-compra-label">unidad</span> contiene</label><input class="form-input" id="ins-cantidad-compra" type="number" placeholder="4000" step="0.001" oninput="updateCompraLabel()"></div>
-          <div><label class="form-label">En unidad de uso</label><input class="form-input" id="ins-unidad-uso-disp" disabled style="background:white;color:var(--text-3);"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+          <div><label class="form-label">Compro en</label><input class="form-input" id="ins-unidad-compra" placeholder="caja, costal..." oninput="updateCostoPreview()"></div>
+          <div><label class="form-label">1 <span id="ins-compra-label">unidad</span> contiene</label><input class="form-input" id="ins-cantidad-compra" type="number" placeholder="ej: 4000" step="0.001" oninput="updateCostoPreview()"></div>
+          <div><label class="form-label">Unidad uso</label><input class="form-input" id="ins-unidad-uso-disp" disabled style="background:white;color:var(--text-3);"></div>
         </div>
-        <div style="font-size:12px;color:var(--pink);font-weight:500;margin-top:10px;padding:8px;background:var(--pink-light);border-radius:8px;" id="ins-compra-preview"></div>
+        <div id="ins-compra-preview" style="font-size:12px;color:var(--pink);font-weight:500;margin-top:8px;padding:6px 10px;background:var(--pink-light);border-radius:8px;display:none;"></div>
       </div>
     </div>
     <div class="modal-actions">
@@ -1316,14 +1272,14 @@ document.querySelectorAll('.nav-item').forEach(btn => {
       </div>
       <div class="form-group"><label class="form-label">Tipo</label>
         <select class="form-select" id="mov-tipo">
-          <option value="entrada">📥 Entrada (compra/recepción)</option>
+          <option value="entrada">📥 Entrada (compra)</option>
           <option value="salida">📤 Salida manual</option>
-          <option value="merma">🗑 Merma / desperdicio</option>
-          <option value="ajuste">⚖️ Ajuste de inventario</option>
+          <option value="merma">🗑 Merma</option>
+          <option value="ajuste">⚖️ Ajuste</option>
         </select>
       </div>
       <div class="form-group"><label class="form-label">Cantidad</label><input class="form-input" id="mov-cantidad" type="number" placeholder="0" step="0.01"></div>
-      <div class="form-group full"><label class="form-label">Nota (opcional)</label><input class="form-input" id="mov-nota" placeholder="Proveedor, motivo, etc."></div>
+      <div class="form-group full"><label class="form-label">Nota</label><input class="form-input" id="mov-nota" placeholder="Proveedor, motivo..."></div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('modal-movimiento')">Cancelar</button>
@@ -1334,25 +1290,38 @@ document.querySelectorAll('.nav-item').forEach(btn => {
 
 <!-- MODAL RECETA -->
 <div class="modal-overlay" id="modal-receta">
-  <div class="modal-box">
+  <div class="modal-box" style="max-width:500px;">
     <div class="modal-title">Agregar ingrediente a receta</div>
     <div class="form-grid">
       <div class="form-group full"><label class="form-label">Producto</label>
-        <select class="form-select" id="rec-producto"></select>
+        <select class="form-select" id="rec-producto" onchange="onRecProductoChange()"></select>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Variante <span style="font-weight:400;color:var(--text-3);">(tamaño, topping, o "Base")</span></label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select class="form-select" id="rec-variante" style="flex:1;"></select>
+          <input class="form-input" id="rec-variante-custom" placeholder="Nueva..." style="flex:1;display:none;">
+          <label style="font-size:12px;white-space:nowrap;cursor:pointer;display:flex;align-items:center;gap:4px;">
+            <input type="checkbox" id="rec-variante-nueva" onchange="toggleVarianteNueva(this)"> Nueva
+          </label>
+        </div>
       </div>
       <div class="form-group full"><label class="form-label">Insumo</label>
         <select class="form-select" id="rec-insumo" onchange="onRecInsumoChange()"></select>
       </div>
-      <div class="form-group">
-        <label class="form-label">Cantidad por porción</label>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <input class="form-input" id="rec-cantidad" type="number" placeholder="0" step="0.001" oninput="updateRecetaEquiv()">
-          <span id="rec-unidad-badge" style="font-size:13px;font-weight:600;color:var(--pink);white-space:nowrap;min-width:30px;">—</span>
-        </div>
+      <div class="form-group"><label class="form-label">Cantidad</label>
+        <input class="form-input" id="rec-cantidad" type="number" placeholder="0" step="0.001" oninput="updateRecetaEquiv()">
       </div>
-      <div class="form-group" style="display:flex;flex-direction:column;justify-content:flex-end;">
-        <div id="rec-equiv-info" style="font-size:12px;color:var(--text-3);padding:8px;background:var(--bg);border-radius:8px;line-height:1.5;">
-          Selecciona un insumo
+      <div class="form-group"><label class="form-label">Unidad de uso</label>
+        <select class="form-select" id="rec-unidad-uso" onchange="updateRecetaEquiv()">
+          <option value="g">g</option><option value="kg">kg</option>
+          <option value="ml">ml</option><option value="l">l</option>
+          <option value="pz">pz</option><option value="caja">caja</option><option value="bolsa">bolsa</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <div id="rec-equiv-info" style="font-size:12px;padding:10px;background:var(--bg);border-radius:8px;color:var(--text-3);line-height:1.7;">
+          Selecciona insumo y cantidad
         </div>
       </div>
     </div>
@@ -1370,25 +1339,22 @@ document.querySelectorAll('.nav-item').forEach(btn => {
 let allInsumos = [];
 let allMovimientos = [];
 let selectedProductoReceta = null;
+let selectedVarianteReceta = 'Base';
 let editingInsumoId = null;
 
 // ── INSUMOS ──
 async function loadInventario() {
   try {
     const res = await sbGet('insumos', 'order=nombre.asc');
-    // sbGet returns array or error object
     allInsumos = Array.isArray(res) ? res : [];
     if (!Array.isArray(res)) {
-      console.error('Error cargando insumos:', res);
       document.getElementById('tbody-insumos').innerHTML =
-        '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--red);">Error cargando insumos. Revisa la consola.</td></tr>';
+        '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--red);">Error: ' + JSON.stringify(res) + '</td></tr>';
       return;
     }
     renderInsumos(allInsumos);
   } catch(e) {
-    console.error('loadInventario error:', e);
-    const tbody = document.getElementById('tbody-insumos');
-    if (tbody) tbody.innerHTML =
+    document.getElementById('tbody-insumos').innerHTML =
       '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--red);">Error: ' + e.message + '</td></tr>';
   }
 }
@@ -1400,133 +1366,120 @@ function renderInsumos(list) {
     return;
   }
   const catLabel = { ingrediente:'🥝 Ingrediente', empaque:'📦 Empaque', desechable:'🥤 Desechable' };
-  tbody.innerHTML = list.map(i => {
+  tbody.innerHTML = list.map(function(i) {
     const alerta = i.stock_actual !== null && i.stock_actual <= i.stock_minimo;
     const stockCls = alerta ? 'color:#A32D2D;font-weight:600;' : '';
-
-    // Compra info
     const compraInfo = (i.unidad_compra && i.cantidad_por_compra)
       ? '1 ' + i.unidad_compra + ' = ' + i.cantidad_por_compra + ' ' + i.unidad
       : '—';
-
-    // Costo display
     let costoHtml;
     if (i.costo_compra && i.unidad_compra) {
-      costoHtml = '<span style="font-weight:600;">$' + Number(i.costo_compra).toFixed(2) + '</span>'
-        + ' <span style="color:var(--text-3);">/ ' + i.unidad_compra + '</span>'
-        + '<br><span style="color:var(--text-3);font-size:11px;">$' + Number(i.costo_unitario).toFixed(4) + ' / ' + i.unidad + '</span>';
+      const cu = Number(i.costo_unitario);
+      costoHtml = '<strong>$' + Number(i.costo_compra).toFixed(2) + '</strong> / ' + i.unidad_compra
+        + '<br><small style="color:var(--text-3);">$' + (cu < 0.01 ? cu.toFixed(4) : cu.toFixed(2)) + ' / ' + i.unidad + '</small>';
     } else {
-      costoHtml = '<span style="font-weight:600;">$' + Number(i.costo_unitario).toFixed(2) + '</span>'
-        + ' <span style="color:var(--text-3);">/ ' + i.unidad + '</span>';
+      const cu = Number(i.costo_unitario);
+      costoHtml = '<strong>$' + (cu < 0.01 ? cu.toFixed(4) : cu.toFixed(2)) + '</strong> / ' + i.unidad;
     }
-
     const safeI = JSON.stringify(i).replace(/"/g, '&quot;');
-
     return '<tr>'
       + '<td><strong>' + i.nombre + '</strong></td>'
       + '<td>' + (catLabel[i.categoria] || i.categoria) + '</td>'
-      + '<td style="font-weight:500;">' + i.unidad + '</td>'
+      + '<td>' + i.unidad + '</td>'
       + '<td style="font-size:12px;color:var(--text-3);">' + compraInfo + '</td>'
-      + '<td style="' + stockCls + '">' + (i.stock_actual ?? 0) + ' ' + i.unidad + (alerta ? ' ⚠️' : '') + '</td>'
-      + '<td>' + (i.stock_minimo ?? 0) + ' ' + i.unidad + '</td>'
+      + '<td style="' + stockCls + '">' + (i.stock_actual || 0) + ' ' + i.unidad + (alerta ? ' ⚠️' : '') + '</td>'
+      + '<td>' + (i.stock_minimo || 0) + ' ' + i.unidad + '</td>'
       + '<td style="font-size:12px;">' + costoHtml + '</td>'
       + '<td><span class="badge ' + (i.activo ? 'badge-gerente' : 'badge-cajero') + '">' + (i.activo ? 'Activo' : 'Inactivo') + '</span></td>'
-      + '<td style="display:flex;gap:6px;">'
-      +   '<button class="btn btn-ghost btn-sm" onclick="openModalInsumo(' + safeI + ')">Editar</button>'
+      + '<td style="display:flex;gap:4px;">'
+      +   '<button class="btn btn-ghost btn-sm" data-ins="' + safeI + '" onclick="openModalInsumoByBtn(this)">Editar</button>'
       +   '<button class="btn btn-ghost btn-sm" onclick="toggleInsumo(' + i.id + ',' + i.activo + ')">' + (i.activo ? 'Desactivar' : 'Activar') + '</button>'
-      +   '<button class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="deleteInsumo(' + i.id + ',\'' + i.nombre.replace(/'/g, "\'") + '\')">Eliminar</button>'
+      +   '<button class="btn btn-ghost btn-sm" style="color:#A32D2D;" onclick="deleteInsumo(' + i.id + ')">Eliminar</button>'
       + '</td>'
       + '</tr>';
   }).join('');
 }
 
 function filterInsumos(cat) {
-  document.querySelectorAll('[id^="fi-"]').forEach(b => b.style.cssText = '');
-  document.getElementById('fi-'+cat).style.cssText = 'background:var(--pink-light);color:var(--pink);';
-  renderInsumos(cat === 'all' ? allInsumos : allInsumos.filter(i => i.categoria === cat));
+  document.querySelectorAll('[id^="fi-"]').forEach(function(b) { b.style.cssText = ''; });
+  document.getElementById('fi-' + cat).style.cssText = 'background:var(--pink-light);color:var(--pink);';
+  renderInsumos(cat === 'all' ? allInsumos : allInsumos.filter(function(i) { return i.categoria === cat; }));
 }
 
-async function openModalInsumo(ins=null) {
+function openModalInsumoByBtn(btn) {
+  try { openModalInsumo(JSON.parse(btn.dataset.ins.replace(/&quot;/g,'"'))); }
+  catch(e) { openModalInsumo(null); }
+}
+
+async function openModalInsumo(ins) {
+  ins = ins || null;
   editingInsumoId = ins ? ins.id : null;
   document.getElementById('modal-insumo-title').textContent = ins ? 'Editar insumo' : 'Nuevo insumo';
-  document.getElementById('ins-nombre').value = ins?.nombre || '';
-  document.getElementById('ins-categoria').value = ins?.categoria || 'ingrediente';
-  document.getElementById('ins-unidad').value = ins?.unidad || 'kg';
-  // Mostrar costo de compra si existe, si no el costo unitario
-  document.getElementById('ins-costo').value = ins?.costo_compra ?? ins?.costo_unitario ?? '';
-  document.getElementById('ins-stock').value = ins?.stock_actual || '';
-  document.getElementById('ins-minimo').value = ins?.stock_minimo || '';
-  document.getElementById('ins-unidad-compra').value = ins?.unidad_compra || '';
-  document.getElementById('ins-cantidad-compra').value = ins?.cantidad_por_compra || '';
-  document.getElementById('ins-unidad-uso-disp').value = ins?.unidad || '';
-  // Sync unidad display when changed
-  document.getElementById('ins-unidad').onchange = () => {
-    document.getElementById('ins-unidad-uso-disp').value = document.getElementById('ins-unidad').value;
-    updateCompraLabel();
-  };
-  updateCompraLabel();
+  document.getElementById('ins-nombre').value = ins ? ins.nombre : '';
+  document.getElementById('ins-categoria').value = ins ? ins.categoria : 'ingrediente';
+  document.getElementById('ins-unidad').value = ins ? ins.unidad : 'g';
+  document.getElementById('ins-costo').value = ins ? (ins.costo_compra || ins.costo_unitario || '') : '';
+  document.getElementById('ins-stock').value = ins ? (ins.stock_actual || '') : '';
+  document.getElementById('ins-minimo').value = ins ? (ins.stock_minimo || '') : '';
+  document.getElementById('ins-unidad-compra').value = ins ? (ins.unidad_compra || '') : '';
+  document.getElementById('ins-cantidad-compra').value = ins ? (ins.cantidad_por_compra || '') : '';
+  syncUnidadUso();
+  updateCostoPreview();
   document.getElementById('modal-insumo').classList.add('open');
 }
 
-function updateCompraLabel() {
-  const uc = document.getElementById('ins-unidad-compra').value.trim() || 'unidad';
-  const cant = parseFloat(document.getElementById('ins-cantidad-compra').value) || null;
-  const uu = document.getElementById('ins-unidad').value || '';
-  const costo = parseFloat(document.getElementById('ins-costo').value) || null;
-
-  document.getElementById('ins-compra-label').textContent = uc;
-
-  // Update the cost field label dynamically
-  const costoLabel = document.getElementById('ins-costo-label');
-  if (uc && uc !== 'unidad') {
-    costoLabel.textContent = `Costo por ${uc} ($)`;
-  } else {
-    costoLabel.textContent = `Costo por unidad ($)`;
-  }
-
-  // Build preview
-  const previewEl = document.getElementById('ins-compra-preview');
-  if (!cant || !uc || uc === 'unidad') { previewEl.textContent = ''; return; }
-
-  let preview = `1 ${uc} = ${cant} ${uu}`;
-  if (costo && cant) {
-    const costoPorUnidadUso = costo / cant;
-    preview += `  →  costo por ${uu}: $${costoPorUnidadUso.toFixed(4)}`;
-  }
-  previewEl.textContent = preview;
+function syncUnidadUso() {
+  document.getElementById('ins-unidad-uso-disp').value = document.getElementById('ins-unidad').value;
+  updateCostoPreview();
 }
 
 function updateCostoPreview() {
-  updateCompraLabel();
+  const uc = document.getElementById('ins-unidad-compra').value.trim();
+  const cant = parseFloat(document.getElementById('ins-cantidad-compra').value) || 0;
+  const uu = document.getElementById('ins-unidad').value;
+  const costo = parseFloat(document.getElementById('ins-costo').value) || 0;
+  const labelEl = document.getElementById('ins-costo-label');
+  const previewEl = document.getElementById('ins-compra-preview');
+  const compraLabel = document.getElementById('ins-compra-label');
+  if (uc) {
+    compraLabel.textContent = uc;
+    labelEl.textContent = 'Costo por ' + uc + ' ($)';
+  } else {
+    compraLabel.textContent = 'unidad';
+    labelEl.textContent = 'Costo ($)';
+  }
+  if (uc && cant > 0 && costo > 0) {
+    const cu = costo / cant;
+    previewEl.textContent = '1 ' + uc + ' = ' + cant + ' ' + uu + '  →  $' + (cu < 0.01 ? cu.toFixed(5) : cu.toFixed(3)) + ' / ' + uu;
+    previewEl.style.display = '';
+  } else {
+    previewEl.style.display = 'none';
+  }
 }
 
 async function saveInsumo() {
   const costoCapturado = parseFloat(document.getElementById('ins-costo').value) || 0;
   const cantidadPorCompra = parseFloat(document.getElementById('ins-cantidad-compra').value) || null;
-  // Si tiene unidad de compra, el costo capturado es por unidad de compra → convertir a costo por unidad de uso
-  const costoUnitario = (cantidadPorCompra && cantidadPorCompra > 0)
-    ? costoCapturado / cantidadPorCompra
-    : costoCapturado;
-
+  const costoUnitario = (cantidadPorCompra && cantidadPorCompra > 0) ? costoCapturado / cantidadPorCompra : costoCapturado;
   const data = {
     nombre: document.getElementById('ins-nombre').value.trim(),
     categoria: document.getElementById('ins-categoria').value,
     unidad: document.getElementById('ins-unidad').value,
     costo_unitario: costoUnitario,
-    costo_compra: costoCapturado, // guardamos también el costo original de compra
+    costo_compra: cantidadPorCompra ? costoCapturado : null,
     stock_actual: parseFloat(document.getElementById('ins-stock').value) || 0,
     stock_minimo: parseFloat(document.getElementById('ins-minimo').value) || 0,
     unidad_compra: document.getElementById('ins-unidad-compra').value.trim() || null,
     cantidad_por_compra: cantidadPorCompra,
     activo: true,
   };
-  if (!data.nombre) { toast('⚠ El nombre es requerido'); return; }
+  if (!data.nombre) { toast('Nombre requerido'); return; }
   if (editingInsumoId) {
     await sbPatch('insumos', editingInsumoId, data);
-    toast('✓ Insumo actualizado');
+    toast('Insumo actualizado');
   } else {
     await sbPost('insumos', data);
-    toast('✓ Insumo creado');
+    toast('Insumo creado');
   }
   closeModal('modal-insumo');
   loadInventario();
@@ -1538,17 +1491,12 @@ async function toggleInsumo(id, active) {
   loadInventario();
 }
 
-async function deleteInsumo(id, nombre) {
-  if (!confirm(`¿Eliminar "${nombre}" permanentemente?
-
-Esto también eliminará sus líneas de receta.`)) return;
-  // Delete receta lines first
-  await fetch(`${SB_URL}/rest/v1/recetas?insumo_id=eq.${id}`, { method:'DELETE', headers:{ apikey:SB_KEY, Authorization:'Bearer '+SB_KEY } });
-  // Delete movimientos
-  await fetch(`${SB_URL}/rest/v1/inv_movimientos?insumo_id=eq.${id}`, { method:'DELETE', headers:{ apikey:SB_KEY, Authorization:'Bearer '+SB_KEY } });
-  // Delete insumo
-  await fetch(`${SB_URL}/rest/v1/insumos?id=eq.${id}`, { method:'DELETE', headers:{ apikey:SB_KEY, Authorization:'Bearer '+SB_KEY } });
-  toast('✓ Insumo eliminado');
+async function deleteInsumo(id) {
+  if (!confirm('Eliminar este insumo permanentemente?')) return;
+  await fetch(SB_URL + '/rest/v1/recetas?insumo_id=eq.' + id, { method:'DELETE', headers:{ apikey:SB_KEY, Authorization:'Bearer '+SB_KEY } });
+  await fetch(SB_URL + '/rest/v1/inv_movimientos?insumo_id=eq.' + id, { method:'DELETE', headers:{ apikey:SB_KEY, Authorization:'Bearer '+SB_KEY } });
+  await fetch(SB_URL + '/rest/v1/insumos?id=eq.' + id, { method:'DELETE', headers:{ apikey:SB_KEY, Authorization:'Bearer '+SB_KEY } });
+  toast('Insumo eliminado');
   loadInventario();
 }
 
@@ -1557,57 +1505,52 @@ async function loadMovimientos() {
   try {
     const res = await sbGet('inv_movimientos', 'order=created_at.desc&limit=200');
     allMovimientos = Array.isArray(res) ? res : [];
-    if (!Array.isArray(res)) {
-      console.error('Error cargando movimientos:', res);
-      document.getElementById('tbody-movimientos').innerHTML =
-        '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--red);">Error cargando movimientos.</td></tr>';
-      return;
-    }
     const insMap = {};
-    allInsumos.forEach(i => insMap[i.id] = i);
+    allInsumos.forEach(function(i) { insMap[i.id] = i; });
     allMovimientos._insMap = insMap;
     renderMovimientos(allMovimientos);
   } catch(e) {
-    console.error('loadMovimientos error:', e);
+    document.getElementById('tbody-movimientos').innerHTML =
+      '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--red);">Error: ' + e.message + '</td></tr>';
   }
 }
 
 function renderMovimientos(list) {
   const tbody = document.getElementById('tbody-movimientos');
-  if (!list.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-3);">Sin movimientos registrados</td></tr>'; return; }
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-3);">Sin movimientos</td></tr>';
+    return;
+  }
   const insMap = list._insMap || {};
-  const tipoStyle = {
-    entrada:  'background:#EAF3DE;color:#3B6D11;',
-    salida:   'background:#FAEEDA;color:#BA7517;',
-    merma:    'background:#FCEBEB;color:#A32D2D;',
-    ajuste:   'background:#EEEDFE;color:#534AB7;',
-  };
-  const tipoLabel = { entrada:'📥 Entrada', salida:'📤 Salida', merma:'🗑 Merma', ajuste:'⚖️ Ajuste' };
-  tbody.innerHTML = list.map(m => {
+  const tipoStyle = { entrada:'background:#EAF3DE;color:#3B6D11;', salida:'background:#FAEEDA;color:#BA7517;', merma:'background:#FCEBEB;color:#A32D2D;', ajuste:'background:#EEEDFE;color:#534AB7;' };
+  const tipoLabel = { entrada:'Entrada', salida:'Salida', merma:'Merma', ajuste:'Ajuste' };
+  tbody.innerHTML = list.map(function(m) {
     const ins = insMap[m.insumo_id];
     const fecha = new Date(m.created_at).toLocaleString('es-MX',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-    return `<tr>
-      <td style="color:var(--text-3);font-size:12px;">${fecha}</td>
-      <td><strong>${ins?.nombre || '—'}</strong></td>
-      <td><span style="font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;${tipoStyle[m.tipo]}">${tipoLabel[m.tipo]||m.tipo}</span></td>
-      <td>${m.cantidad} ${ins?.unidad||''}</td>
-      <td style="color:var(--text-3);">${m.usuario_name||'—'}</td>
-      <td style="color:var(--text-3);font-size:12px;">${m.nota||''}</td>
-    </tr>`;
+    return '<tr>'
+      + '<td style="color:var(--text-3);font-size:12px;">' + fecha + '</td>'
+      + '<td><strong>' + (ins ? ins.nombre : '—') + '</strong></td>'
+      + '<td><span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;' + (tipoStyle[m.tipo]||'') + '">' + (tipoLabel[m.tipo]||m.tipo) + '</span></td>'
+      + '<td>' + m.cantidad + ' ' + (ins ? ins.unidad : '') + '</td>'
+      + '<td style="color:var(--text-3);">' + (m.usuario_name||'—') + '</td>'
+      + '<td style="color:var(--text-3);font-size:12px;">' + (m.nota||'') + '</td>'
+      + '</tr>';
   }).join('');
 }
 
 function filterMovs(tipo) {
-  document.querySelectorAll('[id^="fm-"]').forEach(b => b.style.cssText = '');
-  document.getElementById('fm-'+tipo).style.cssText = 'background:var(--pink-light);color:var(--pink);';
-  const filtered = tipo === 'all' ? allMovimientos : allMovimientos.filter(m => m.tipo === tipo);
+  document.querySelectorAll('[id^="fm-"]').forEach(function(b) { b.style.cssText = ''; });
+  document.getElementById('fm-' + tipo).style.cssText = 'background:var(--pink-light);color:var(--pink);';
+  const filtered = tipo === 'all' ? allMovimientos : allMovimientos.filter(function(m) { return m.tipo === tipo; });
   filtered._insMap = allMovimientos._insMap;
   renderMovimientos(filtered);
 }
 
 async function openModalMovimiento() {
   if (!allInsumos.length) await loadInventario();
-  document.getElementById('mov-insumo').innerHTML = allInsumos.filter(i=>i.activo).map(i=>`<option value="${i.id}">${i.nombre} (${i.unidad})</option>`).join('');
+  document.getElementById('mov-insumo').innerHTML = allInsumos.filter(function(i){return i.activo;}).map(function(i){
+    return '<option value="' + i.id + '">' + i.nombre + ' (' + i.unidad + ')</option>';
+  }).join('');
   document.getElementById('mov-cantidad').value = '';
   document.getElementById('mov-nota').value = '';
   document.getElementById('modal-movimiento').classList.add('open');
@@ -1618,130 +1561,223 @@ async function saveMovimiento() {
   const tipo = document.getElementById('mov-tipo').value;
   const cantidad = parseFloat(document.getElementById('mov-cantidad').value);
   const nota = document.getElementById('mov-nota').value.trim();
-  if (!insId || !cantidad || cantidad <= 0) { toast('⚠ Selecciona insumo y cantidad válida'); return; }
-
-  // Actualizar stock
-  const ins = allInsumos.find(i => i.id === insId);
-  let nuevoStock = ins.stock_actual;
+  if (!insId || !cantidad || cantidad <= 0) { toast('Insumo y cantidad requeridos'); return; }
+  const ins = allInsumos.find(function(i){return i.id === insId;});
+  let nuevoStock = ins ? (ins.stock_actual || 0) : 0;
   if (tipo === 'entrada') nuevoStock += cantidad;
-  else if (tipo === 'salida' || tipo === 'merma') nuevoStock -= cantidad;
-  else if (tipo === 'ajuste') nuevoStock = cantidad; // ajuste = valor absoluto
-
-  await sbPost('inv_movimientos', {
-    insumo_id: insId, tipo, cantidad, nota: nota||null,
-    usuario_id: null, usuario_name: 'Admin',
-  });
-  await sbPatch('insumos', insId, { stock_actual: Math.max(0, nuevoStock) });
-  toast('✓ Movimiento registrado');
+  else if (tipo === 'salida' || tipo === 'merma') nuevoStock = Math.max(0, nuevoStock - cantidad);
+  else if (tipo === 'ajuste') nuevoStock = cantidad;
+  await sbPost('inv_movimientos', { insumo_id:insId, tipo, cantidad, nota:nota||null, usuario_name:'Admin' });
+  await sbPatch('insumos', insId, { stock_actual: nuevoStock });
+  toast('Movimiento registrado');
   closeModal('modal-movimiento');
   loadInventario();
-  loadMovimientos();
+  if (document.getElementById('page-movimientos').classList.contains('active')) loadMovimientos();
 }
 
 // ── RECETAS ──
 async function loadRecetas() {
   if (!allInsumos.length) await loadInventario();
-  // Load products from productos table
   const productos = await sbGet('productos', 'activo=eq.true&select=nombre&order=nombre.asc');
-  const productosList = document.getElementById('recetas-productos-list');
-  productosList.innerHTML = productos.map(p => `
-    <button onclick="selectProductoReceta('${p.nombre.replace(/'/g,"\'")}',this)"
-      style="width:100%;text-align:left;padding:10px 14px;border:none;background:none;cursor:pointer;font-size:13px;font-family:DM Sans,sans-serif;border-bottom:1px solid var(--border);transition:background 0.15s;"
-      onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='none'">
-      ${p.nombre}
-    </button>`).join('');
+  const list = document.getElementById('recetas-productos-list');
+  if (!Array.isArray(productos) || !productos.length) {
+    list.innerHTML = '<div style="padding:14px;font-size:13px;color:var(--text-3);">Sin productos</div>';
+    return;
+  }
+  list.innerHTML = productos.map(function(p) {
+    return '<button data-nombre="' + encodeURIComponent(p.nombre) + '" onclick="selectProductoRecetaBtn(this)"'
+      + ' style="width:100%;text-align:left;padding:10px 14px;border:none;background:none;cursor:pointer;font-size:13px;'
+      + 'font-family:DM Sans,sans-serif;border-bottom:1px solid var(--border);transition:background 0.15s;">'
+      + p.nombre + '</button>';
+  }).join('');
 }
 
-async function selectProductoReceta(nombre, btn) {
-  selectedProductoReceta = nombre;
-  document.querySelectorAll('#recetas-productos-list button').forEach(b => b.style.background = 'none');
+function selectProductoRecetaBtn(btn) {
+  const nombre = decodeURIComponent(btn.dataset.nombre);
+  document.querySelectorAll('#recetas-productos-list button').forEach(function(b){
+    b.style.background = 'none'; b.style.color = '';
+  });
   btn.style.background = 'var(--pink-light)';
   btn.style.color = 'var(--pink)';
-  document.getElementById('recetas-producto-sel').innerHTML = `<strong style="color:var(--pink);">🍓 ${nombre}</strong>`;
-  // Load receta lines
-  const lines = await sbGet('recetas', `producto_nombre=eq.${encodeURIComponent(nombre)}`);
-  const insMap = {};
-  allInsumos.forEach(i => insMap[i.id] = i);
-  const tbody = document.getElementById('tbody-receta');
-  if (!lines.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-3);">Sin ingredientes en receta</td></tr>'; return; }
-  tbody.innerHTML = lines.map(l => {
-    const ins = insMap[l.insumo_id];
-    const costo = ins ? (ins.costo_unitario * l.cantidad).toFixed(2) : '—';
-    return `<tr>
-      <td><strong>${ins?.nombre||'—'}</strong></td>
-      <td>${l.cantidad}</td>
-      <td>${ins?.unidad||'—'}</td>
-      <td>$${costo}</td>
-      <td><button class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="deleteRecetaLine(${l.id})">Quitar</button></td>
-    </tr>`;
+  selectedProductoReceta = nombre;
+  document.getElementById('recetas-titulo').innerHTML = '<strong style="color:var(--pink);">🍓 ' + nombre + '</strong>';
+  document.getElementById('btn-nueva-receta').style.display = '';
+  renderRecetaVariantes(nombre);
+}
+
+async function renderRecetaVariantes(nombre) {
+  const lines = await sbGet('recetas', 'producto_nombre=eq.' + encodeURIComponent(nombre));
+  if (!Array.isArray(lines)) return;
+  window._recetaLines = lines;
+  const variantes = [];
+  lines.forEach(function(l) {
+    const v = l.modificador_opcion || 'Base';
+    if (variantes.indexOf(v) === -1) variantes.push(v);
+  });
+  if (variantes.indexOf('Base') === -1) variantes.unshift('Base');
+  const tabsEl = document.getElementById('recetas-variantes-tabs');
+  tabsEl.innerHTML = variantes.map(function(v, idx) {
+    const active = idx === 0 ? ' style="background:var(--pink-light);color:var(--pink);"' : '';
+    return '<button data-variante="' + encodeURIComponent(v) + '" onclick="selectVarianteBtn(this)" class="btn btn-ghost btn-sm"' + active + '>' + v + '</button>';
   }).join('');
+  selectedVarianteReceta = variantes[0] || 'Base';
+  renderRecetaLines(lines, selectedVarianteReceta);
+}
+
+function selectVarianteBtn(btn) {
+  const variante = decodeURIComponent(btn.dataset.variante);
+  selectedVarianteReceta = variante;
+  document.querySelectorAll('#recetas-variantes-tabs button').forEach(function(b){ b.style.cssText = ''; });
+  btn.style.background = 'var(--pink-light)';
+  btn.style.color = 'var(--pink)';
+  renderRecetaLines(window._recetaLines || [], variante);
+}
+
+function getConversionFactor(from, to) {
+  const toG = { kg:1000, g:1 };
+  const toMl = { l:1000, ml:1 };
+  if (toG[from] && toG[to]) return toG[from] / toG[to];
+  if (toMl[from] && toMl[to]) return toMl[from] / toMl[to];
+  return null;
+}
+
+function renderRecetaLines(lines, variante) {
+  const insMap = {};
+  allInsumos.forEach(function(i){ insMap[i.id] = i; });
+  const tbody = document.getElementById('tbody-receta');
+  const filtered = lines.filter(function(l){ return (l.modificador_opcion || 'Base') === variante; });
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-3);">Sin ingredientes para "' + variante + '"</td></tr>';
+    document.getElementById('receta-costo-total').style.display = 'none';
+    return;
+  }
+  let costoTotal = 0;
+  tbody.innerHTML = filtered.map(function(l) {
+    const ins = insMap[l.insumo_id];
+    const uu = l.unidad_uso || (ins ? ins.unidad : '—');
+    let cantBase = l.cantidad;
+    let equiv = '';
+    if (ins && uu !== ins.unidad) {
+      const f = getConversionFactor(uu, ins.unidad);
+      if (f) { cantBase = l.cantidad * f; equiv = '= ' + parseFloat(cantBase.toFixed(4)) + ' ' + ins.unidad; }
+    }
+    const costo = ins ? ins.costo_unitario * cantBase : 0;
+    costoTotal += costo;
+    const costoStr = '$' + (costo < 0.01 ? costo.toFixed(4) : costo.toFixed(2));
+    return '<tr>'
+      + '<td><strong>' + (ins ? ins.nombre : '—') + '</strong></td>'
+      + '<td>' + l.cantidad + '</td>'
+      + '<td>' + uu + '</td>'
+      + '<td style="color:var(--text-3);font-size:12px;">' + equiv + '</td>'
+      + '<td>' + costoStr + '</td>'
+      + '<td><button class="btn btn-ghost btn-sm" style="color:#A32D2D;" onclick="deleteRecetaLine(' + l.id + ')">Quitar</button></td>'
+      + '</tr>';
+  }).join('');
+  document.getElementById('receta-costo-total').style.display = '';
+  const ct = costoTotal < 0.01 ? costoTotal.toFixed(4) : costoTotal.toFixed(2);
+  document.getElementById('receta-costo-val').textContent = '$' + ct;
 }
 
 async function openModalReceta() {
   if (!allInsumos.length) await loadInventario();
   const productos = await sbGet('productos', 'activo=eq.true&select=nombre&order=nombre.asc');
-  document.getElementById('rec-producto').innerHTML = productos.map(p=>`<option value="${p.nombre}" ${selectedProductoReceta===p.nombre?'selected':''}>${p.nombre}</option>`).join('');
-  const insActivos = allInsumos.filter(i=>i.activo);
-  document.getElementById('rec-insumo').innerHTML = insActivos.map(i=>`<option value="${i.id}">${i.nombre} (${i.unidad})</option>`).join('');
+  document.getElementById('rec-producto').innerHTML = (Array.isArray(productos) ? productos : []).map(function(p){
+    return '<option value="' + p.nombre + '"' + (selectedProductoReceta === p.nombre ? ' selected' : '') + '>' + p.nombre + '</option>';
+  }).join('');
+  await onRecProductoChange();
+  document.getElementById('rec-insumo').innerHTML = allInsumos.filter(function(i){return i.activo;}).map(function(i){
+    return '<option value="' + i.id + '">' + i.nombre + ' (' + i.unidad + ')</option>';
+  }).join('');
   document.getElementById('rec-cantidad').value = '';
+  document.getElementById('rec-variante-nueva').checked = false;
+  document.getElementById('rec-variante').style.display = '';
+  document.getElementById('rec-variante-custom').style.display = 'none';
   onRecInsumoChange();
   document.getElementById('modal-receta').classList.add('open');
 }
 
+async function onRecProductoChange() {
+  const nombre = document.getElementById('rec-producto').value;
+  if (!nombre) return;
+  const lines = await sbGet('recetas', 'producto_nombre=eq.' + encodeURIComponent(nombre) + '&select=modificador_opcion');
+  const mods = await sbGet('modificadores_opciones', 'select=nombre&order=nombre.asc');
+  const existing = Array.isArray(lines) ? lines.map(function(l){ return l.modificador_opcion || 'Base'; }) : [];
+  const modNames = Array.isArray(mods) ? mods.map(function(m){ return m.nombre; }) : [];
+  const all = ['Base'];
+  existing.concat(modNames).forEach(function(v){ if (all.indexOf(v) === -1) all.push(v); });
+  const sel = document.getElementById('rec-variante');
+  sel.innerHTML = all.map(function(v){
+    return '<option value="' + v + '"' + (v === selectedVarianteReceta ? ' selected' : '') + '>' + v + '</option>';
+  }).join('');
+}
+
+function toggleVarianteNueva(cb) {
+  document.getElementById('rec-variante').style.display = cb.checked ? 'none' : '';
+  document.getElementById('rec-variante-custom').style.display = cb.checked ? '' : 'none';
+}
+
 function onRecInsumoChange() {
-  const insId = parseInt(document.getElementById('rec-insumo')?.value);
-  const ins = allInsumos.find(i => i.id === insId);
+  const insId = parseInt(document.getElementById('rec-insumo').value);
+  const ins = allInsumos.find(function(i){ return i.id === insId; });
   if (!ins) return;
-  document.getElementById('rec-unidad-badge').textContent = ins.unidad;
+  document.getElementById('rec-unidad-uso').value = ins.unidad;
   updateRecetaEquiv();
 }
 
 function updateRecetaEquiv() {
-  const insId = parseInt(document.getElementById('rec-insumo')?.value);
-  const ins = allInsumos.find(i => i.id === insId);
+  const insId = parseInt(document.getElementById('rec-insumo').value);
+  const ins = allInsumos.find(function(i){ return i.id === insId; });
   const cantidad = parseFloat(document.getElementById('rec-cantidad').value) || 0;
-  const infoEl = document.getElementById('rec-equiv-info');
-  if (!ins) { infoEl.textContent = 'Selecciona un insumo'; return; }
-
-  let lines = [`<strong>Unidad de uso:</strong> ${ins.unidad}`];
-
-  if (ins.unidad_compra && ins.cantidad_por_compra) {
-    const porciones = ins.cantidad_por_compra / (cantidad || 1);
-    lines.push(`<strong>Compra:</strong> 1 ${ins.unidad_compra} = ${ins.cantidad_por_compra} ${ins.unidad}`);
-    if (cantidad > 0) {
-      lines.push(`<strong>1 ${ins.unidad_compra}</strong> alcanza para <strong>${porciones.toFixed(0)} porciones</strong>`);
-      const costoXPorcion = (ins.costo_unitario * cantidad);
-      lines.push(`<strong>Costo por porción:</strong> $${costoXPorcion.toFixed(3)}`);
-    }
-  } else if (cantidad > 0) {
-    const costoXPorcion = (ins.costo_unitario * cantidad);
-    lines.push(`<strong>Costo por porción:</strong> $${costoXPorcion.toFixed(3)}`);
+  const uu = document.getElementById('rec-unidad-uso').value;
+  const el = document.getElementById('rec-equiv-info');
+  if (!ins) { el.textContent = 'Selecciona insumo y cantidad'; return; }
+  const lines = [];
+  let cantBase = cantidad;
+  const f = getConversionFactor(uu, ins.unidad);
+  if (f && uu !== ins.unidad && cantidad > 0) {
+    cantBase = cantidad * f;
+    lines.push('<strong>Equivale:</strong> ' + parseFloat(cantBase.toFixed(4)) + ' ' + ins.unidad);
   }
-
-  infoEl.innerHTML = lines.join('<br>');
+  if (cantidad > 0) {
+    const costo = ins.costo_unitario * cantBase;
+    lines.push('<strong>Costo/porción:</strong> $' + (costo < 0.01 ? costo.toFixed(5) : costo.toFixed(2)));
+    if (ins.unidad_compra && ins.cantidad_por_compra) {
+      const porciones = Math.round(ins.cantidad_por_compra / cantBase);
+      lines.push('<strong>1 ' + ins.unidad_compra + '</strong> alcanza ~' + porciones + ' porciones');
+    }
+  }
+  el.innerHTML = lines.length ? lines.join('<br>') : 'Ingresa una cantidad';
 }
 
 async function saveReceta() {
   const producto = document.getElementById('rec-producto').value;
-  const insumoId = parseInt(document.getElementById('rec-insumo').value);
+  const insId = parseInt(document.getElementById('rec-insumo').value);
   const cantidad = parseFloat(document.getElementById('rec-cantidad').value);
-  if (!producto || !insumoId || !cantidad || cantidad <= 0) { toast('⚠ Completa todos los campos'); return; }
-  await sbPost('recetas', { producto_nombre: producto, insumo_id: insumoId, cantidad });
-  toast('✓ Ingrediente agregado a receta');
+  const uu = document.getElementById('rec-unidad-uso').value;
+  const esNueva = document.getElementById('rec-variante-nueva').checked;
+  const variante = esNueva
+    ? document.getElementById('rec-variante-custom').value.trim()
+    : document.getElementById('rec-variante').value;
+  if (!producto || !insId || !cantidad || cantidad <= 0 || !variante) { toast('Completa todos los campos'); return; }
+  await sbPost('recetas', {
+    producto_nombre: producto,
+    insumo_id: insId,
+    cantidad: cantidad,
+    unidad_uso: uu,
+    modificador_opcion: variante === 'Base' ? null : variante,
+  });
+  toast('Ingrediente agregado');
   closeModal('modal-receta');
-  if (selectedProductoReceta === producto) {
-    const btn = [...document.querySelectorAll('#recetas-productos-list button')].find(b=>b.textContent.trim()===producto);
-    if (btn) selectProductoReceta(producto, btn);
-  }
+  if (selectedProductoReceta === producto) await renderRecetaVariantes(producto);
 }
 
 async function deleteRecetaLine(id) {
-  if (!confirm('¿Quitar este ingrediente de la receta?')) return;
-  await fetch(`${SB_URL}/rest/v1/recetas?id=eq.${id}`, { method:'DELETE', headers:{ apikey:SB_KEY, Authorization:'Bearer '+SB_KEY } });
-  toast('✓ Ingrediente quitado');
-  const btn = [...document.querySelectorAll('#recetas-productos-list button')].find(b=>b.style.color==='var(--pink)');
-  if (btn && selectedProductoReceta) selectProductoReceta(selectedProductoReceta, btn);
+  if (!confirm('Quitar este ingrediente?')) return;
+  await fetch(SB_URL + '/rest/v1/recetas?id=eq.' + id, { method:'DELETE', headers:{ apikey:SB_KEY, Authorization:'Bearer '+SB_KEY } });
+  toast('Ingrediente quitado');
+  if (selectedProductoReceta) await renderRecetaVariantes(selectedProductoReceta);
 }
 </script>
+
 </body>
 </html>
