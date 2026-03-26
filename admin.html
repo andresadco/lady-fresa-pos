@@ -1448,11 +1448,13 @@ function renderInsumos(list) {
     // Costo display
     let costoHtml;
     if (i.costo_compra && i.unidad_compra) {
+      const cu = Number(i.costo_unitario);
       costoHtml = '<span style="font-weight:600;">$' + Number(i.costo_compra).toFixed(2) + '</span>'
         + ' <span style="color:var(--text-3);">/ ' + i.unidad_compra + '</span>'
-        + '<br><span style="color:var(--text-3);font-size:11px;">$' + Number(i.costo_unitario).toFixed(4) + ' / ' + i.unidad + '</span>';
+        + '<br><span style="color:var(--text-3);font-size:11px;">$' + (cu < 0.01 ? cu.toFixed(4) : cu.toFixed(2)) + ' / ' + i.unidad + '</span>';
     } else {
-      costoHtml = '<span style="font-weight:600;">$' + Number(i.costo_unitario).toFixed(2) + '</span>'
+      const cu2 = Number(i.costo_unitario);
+      costoHtml = '<span style="font-weight:600;">$' + (cu2 < 0.01 ? cu2.toFixed(4) : cu2.toFixed(2)) + '</span>'
         + ' <span style="color:var(--text-3);">/ ' + i.unidad + '</span>';
     }
 
@@ -1683,14 +1685,17 @@ async function loadRecetas() {
     list.innerHTML = '<div style="padding:14px;font-size:13px;color:var(--text-3);">Sin productos</div>';
     return;
   }
-  list.innerHTML = productos.map(p =>
-    '<button onclick="selectProductoReceta('' + p.nombre.replace(/'/g,"\'") + '',this)"'
-    + ' style="width:100%;text-align:left;padding:10px 14px;border:none;background:none;cursor:pointer;font-size:13px;'
-    + 'font-family:DM Sans,sans-serif;border-bottom:1px solid var(--border);transition:background 0.15s;"'
-    + ' onmouseover="if(!this.classList.contains('sel'))this.style.background='var(--bg)'"'
-    + ' onmouseout="if(!this.classList.contains('sel'))this.style.background='none'">'
-    + p.nombre + '</button>'
-  ).join('');
+  list.innerHTML = productos.map(p => {
+    const safeName = encodeURIComponent(p.nombre);
+    return '<button data-nombre="' + safeName + '" onclick="selectProductoRecetaByBtn(this)"'
+      + ' style="width:100%;text-align:left;padding:10px 14px;border:none;background:none;cursor:pointer;font-size:13px;font-family:DM Sans,sans-serif;border-bottom:1px solid var(--border);transition:background 0.15s;">'
+      + p.nombre + '</button>';
+  }).join('');
+}
+
+function selectProductoRecetaByBtn(btn) {
+  const nombre = decodeURIComponent(btn.dataset.nombre);
+  selectProductoReceta(nombre, btn);
 }
 
 async function selectProductoReceta(nombre, btn) {
@@ -1719,12 +1724,11 @@ async function renderRecetaVariantes(nombre) {
 
   // Render tabs
   const tabsEl = document.getElementById('recetas-variantes-tabs');
-  tabsEl.innerHTML = variantes.map((v, i) =>
-    '<button onclick="selectVarianteTab('' + v.replace(/'/g,"\'") + '',this)" '
-    + 'class="btn btn-ghost btn-sm" '
-    + (i === 0 ? 'style="background:var(--pink-light);color:var(--pink);"' : '')
-    + '>' + v + '</button>'
-  ).join('');
+  tabsEl.innerHTML = variantes.map((v, idx) => {
+    const safeV = encodeURIComponent(v);
+    const activeStyle = idx === 0 ? ' style="background:var(--pink-light);color:var(--pink);"' : '';
+    return '<button data-variante="' + safeV + '" onclick="selectVarianteTabByBtn(this)" class="btn btn-ghost btn-sm"' + activeStyle + '>' + v + '</button>';
+  }).join('');
 
   // Show first variante
   if (variantes.length > 0) {
@@ -1740,6 +1744,11 @@ async function renderRecetaVariantes(nombre) {
 }
 
 let selectedVarianteReceta = 'Base';
+
+function selectVarianteTabByBtn(btn) {
+  const variante = decodeURIComponent(btn.dataset.variante);
+  selectVarianteTab(variante, btn);
+}
 
 function selectVarianteTab(variante, btn) {
   selectedVarianteReceta = variante;
@@ -1772,7 +1781,7 @@ function renderRecetaLines(lines, variante) {
       const factor = getConversionFactor(unidadUso, ins.unidad);
       if (factor) {
         cantidadBase = l.cantidad * factor;
-        equiv = '= ' + cantidadBase.toFixed(3) + ' ' + ins.unidad;
+        equiv = '= ' + (cantidadBase % 1 === 0 ? cantidadBase : parseFloat(cantidadBase.toFixed(3))) + ' ' + ins.unidad;
       }
     }
     const costo = ins ? ins.costo_unitario * cantidadBase : 0;
@@ -1782,13 +1791,13 @@ function renderRecetaLines(lines, variante) {
       + '<td>' + l.cantidad + '</td>'
       + '<td style="font-weight:500;">' + unidadUso + '</td>'
       + '<td style="color:var(--text-3);font-size:12px;">' + equiv + '</td>'
-      + '<td>$' + costo.toFixed(4) + '</td>'
+      + '<td>$' + (costo < 0.01 ? costo.toFixed(4) : costo.toFixed(2)) + '</td>'
       + '<td><button class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="deleteRecetaLine(' + l.id + ')">Quitar</button></td>'
       + '</tr>';
   }).join('');
 
   document.getElementById('receta-costo-total').style.display = '';
-  document.getElementById('receta-costo-val').textContent = '$' + costoTotal.toFixed(4);
+  document.getElementById('receta-costo-val').textContent = '$' + (costoTotal < 0.01 ? costoTotal.toFixed(4) : costoTotal.toFixed(2));
 }
 
 // Conversion factors between common units
@@ -1878,7 +1887,7 @@ function updateRecetaEquiv() {
   // Cost
   if (cantidad > 0) {
     const costo = ins.costo_unitario * cantidadBase;
-    lines.push('<strong>Costo por porción:</strong> $' + costo.toFixed(4));
+    lines.push('<strong>Costo por porción:</strong> $' + (costo < 0.01 ? costo.toFixed(5) : costo.toFixed(2)));
   }
   // Purchase unit info
   if (ins.unidad_compra && ins.cantidad_por_compra && cantidad > 0) {
