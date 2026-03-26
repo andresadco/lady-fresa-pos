@@ -1648,7 +1648,7 @@ function applyPermissions(user) {
   const sucDisp = document.getElementById('sucursal-disp');
   if (sucBadge && sucDisp && user.sucursal) {
     sucDisp.textContent = user.sucursal;
-    sucBadge.style.display = '';
+    sucBadge.style.display = 'inline-flex';
   }
 }
 
