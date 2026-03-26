@@ -1290,41 +1290,50 @@ document.querySelectorAll('.nav-item').forEach(btn => {
 
 <!-- MODAL RECETA -->
 <div class="modal-overlay" id="modal-receta">
-  <div class="modal-box" style="max-width:500px;">
+  <div class="modal-box" style="max-width:540px;">
     <div class="modal-title">Agregar ingrediente a receta</div>
-    <div class="form-grid">
-      <div class="form-group full"><label class="form-label">Producto</label>
+
+    <!-- Paso 1: Producto + Tipo de componente -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+      <div>
+        <label class="form-label">Producto</label>
         <select class="form-select" id="rec-producto" onchange="onRecProductoChange()"></select>
       </div>
-      <div class="form-group full">
-        <label class="form-label">Variante <span style="font-weight:400;color:var(--text-3);">(tamaño, topping, o "Base")</span></label>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <select class="form-select" id="rec-variante" style="flex:1;"></select>
-          <input class="form-input" id="rec-variante-custom" placeholder="Nueva..." style="flex:1;display:none;">
-          <label style="font-size:12px;white-space:nowrap;cursor:pointer;display:flex;align-items:center;gap:4px;">
-            <input type="checkbox" id="rec-variante-nueva" onchange="toggleVarianteNueva(this)"> Nueva
-          </label>
-        </div>
+      <div>
+        <label class="form-label">Tipo de componente</label>
+        <select class="form-select" id="rec-tipo" onchange="onRecTipoChange()">
+          <option value="fruta">🍓 Fruta (varía por tamaño)</option>
+          <option value="base">🍫 Base (varía por tamaño)</option>
+          <option value="topping">✨ Topping (cantidad fija)</option>
+          <option value="ingrediente">📦 Ingrediente fijo</option>
+        </select>
       </div>
-      <div class="form-group full"><label class="form-label">Insumo</label>
+    </div>
+
+    <!-- Campos dinámicos según tipo -->
+    <div id="rec-campos-dinamicos" style="margin-bottom:16px;"></div>
+
+    <!-- Insumo + Cantidad + Unidad -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div style="grid-column:1/3;">
+        <label class="form-label">Insumo</label>
         <select class="form-select" id="rec-insumo" onchange="onRecInsumoChange()"></select>
       </div>
-      <div class="form-group"><label class="form-label">Cantidad</label>
-        <input class="form-input" id="rec-cantidad" type="number" placeholder="0" step="0.001" oninput="updateRecetaEquiv()">
-      </div>
-      <div class="form-group"><label class="form-label">Unidad de uso</label>
+      <div>
+        <label class="form-label">Unidad uso</label>
         <select class="form-select" id="rec-unidad-uso" onchange="updateRecetaEquiv()">
           <option value="g">g</option><option value="kg">kg</option>
           <option value="ml">ml</option><option value="l">l</option>
-          <option value="pz">pz</option><option value="caja">caja</option><option value="bolsa">bolsa</option>
+          <option value="pz">pz</option>
         </select>
       </div>
-      <div class="form-group full">
-        <div id="rec-equiv-info" style="font-size:12px;padding:10px;background:var(--bg);border-radius:8px;color:var(--text-3);line-height:1.7;">
-          Selecciona insumo y cantidad
-        </div>
-      </div>
     </div>
+
+    <!-- Info costo -->
+    <div id="rec-equiv-info" style="font-size:12px;padding:10px;background:var(--bg);border-radius:8px;color:var(--text-3);line-height:1.8;margin-bottom:16px;">
+      Selecciona insumo y cantidad
+    </div>
+
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('modal-receta')">Cancelar</button>
       <button class="btn btn-primary" onclick="saveReceta()">Guardar</button>
@@ -1606,31 +1615,38 @@ function selectProductoRecetaBtn(btn) {
 }
 
 async function renderRecetaVariantes(nombre) {
-  const lines = await sbGet('recetas', 'producto_nombre=eq.' + encodeURIComponent(nombre));
+  const lines = await sbGet('recetas', 'producto_nombre=eq.' + encodeURIComponent(nombre) + '&order=tipo_componente.asc,modificador_opcion.asc');
   if (!Array.isArray(lines)) return;
   window._recetaLines = lines;
-  const variantes = [];
+
+  // Build tabs grouped by tipo_componente
+  const grupos = { fruta:'🍓 Fruta', base:'🍫 Base', topping:'✨ Toppings', ingrediente:'📦 Ingrediente' };
+  const tiposPresentes = [];
   lines.forEach(function(l) {
-    const v = l.modificador_opcion || 'Base';
-    if (variantes.indexOf(v) === -1) variantes.push(v);
+    const t = l.tipo_componente || 'ingrediente';
+    if (tiposPresentes.indexOf(t) === -1) tiposPresentes.push(t);
   });
-  if (variantes.indexOf('Base') === -1) variantes.unshift('Base');
+  // Always show at least one tab
+  if (!tiposPresentes.length) tiposPresentes.push('ingrediente');
+
   const tabsEl = document.getElementById('recetas-variantes-tabs');
-  tabsEl.innerHTML = variantes.map(function(v, idx) {
+  tabsEl.innerHTML = tiposPresentes.map(function(t, idx) {
+    const label = grupos[t] || t;
     const active = idx === 0 ? ' style="background:var(--pink-light);color:var(--pink);"' : '';
-    return '<button data-variante="' + encodeURIComponent(v) + '" onclick="selectVarianteBtn(this)" class="btn btn-ghost btn-sm"' + active + '>' + v + '</button>';
+    return '<button data-variante="' + encodeURIComponent(t) + '" onclick="selectVarianteBtn(this)" class="btn btn-ghost btn-sm"' + active + '>' + label + '</button>';
   }).join('');
-  selectedVarianteReceta = variantes[0] || 'Base';
-  renderRecetaLines(lines, selectedVarianteReceta);
+
+  selectedVarianteReceta = tiposPresentes[0] || 'ingrediente';
+  renderRecetaLinesByTipo(lines, selectedVarianteReceta);
 }
 
 function selectVarianteBtn(btn) {
-  const variante = decodeURIComponent(btn.dataset.variante);
-  selectedVarianteReceta = variante;
+  const tipo = decodeURIComponent(btn.dataset.variante);
+  selectedVarianteReceta = tipo;
   document.querySelectorAll('#recetas-variantes-tabs button').forEach(function(b){ b.style.cssText = ''; });
   btn.style.background = 'var(--pink-light)';
   btn.style.color = 'var(--pink)';
-  renderRecetaLines(window._recetaLines || [], variante);
+  renderRecetaLinesByTipo(window._recetaLines || [], tipo);
 }
 
 function getConversionFactor(from, to) {
@@ -1641,84 +1657,124 @@ function getConversionFactor(from, to) {
   return null;
 }
 
-function renderRecetaLines(lines, variante) {
+function renderRecetaLinesByTipo(lines, tipo) {
   const insMap = {};
   allInsumos.forEach(function(i){ insMap[i.id] = i; });
   const tbody = document.getElementById('tbody-receta');
-  const filtered = lines.filter(function(l){ return (l.modificador_opcion || 'Base') === variante; });
+  const filtered = lines.filter(function(l){ return (l.tipo_componente || 'ingrediente') === tipo; });
   if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-3);">Sin ingredientes para "' + variante + '"</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-3);">Sin ingredientes en esta sección</td></tr>';
     document.getElementById('receta-costo-total').style.display = 'none';
     return;
   }
   let costoTotal = 0;
-  tbody.innerHTML = filtered.map(function(l) {
-    const ins = insMap[l.insumo_id];
-    const uu = l.unidad_uso || (ins ? ins.unidad : '—');
-    let cantBase = l.cantidad;
-    let equiv = '';
-    if (ins && uu !== ins.unidad) {
-      const f = getConversionFactor(uu, ins.unidad);
-      if (f) { cantBase = l.cantidad * f; equiv = '= ' + parseFloat(cantBase.toFixed(4)) + ' ' + ins.unidad; }
+
+  // Group by modificador_opcion for cleaner display
+  const grupos = {};
+  filtered.forEach(function(l) {
+    const key = l.modificador_opcion || '—';
+    if (!grupos[key]) grupos[key] = [];
+    grupos[key].push(l);
+  });
+
+  let html = '';
+  Object.keys(grupos).sort().forEach(function(grupo) {
+    if (Object.keys(grupos).length > 1) {
+      html += '<tr><td colspan="6" style="background:var(--bg);padding:6px 12px;font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.5px;">'
+        + grupo + '</td></tr>';
     }
-    const costo = ins ? ins.costo_unitario * cantBase : 0;
-    costoTotal += costo;
-    const costoStr = '$' + (costo < 0.01 ? costo.toFixed(4) : costo.toFixed(2));
-    return '<tr>'
-      + '<td><strong>' + (ins ? ins.nombre : '—') + '</strong></td>'
-      + '<td>' + l.cantidad + '</td>'
-      + '<td>' + uu + '</td>'
-      + '<td style="color:var(--text-3);font-size:12px;">' + equiv + '</td>'
-      + '<td>' + costoStr + '</td>'
-      + '<td><button class="btn btn-ghost btn-sm" style="color:#A32D2D;" onclick="deleteRecetaLine(' + l.id + ')">Quitar</button></td>'
-      + '</tr>';
-  }).join('');
+    grupos[grupo].forEach(function(l) {
+      const ins = insMap[l.insumo_id];
+      const uu = l.unidad_uso || (ins ? ins.unidad : '—');
+      let cantBase = l.cantidad;
+      let equiv = '';
+      if (ins && uu !== ins.unidad) {
+        const f = getConversionFactor(uu, ins.unidad);
+        if (f) { cantBase = l.cantidad * f; equiv = '≈ '+parseFloat(cantBase.toFixed(3))+' '+ins.unidad; }
+      }
+      const costo = ins ? ins.costo_unitario * cantBase : 0;
+      costoTotal += costo;
+      html += '<tr>'
+        + '<td><strong>'+(ins?ins.nombre:'—')+'</strong></td>'
+        + '<td>'+l.cantidad+'</td>'
+        + '<td>'+uu+'</td>'
+        + '<td style="color:var(--text-3);font-size:12px;">'+equiv+'</td>'
+        + '<td>$'+(costo<0.01?costo.toFixed(4):costo.toFixed(2))+'</td>'
+        + '<td><button class="btn btn-ghost btn-sm" style="color:#A32D2D;" onclick="deleteRecetaLine('+l.id+')">Quitar</button></td>'
+        + '</tr>';
+    });
+  });
+  tbody.innerHTML = html;
   document.getElementById('receta-costo-total').style.display = '';
-  const ct = costoTotal < 0.01 ? costoTotal.toFixed(4) : costoTotal.toFixed(2);
-  document.getElementById('receta-costo-val').textContent = '$' + ct;
+  document.getElementById('receta-costo-val').textContent = '$'+(costoTotal<0.01?costoTotal.toFixed(4):costoTotal.toFixed(2));
 }
 
 async function openModalReceta() {
   if (!allInsumos.length) await loadInventario();
-  const productos = await sbGet('productos', 'activo=eq.true&select=nombre&order=nombre.asc');
-  document.getElementById('rec-producto').innerHTML = (Array.isArray(productos) ? productos : []).map(function(p){
-    return '<option value="' + p.nombre + '"' + (selectedProductoReceta === p.nombre ? ' selected' : '') + '>' + p.nombre + '</option>';
+  const produtos = await sbGet('productos', 'activo=eq.true&select=nombre&order=nombre.asc');
+  document.getElementById('rec-producto').innerHTML = (Array.isArray(produtos)?produtos:[]).map(function(p){
+    return '<option value="'+p.nombre+'"'+(selectedProductoReceta===p.nombre?' selected':'')+'>'+p.nombre+'</option>';
   }).join('');
-  await onRecProductoChange();
   document.getElementById('rec-insumo').innerHTML = allInsumos.filter(function(i){return i.activo;}).map(function(i){
-    return '<option value="' + i.id + '">' + i.nombre + ' (' + i.unidad + ')</option>';
+    return '<option value="'+i.id+'">'+i.nombre+' ('+i.unidad+')</option>';
   }).join('');
-  document.getElementById('rec-cantidad').value = '';
-  document.getElementById('rec-variante-nueva').checked = false;
-  document.getElementById('rec-variante').style.display = '';
-  document.getElementById('rec-variante-custom').style.display = 'none';
+  onRecTipoChange();
   onRecInsumoChange();
   document.getElementById('modal-receta').classList.add('open');
 }
 
-async function onRecProductoChange() {
-  const nombre = document.getElementById('rec-producto').value;
-  if (!nombre) return;
-  const lines = await sbGet('recetas', 'producto_nombre=eq.' + encodeURIComponent(nombre) + '&select=modificador_opcion');
-  const mods = await sbGet('modificadores_opciones', 'select=nombre&order=nombre.asc');
-  const existing = Array.isArray(lines) ? lines.map(function(l){ return l.modificador_opcion || 'Base'; }) : [];
-  const modNames = Array.isArray(mods) ? mods.map(function(m){ return m.nombre; }) : [];
-  const all = ['Base'];
-  existing.concat(modNames).forEach(function(v){ if (all.indexOf(v) === -1) all.push(v); });
-  const sel = document.getElementById('rec-variante');
-  sel.innerHTML = all.map(function(v){
-    return '<option value="' + v + '"' + (v === selectedVarianteReceta ? ' selected' : '') + '>' + v + '</option>';
-  }).join('');
-}
+const TAMANOS = ['Chico','Mediano','Grande'];
+const BASES_DEFAULT = ['Crema','Chocolate','Chococrema','Caramelo'];
 
-function toggleVarianteNueva(cb) {
-  document.getElementById('rec-variante').style.display = cb.checked ? 'none' : '';
-  document.getElementById('rec-variante-custom').style.display = cb.checked ? '' : 'none';
+function onRecProductoChange() { onRecTipoChange(); }
+
+async function onRecTipoChange() {
+  const tipo = document.getElementById('rec-tipo').value;
+  const container = document.getElementById('rec-campos-dinamicos');
+  if (tipo === 'fruta') {
+    container.innerHTML =
+      '<label class="form-label">Tamaño</label>'
+      +'<div style="display:flex;gap:8px;margin-top:6px;">'
+      +TAMANOS.map(function(t,i){
+        return '<label style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 6px;border:1px solid var(--border-2);border-radius:10px;cursor:pointer;font-size:13px;font-weight:500;">'
+          +'<input type="radio" name="rec-tamano" value="'+t+'"'+(i===0?' checked':'')+' style="accent-color:#D4537E;"> '+t+'</label>';
+      }).join('')+'</div>'
+      +'<div style="margin-top:12px;"><label class="form-label">Cantidad de fruta ('+document.getElementById('rec-unidad-uso').value+')</label>'
+      +'<input class="form-input" id="rec-cantidad" type="number" placeholder="ej: 200" step="0.001" oninput="updateRecetaEquiv()" style="margin-top:4px;"></div>';
+
+  } else if (tipo === 'base') {
+    container.innerHTML =
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+      +'<div><label class="form-label">Tamaño</label>'
+      +'<select class="form-select" id="rec-tamano-sel" style="margin-top:4px;">'
+      +TAMANOS.map(function(t){return '<option value="'+t+'">'+t+'</option>';}).join('')+'</select></div>'
+      +'<div><label class="form-label">Base</label>'
+      +'<select class="form-select" id="rec-base-sel" style="margin-top:4px;">'
+      +BASES_DEFAULT.map(function(b){return '<option value="'+b+'">'+b+'</option>';}).join('')+'</select></div>'
+      +'</div>'
+      +'<div style="margin-top:12px;"><label class="form-label">Cantidad de base</label>'
+      +'<input class="form-input" id="rec-cantidad" type="number" placeholder="ej: 80" step="0.001" oninput="updateRecetaEquiv()" style="margin-top:4px;"></div>';
+
+  } else if (tipo === 'topping') {
+    const mods = await sbGet('modificadores_opciones','select=nombre&order=nombre.asc');
+    const opts = Array.isArray(mods)?mods.map(function(m){return '<option value="'+m.nombre+'">'+m.nombre+'</option>';}).join(''):'';
+    container.innerHTML =
+      '<div><label class="form-label">Topping</label>'
+      +'<select class="form-select" id="rec-topping-sel" style="margin-top:4px;">'+opts+'</select></div>'
+      +'<div style="margin-top:12px;"><label class="form-label">Cantidad fija por porción</label>'
+      +'<input class="form-input" id="rec-cantidad" type="number" placeholder="ej: 30" step="0.001" oninput="updateRecetaEquiv()" style="margin-top:4px;"></div>';
+
+  } else {
+    container.innerHTML =
+      '<div><label class="form-label">Cantidad</label>'
+      +'<input class="form-input" id="rec-cantidad" type="number" placeholder="0" step="0.001" oninput="updateRecetaEquiv()" style="margin-top:4px;"></div>';
+  }
+  updateRecetaEquiv();
 }
 
 function onRecInsumoChange() {
   const insId = parseInt(document.getElementById('rec-insumo').value);
-  const ins = allInsumos.find(function(i){ return i.id === insId; });
+  const ins = allInsumos.find(function(i){return i.id===insId;});
   if (!ins) return;
   document.getElementById('rec-unidad-uso').value = ins.unidad;
   updateRecetaEquiv();
@@ -1726,54 +1782,70 @@ function onRecInsumoChange() {
 
 function updateRecetaEquiv() {
   const insId = parseInt(document.getElementById('rec-insumo').value);
-  const ins = allInsumos.find(function(i){ return i.id === insId; });
-  const cantidad = parseFloat(document.getElementById('rec-cantidad').value) || 0;
+  const ins = allInsumos.find(function(i){return i.id===insId;});
+  const cantEl = document.getElementById('rec-cantidad');
+  const cantidad = cantEl ? (parseFloat(cantEl.value)||0) : 0;
   const uu = document.getElementById('rec-unidad-uso').value;
   const el = document.getElementById('rec-equiv-info');
-  if (!ins) { el.textContent = 'Selecciona insumo y cantidad'; return; }
+  if (!ins || !cantidad) { el.textContent = 'Ingresa insumo y cantidad'; return; }
   const lines = [];
   let cantBase = cantidad;
   const f = getConversionFactor(uu, ins.unidad);
-  if (f && uu !== ins.unidad && cantidad > 0) {
+  if (f && uu !== ins.unidad) {
     cantBase = cantidad * f;
-    lines.push('<strong>Equivale:</strong> ' + parseFloat(cantBase.toFixed(4)) + ' ' + ins.unidad);
+    lines.push('<strong>Equivale:</strong> '+parseFloat(cantBase.toFixed(4))+' '+ins.unidad);
   }
-  if (cantidad > 0) {
-    const costo = ins.costo_unitario * cantBase;
-    lines.push('<strong>Costo/porción:</strong> $' + (costo < 0.01 ? costo.toFixed(5) : costo.toFixed(2)));
-    if (ins.unidad_compra && ins.cantidad_por_compra) {
-      const porciones = Math.round(ins.cantidad_por_compra / cantBase);
-      lines.push('<strong>1 ' + ins.unidad_compra + '</strong> alcanza ~' + porciones + ' porciones');
-    }
+  const costo = ins.costo_unitario * cantBase;
+  lines.push('<strong>Costo/porción:</strong> $'+(costo<0.01?costo.toFixed(4):costo.toFixed(2)));
+  if (ins.unidad_compra && ins.cantidad_por_compra && cantBase > 0) {
+    lines.push('<strong>1 '+ins.unidad_compra+'</strong> rinde ~'+Math.round(ins.cantidad_por_compra/cantBase)+' porciones');
   }
-  el.innerHTML = lines.length ? lines.join('<br>') : 'Ingresa una cantidad';
+  el.innerHTML = lines.join('<br>');
+}
+
+function buildVarianteKey(tipo) {
+  if (tipo === 'fruta') {
+    var tamano = TAMANOS[0];
+    document.querySelectorAll('input[name="rec-tamano"]').forEach(function(r){ if(r.checked) tamano=r.value; });
+    return { modificador_opcion: tamano, tipo_componente: 'fruta' };
+  }
+  if (tipo === 'base') {
+    var tam = document.getElementById('rec-tamano-sel').value;
+    var base = document.getElementById('rec-base-sel').value;
+    return { modificador_opcion: tam+' · '+base, tipo_componente: 'base' };
+  }
+  if (tipo === 'topping') {
+    var top = document.getElementById('rec-topping-sel').value;
+    return { modificador_opcion: top, tipo_componente: 'topping' };
+  }
+  return { modificador_opcion: null, tipo_componente: 'ingrediente' };
 }
 
 async function saveReceta() {
-  const producto = document.getElementById('rec-producto').value;
-  const insId = parseInt(document.getElementById('rec-insumo').value);
-  const cantidad = parseFloat(document.getElementById('rec-cantidad').value);
-  const uu = document.getElementById('rec-unidad-uso').value;
-  const esNueva = document.getElementById('rec-variante-nueva').checked;
-  const variante = esNueva
-    ? document.getElementById('rec-variante-custom').value.trim()
-    : document.getElementById('rec-variante').value;
-  if (!producto || !insId || !cantidad || cantidad <= 0 || !variante) { toast('Completa todos los campos'); return; }
+  var producto = document.getElementById('rec-producto').value;
+  var insId = parseInt(document.getElementById('rec-insumo').value);
+  var tipo = document.getElementById('rec-tipo').value;
+  var cantEl = document.getElementById('rec-cantidad');
+  var cantidad = cantEl ? (parseFloat(cantEl.value)||0) : 0;
+  var uu = document.getElementById('rec-unidad-uso').value;
+  if (!producto || !insId || cantidad <= 0) { toast('Completa todos los campos'); return; }
+  var varKey = buildVarianteKey(tipo);
   await sbPost('recetas', {
     producto_nombre: producto,
     insumo_id: insId,
     cantidad: cantidad,
     unidad_uso: uu,
-    modificador_opcion: variante === 'Base' ? null : variante,
+    modificador_opcion: varKey.modificador_opcion,
+    tipo_componente: varKey.tipo_componente,
   });
-  toast('Ingrediente agregado');
+  toast('Ingrediente guardado');
   closeModal('modal-receta');
   if (selectedProductoReceta === producto) await renderRecetaVariantes(producto);
 }
 
 async function deleteRecetaLine(id) {
   if (!confirm('Quitar este ingrediente?')) return;
-  await fetch(SB_URL + '/rest/v1/recetas?id=eq.' + id, { method:'DELETE', headers:{ apikey:SB_KEY, Authorization:'Bearer '+SB_KEY } });
+  await fetch(SB_URL+'/rest/v1/recetas?id=eq.'+id,{method:'DELETE',headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}});
   toast('Ingrediente quitado');
   if (selectedProductoReceta) await renderRecetaVariantes(selectedProductoReceta);
 }
