@@ -25,30 +25,18 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 #app { display: flex; height: 100vh; }
 #left { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
 
-#topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 20px; height: 60px; display: flex; align-items: center; gap: 0; flex-shrink: 0; }
-.logo { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--pink); line-height: 1; padding-right: 18px; border-right: 1px solid var(--border); margin-right: 16px; white-space: nowrap; }
-.logo span { font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 400; color: var(--text-3); display: block; margin-top: 3px; letter-spacing: 0.3px; }
-#search-wrap { position: relative; width: 210px; margin-right: 0; }
-#search { width: 100%; height: 34px; border: 1px solid var(--border-2); border-radius: 10px; padding: 0 14px 0 32px; font-size: 13px; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); outline: none; transition: border-color 0.15s; }
+#topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 20px; height: 56px; display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+.logo { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--pink); }
+.logo span { font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 400; color: var(--text-3); display: block; margin-top: -4px; }
+#search-wrap { flex: 1; max-width: 300px; position: relative; }
+#search { width: 100%; height: 36px; border: 1px solid var(--border-2); border-radius: 20px; padding: 0 14px 0 34px; font-size: 13px; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); outline: none; transition: border-color 0.15s; }
 #search:focus { border-color: var(--pink); background: white; }
-.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-3); font-size: 13px; pointer-events: none; }
-.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 5px; }
-.topbar-sep { width: 1px; height: 26px; background: var(--border); margin: 0 7px; flex-shrink: 0; }
-.badge-turno { display: flex; align-items: center; gap: 5px; background: var(--green-light); color: var(--green); font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 8px; white-space: nowrap; }
-.badge-turno::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
-#clock { font-size: 14px; color: var(--text-2); font-weight: 600; min-width: 44px; text-align: right; letter-spacing: 0.5px; padding-left: 6px; }
-.top-action { display: inline-flex; align-items: center; gap: 5px; padding: 0 11px; height: 34px; border: 1px solid var(--border-2); border-radius: 10px; background: transparent; font-size: 12px; font-weight: 500; color: var(--text-2); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; white-space: nowrap; text-decoration: none; }
-.top-action:hover { border-color: var(--pink); color: var(--pink); background: var(--pink-light); }
-.top-action.icon-only { padding: 0; width: 34px; justify-content: center; }
-#btn-cierre-turno { border-color: var(--pink-mid); color: var(--pink); background: var(--pink-light); }
-#btn-cierre-turno:hover { background: #f5d0de; border-color: var(--pink); }
-#user-badge { display: flex; align-items: center; gap: 7px; padding: 4px 10px 4px 5px; border: 1px solid var(--border-2); border-radius: 10px; cursor: pointer; transition: all 0.15s; }
-#user-badge:hover { border-color: var(--pink); background: var(--pink-light); }
-.user-avatar { width: 26px; height: 26px; border-radius: 8px; background: var(--pink-light); color: var(--pink-dark); font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
-.user-name { font-size: 12px; font-weight: 600; color: var(--text-2); }
-.user-role { font-size: 10px; color: var(--text-3); }
-#db-status { font-size: 11px; font-weight: 500; padding: 4px 10px; border-radius: 8px; transition: background 0.3s, color 0.3s; white-space: nowrap; }
-#sucursal-badge { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 8px; background: var(--purple-light); color: var(--purple); white-space: nowrap; display: none; }
+.search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--text-3); font-size: 13px; pointer-events: none; }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.badge-turno { background: var(--green-light); color: var(--green); font-size: 11px; font-weight: 500; padding: 4px 12px; border-radius: 20px; }
+#clock { font-size: 13px; color: var(--text-2); font-weight: 500; min-width: 50px; text-align: right; }
+.top-action { padding: 6px 12px; border: 1px solid var(--border-2); border-radius: 20px; background: transparent; font-size: 12px; font-weight: 500; color: var(--text-2); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
+.top-action:hover { border-color: var(--pink); color: var(--pink); }
 
 #tabs { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 20px; display: flex; gap: 2px; flex-shrink: 0; overflow-x: auto; }
 .tab { padding: 10px 14px; font-size: 13px; font-weight: 400; color: var(--text-3); cursor: pointer; white-space: nowrap; border: none; background: none; border-bottom: 2px solid transparent; transition: color 0.15s; font-family: 'DM Sans', sans-serif; }
@@ -301,7 +289,16 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .login-btn:hover { background: var(--pink-dark); }
 .login-error { font-size: 12px; color: var(--red); text-align: center; margin-top: 10px; min-height: 18px; }
 
-/* User badge en topbar — ver estilos en bloque topbar arriba */
+/* User badge en topbar */
+#user-badge {
+  display: flex; align-items: center; gap: 8px; padding: 4px 10px 4px 6px;
+  border: 1px solid var(--border-2); border-radius: 20px; cursor: pointer;
+  transition: border-color 0.15s;
+}
+#user-badge:hover { border-color: var(--pink); }
+.user-avatar { width: 24px; height: 24px; border-radius: 50%; background: var(--pink-light); color: var(--pink-dark); font-size: 10px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+.user-name { font-size: 12px; font-weight: 500; color: var(--text-2); }
+.user-role { font-size: 10px; color: var(--text-3); }
 
 /* ── CIERRE DE TURNO ── */
 #modal-cierre {
@@ -436,20 +433,17 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       </div>
       <div class="topbar-right">
         <button class="top-action" onclick="toggleHist()">📋 Historial</button>
-        <button class="top-action icon-only" id="btn-print-cfg" onclick="openPrintCfg()" title="Configurar impresora">🖨️</button>
-        <button class="top-action" onclick="openCierre()" id="btn-cierre-turno">🔒 Cierre del día</button>
-        <div class="topbar-sep"></div>
-        <a href="admin.html" id="admin-link" class="top-action" style="display:none">🔧 Admin</a>
-        <a href="dashboard.html" class="top-action">📊 Dashboard</a>
-        <div class="topbar-sep"></div>
-        <div id="db-status" style="background:#FAEEDA;color:#BA7517;">⟳ Conectando...</div>
-        <div id="sucursal-badge">🏪 <span id="sucursal-disp">—</span></div>
-        <div class="topbar-sep"></div>
+        <button class="top-action" id="btn-print-cfg" onclick="openPrintCfg()" title="Configurar impresora">🖨️</button>
+        <button class="top-action" onclick="openCierre()" style="border-color:var(--pink-mid);color:var(--pink);" id="btn-cierre-turno">🔒 Cierre del día</button>
+        <a href="admin.html" id="admin-link" style="padding:6px 12px;border:1px solid var(--border-2);border-radius:20px;background:transparent;font-size:12px;font-weight:500;color:var(--text-2);cursor:pointer;font-family:DM Sans,sans-serif;text-decoration:none;transition:all 0.15s;display:none" onmouseover="this.style.borderColor='#D4537E';this.style.color='#D4537E'" onmouseout="this.style.borderColor='';this.style.color=''">🔧 Admin</a>
+        <a href="dashboard.html" style="padding:6px 12px;border:1px solid var(--border-2);border-radius:20px;background:transparent;font-size:12px;font-weight:500;color:var(--text-2);cursor:pointer;font-family:DM Sans,sans-serif;text-decoration:none;transition:all 0.15s;" onmouseover="this.style.borderColor='#D4537E';this.style.color='#D4537E'" onmouseout="this.style.borderColor='';this.style.color=''">📊 Dashboard</a>
+        <div id="db-status" style="font-size:11px;font-weight:500;padding:4px 12px;border-radius:20px;background:#FAEEDA;color:#BA7517;transition:background 0.3s,color 0.3s;">⟳ Conectando...</div>
+        <div id="sucursal-badge" style="font-size:11px;font-weight:500;padding:4px 10px;border-radius:12px;background:var(--purple-light);color:var(--purple);display:none;">🏪 <span id="sucursal-disp">—</span></div>
         <div id="user-badge" onclick="logout()" title="Cerrar sesión">
           <div class="user-avatar" id="user-avatar">?</div>
           <div><div class="user-name" id="user-name-disp">—</div><div class="user-role" id="user-role-disp">—</div></div>
         </div>
-        <div class="badge-turno">Turno abierto</div>
+        <div class="badge-turno">● Turno abierto</div>
         <div id="clock"></div>
       </div>
     </div>
@@ -1138,6 +1132,8 @@ async function confirmarPago() {
 
   // Guardar en Supabase (async, no bloquea la UI)
   saveToSupabase(saleData);
+  // Descontar inventario según recetas
+  descontarInventario(saleData);
   // Imprimir ticket y comanda
   printSale(saleData);
 
@@ -1162,6 +1158,141 @@ async function confirmarPago() {
   document.getElementById('efec-section').style.display='block';
 
   renderOrder(); renderProducts();
+}
+
+// ═══════════════════════════════════════════════════
+// INVENTARIO — DESCUENTO AUTOMÁTICO AL COBRAR
+// ═══════════════════════════════════════════════════
+
+async function descontarInventario(saleData) {
+  try {
+    // Load all recetas once
+    const recetas = await sbFetch('recetas', 'select=*');
+    if (!Array.isArray(recetas) || !recetas.length) return;
+
+    // Load current insumos stock
+    const insumos = await sbFetch('insumos', 'select=id,nombre,stock_actual,unidad,costo_unitario&activo=eq.true');
+    if (!Array.isArray(insumos)) return;
+    const insMap = {};
+    insumos.forEach(function(i){ insMap[i.id] = i; });
+
+    // Build deduction map: insumo_id -> total quantity to deduct
+    const deductions = {}; // { insumo_id: cantidad_en_unidad_base }
+
+    saleData.items.forEach(function(item) {
+      var qty = item.qty || 1;
+      var sel = item.sel || {};
+      var producto = item.name;
+      var tamano = sel['Tamaño'] || null;
+      var base = sel['Bases'] || null;
+
+      // Get all toppings selected
+      var toppingsSeleccionados = [];
+      ['Toppings Incluidos','Toppings Extra Básicos','Toppings Extra Premium'].forEach(function(grupo) {
+        if (sel[grupo]) {
+          if (Array.isArray(sel[grupo])) {
+            sel[grupo].forEach(function(t){ toppingsSeleccionados.push(t); });
+          } else {
+            toppingsSeleccionados.push(sel[grupo]);
+          }
+        }
+      });
+
+      // Filter recetas for this product
+      var recetasProducto = recetas.filter(function(r){ return r.producto_nombre === producto; });
+
+      recetasProducto.forEach(function(r) {
+        var aplica = false;
+        var tipo = r.tipo_componente || 'ingrediente';
+        var variante = r.modificador_opcion;
+
+        if (tipo === 'ingrediente') {
+          aplica = true; // always applies
+        } else if (tipo === 'fruta') {
+          aplica = !tamano || variante === tamano; // if no size selected, apply base
+        } else if (tipo === 'base') {
+          // variante = "Chico · Crema" — match tamaño + base
+          if (tamano && base) {
+            aplica = variante === (tamano + ' · ' + base);
+          } else if (tamano) {
+            aplica = variante && variante.startsWith(tamano);
+          } else {
+            aplica = true;
+          }
+        } else if (tipo === 'topping') {
+          // Only deduct if this specific topping was selected
+          aplica = toppingsSeleccionados.indexOf(variante) !== -1;
+        }
+
+        if (!aplica) return;
+
+        // Convert to base unit
+        var ins = insMap[r.insumo_id];
+        if (!ins) return;
+        var uu = r.unidad_uso || ins.unidad;
+        var cantBase = r.cantidad;
+        var factor = getConvFactor(uu, ins.unidad);
+        if (factor) cantBase = r.cantidad * factor;
+
+        if (!deductions[r.insumo_id]) deductions[r.insumo_id] = 0;
+        deductions[r.insumo_id] += cantBase * qty;
+      });
+    });
+
+    // Apply deductions — update stock and register movements
+    var promises = Object.keys(deductions).map(function(insId) {
+      var ins = insMap[insId];
+      if (!ins) return Promise.resolve();
+      var cantidad = deductions[insId];
+      var nuevoStock = Math.max(0, (ins.stock_actual || 0) - cantidad);
+
+      // Update stock
+      var p1 = fetch(SB_URL + '/rest/v1/insumos?id=eq.' + insId, {
+        method: 'PATCH',
+        headers: SB_HEADERS,
+        body: JSON.stringify({ stock_actual: nuevoStock })
+      });
+
+      // Register movement
+      var p2 = fetch(SB_URL + '/rest/v1/inv_movimientos', {
+        method: 'POST',
+        headers: SB_HEADERS,
+        body: JSON.stringify({
+          insumo_id: parseInt(insId),
+          tipo: 'salida',
+          cantidad: parseFloat(cantidad.toFixed(4)),
+          nota: 'Venta orden #' + String(saleData.id).padStart(3,'0'),
+          usuario_name: currentUser ? currentUser.name : 'POS',
+        })
+      });
+
+      return Promise.all([p1, p2]);
+    });
+
+    await Promise.all(promises);
+    console.log('Inventario descontado:', Object.keys(deductions).length, 'insumos');
+  } catch(e) {
+    console.error('Error descontando inventario:', e);
+  }
+}
+
+// Fetch helper for inventory (no Prefer header needed for GET)
+async function sbFetch(table, query) {
+  try {
+    var res = await fetch(SB_URL + '/rest/v1/' + table + '?' + query, {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    });
+    return res.json();
+  } catch(e) { return []; }
+}
+
+// Unit conversion for inventory
+function getConvFactor(from, to) {
+  var toG = { kg: 1000, g: 1, gr: 1 };
+  var toMl = { l: 1000, ml: 1, lt: 1000 };
+  if (toG[from] && toG[to]) return toG[from] / toG[to];
+  if (toMl[from] && toMl[to]) return toMl[from] / toMl[to];
+  return null;
 }
 
 // ═══════════════════════════════════════════════════
@@ -1546,19 +1677,13 @@ let currentUser = null;
 let pinBuffer = '';
 const ROLE_LABELS = { cajero:'Cajero', encargado:'Encargado', gerente:'Gerente', admin:'Admin' };
 
-// Permisos por rol (fallback si el usuario no tiene permissions en Supabase)
-const PERMS_DEFAULT = {
-  cajero:    { cierre:false, discount:false, cancel:false, dashboard:false, admin:false },
-  encargado: { cierre:false, discount:true,  cancel:true,  dashboard:false, admin:false },
-  gerente:   { cierre:true,  discount:true,  cancel:true,  dashboard:true,  admin:false },
-  admin:     { cierre:true,  discount:true,  cancel:true,  dashboard:true,  admin:true  },
+// Permisos por rol
+const PERMS = {
+  cajero:     { discount: false, cancel: false, dashboard: false },
+  encargado:  { discount: true,  cancel: true,  dashboard: false },
+  gerente:    { discount: true,  cancel: true,  dashboard: true  },
+  admin:      { discount: true,  cancel: true,  dashboard: true  },
 };
-
-function getPerms(user) {
-  // Si tiene permissions guardados en Supabase, úsalos; si no, usa defaults por rol
-  if (user.permissions && Object.keys(user.permissions).length > 0) return user.permissions;
-  return PERMS_DEFAULT[user.role] || PERMS_DEFAULT.cajero;
-}
 
 function switchLoginTab(tab, btn) {
   document.querySelectorAll('.ltab').forEach(b=>b.classList.remove('active'));
@@ -1629,7 +1754,7 @@ async function doLogin(creds) {
     // Guardar sesión con fecha del día
     localStorage.setItem('lf_session', JSON.stringify({
       date: new Date().toDateString(),
-      user: { id:user.id, name:user.name, role:user.role, sucursal:user.sucursal, permissions:user.permissions||{} }
+      user: { id:user.id, name:user.name, role:user.role, sucursal:user.sucursal }
     }));
 
   } catch(e) {
@@ -1639,7 +1764,7 @@ async function doLogin(creds) {
 }
 
 function applyPermissions(user) {
-  const p = getPerms(user);
+  const p = PERMS[user.role] || PERMS.cajero;
   // Descuentos
   document.getElementById('discount-row').style.display = p.discount ? '' : 'none';
   // Cancelar orden
@@ -1647,18 +1772,14 @@ function applyPermissions(user) {
   // Dashboard link
   const dashLink = document.querySelector('a[href="dashboard.html"]');
   if (dashLink) dashLink.style.display = p.dashboard ? '' : 'none';
-  // Admin link
   const adminLink = document.querySelector('a[href="admin.html"]');
-  if (adminLink) adminLink.style.display = p.admin ? '' : 'none';
-  // Cierre del día — ocultar botón si no tiene permiso
-  const btnCierre = document.getElementById('btn-cierre-turno');
-  if (btnCierre) btnCierre.style.display = p.cierre ? '' : 'none';
+  if (adminLink) adminLink.style.display = user.role==='admin' ? '' : 'none';
   // Mostrar sucursal activa
   const sucBadge = document.getElementById('sucursal-badge');
   const sucDisp = document.getElementById('sucursal-disp');
   if (sucBadge && sucDisp && user.sucursal) {
     sucDisp.textContent = user.sucursal;
-    sucBadge.style.display = 'inline-flex';
+    sucBadge.style.display = '';
   }
 }
 
@@ -1711,8 +1832,7 @@ let cierreData = null;
 
 function openCierre() {
   if (!currentUser) { alert('Debes iniciar sesión primero'); return; }
-  const p = getPerms(currentUser);
-  if (!p.cierre) { alert('No tienes permiso para hacer el cierre del día'); return; }
+  if (['cajero'].includes(currentUser.role)) { alert('No tienes permiso para cerrar el turno'); return; }
   buildCierreData();
   renderCierreModal();
   document.getElementById('ov-cierre').classList.add('open');
