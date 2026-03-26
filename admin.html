@@ -1259,111 +1259,12 @@ document.querySelectorAll('.nav-item').forEach(btn => {
     btn.setAttribute('onclick', "goPage('modificadores',this);loadModificadores()");
   }
 });
-</script>
 
-<!-- MODAL INSUMO -->
-<div class="modal-overlay" id="modal-insumo">
-  <div class="modal-box">
-    <div class="modal-title" id="modal-insumo-title">Nuevo insumo</div>
-    <div class="form-grid">
-      <div class="form-group"><label class="form-label">Nombre</label><input class="form-input" id="ins-nombre" placeholder="Fresa kg"></div>
-      <div class="form-group"><label class="form-label">Categoría</label>
-        <select class="form-select" id="ins-categoria">
-          <option value="ingrediente">Ingrediente</option>
-          <option value="empaque">Empaque</option>
-          <option value="desechable">Desechable</option>
-        </select>
-      </div>
-      <div class="form-group"><label class="form-label">Unidad</label>
-        <select class="form-select" id="ins-unidad">
-          <option value="kg">kg</option>
-          <option value="g">g</option>
-          <option value="l">l</option>
-          <option value="ml">ml</option>
-          <option value="pz">pz</option>
-          <option value="caja">caja</option>
-          <option value="bolsa">bolsa</option>
-          <option value="rollo">rollo</option>
-        </select>
-      </div>
-      <div class="form-group"><label class="form-label" id="ins-costo-label">Costo por unidad ($)</label><input class="form-input" id="ins-costo" type="number" placeholder="0.00" step="0.01" oninput="updateCostoPreview()"></div>
-      <div class="form-group"><label class="form-label">Stock actual</label><input class="form-input" id="ins-stock" type="number" placeholder="0" step="0.01"></div>
-      <div class="form-group"><label class="form-label">Stock mínimo (alerta)</label><input class="form-input" id="ins-minimo" type="number" placeholder="0" step="0.01"></div>
-      <div class="form-group full" style="background:var(--bg);border-radius:10px;padding:12px 14px;margin-top:4px;">
-        <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">📦 Unidad de compra (opcional)</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
-          <div><label class="form-label">Compro en</label><input class="form-input" id="ins-unidad-compra" placeholder="caja, paquete, costal…" oninput="updateCompraLabel()"></div>
-          <div><label class="form-label">1 <span id="ins-compra-label">unidad</span> contiene</label><input class="form-input" id="ins-cantidad-compra" type="number" placeholder="4000" step="0.001" oninput="updateCompraLabel()"></div>
-          <div><label class="form-label">En unidad de uso</label><input class="form-input" id="ins-unidad-uso-disp" disabled style="background:white;color:var(--text-3);"></div>
-        </div>
-        <div style="font-size:12px;color:var(--pink);font-weight:500;margin-top:10px;padding:8px;background:var(--pink-light);border-radius:8px;" id="ins-compra-preview"></div>
-      </div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeModal('modal-insumo')">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveInsumo()">Guardar</button>
-    </div>
-  </div>
-</div>
 
-<!-- MODAL MOVIMIENTO -->
-<div class="modal-overlay" id="modal-movimiento">
-  <div class="modal-box">
-    <div class="modal-title">Registrar movimiento</div>
-    <div class="form-grid">
-      <div class="form-group full"><label class="form-label">Insumo</label>
-        <select class="form-select" id="mov-insumo"></select>
-      </div>
-      <div class="form-group"><label class="form-label">Tipo</label>
-        <select class="form-select" id="mov-tipo">
-          <option value="entrada">📥 Entrada (compra/recepción)</option>
-          <option value="salida">📤 Salida manual</option>
-          <option value="merma">🗑 Merma / desperdicio</option>
-          <option value="ajuste">⚖️ Ajuste de inventario</option>
-        </select>
-      </div>
-      <div class="form-group"><label class="form-label">Cantidad</label><input class="form-input" id="mov-cantidad" type="number" placeholder="0" step="0.01"></div>
-      <div class="form-group full"><label class="form-label">Nota (opcional)</label><input class="form-input" id="mov-nota" placeholder="Proveedor, motivo, etc."></div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeModal('modal-movimiento')">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveMovimiento()">Guardar</button>
-    </div>
-  </div>
-</div>
+// ═══════════════════════════════════════════════════
+// INVENTARIO
+// ═══════════════════════════════════════════════════
 
-<!-- MODAL RECETA -->
-<div class="modal-overlay" id="modal-receta">
-  <div class="modal-box">
-    <div class="modal-title">Agregar ingrediente a receta</div>
-    <div class="form-grid">
-      <div class="form-group full"><label class="form-label">Producto</label>
-        <select class="form-select" id="rec-producto"></select>
-      </div>
-      <div class="form-group full"><label class="form-label">Insumo</label>
-        <select class="form-select" id="rec-insumo" onchange="onRecInsumoChange()"></select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Cantidad por porción</label>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <input class="form-input" id="rec-cantidad" type="number" placeholder="0" step="0.001" oninput="updateRecetaEquiv()">
-          <span id="rec-unidad-badge" style="font-size:13px;font-weight:600;color:var(--pink);white-space:nowrap;min-width:30px;">—</span>
-        </div>
-      </div>
-      <div class="form-group" style="display:flex;flex-direction:column;justify-content:flex-end;">
-        <div id="rec-equiv-info" style="font-size:12px;color:var(--text-3);padding:8px;background:var(--bg);border-radius:8px;line-height:1.5;">
-          Selecciona un insumo
-        </div>
-      </div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeModal('modal-receta')">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveReceta()">Guardar</button>
-    </div>
-  </div>
-</div>
-
-<script>
 // ═══════════════════════════════════════════════════
 // INVENTARIO
 // ═══════════════════════════════════════════════════
