@@ -344,7 +344,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
       </div>
       <div class="table-wrap">
         <table class="data-table">
-          <thead><tr><th>Insumo</th><th>Categoría</th><th>Unidad</th><th>Stock actual</th><th>Stock mínimo</th><th>Costo unit.</th><th>Estado</th><th></th></tr></thead>
+          <thead><tr><th>Insumo</th><th>Categoría</th><th>Unidad uso</th><th>Unidad compra</th><th>Stock actual</th><th>Stock mínimo</th><th>Costo unit.</th><th>Estado</th><th></th></tr></thead>
           <tbody id="tbody-insumos"><tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-3);">Cargando...</td></tr></tbody>
         </table>
       </div>
@@ -1289,6 +1289,15 @@ document.querySelectorAll('.nav-item').forEach(btn => {
       <div class="form-group"><label class="form-label">Costo unitario ($)</label><input class="form-input" id="ins-costo" type="number" placeholder="0.00" step="0.01"></div>
       <div class="form-group"><label class="form-label">Stock actual</label><input class="form-input" id="ins-stock" type="number" placeholder="0" step="0.01"></div>
       <div class="form-group"><label class="form-label">Stock mínimo (alerta)</label><input class="form-input" id="ins-minimo" type="number" placeholder="0" step="0.01"></div>
+      <div class="form-group full" style="background:var(--bg);border-radius:10px;padding:12px 14px;margin-top:4px;">
+        <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">📦 Unidad de compra</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+          <div><label class="form-label">Compro en</label><input class="form-input" id="ins-unidad-compra" placeholder="caja, paquete, costal…"></div>
+          <div><label class="form-label">1 <span id="ins-compra-label">unidad</span> contiene</label><input class="form-input" id="ins-cantidad-compra" type="number" placeholder="4000" step="0.001" oninput="updateCompraLabel()"></div>
+          <div><label class="form-label">En unidad de uso</label><input class="form-input" id="ins-unidad-uso-disp" disabled style="background:white;color:var(--text-3);"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text-3);margin-top:8px;" id="ins-compra-preview">Ej: 1 caja = 4000 g</div>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('modal-insumo')">Cancelar</button>
@@ -1332,10 +1341,20 @@ document.querySelectorAll('.nav-item').forEach(btn => {
         <select class="form-select" id="rec-producto"></select>
       </div>
       <div class="form-group full"><label class="form-label">Insumo</label>
-        <select class="form-select" id="rec-insumo"></select>
+        <select class="form-select" id="rec-insumo" onchange="onRecInsumoChange()"></select>
       </div>
-      <div class="form-group"><label class="form-label">Cantidad por porción</label><input class="form-input" id="rec-cantidad" type="number" placeholder="0" step="0.001"></div>
-      <div class="form-group"><label class="form-label">Unidad</label><input class="form-input" id="rec-unidad-disp" disabled style="background:var(--bg);color:var(--text-3);"></div>
+      <div class="form-group">
+        <label class="form-label">Cantidad por porción</label>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input class="form-input" id="rec-cantidad" type="number" placeholder="0" step="0.001" oninput="updateRecetaEquiv()">
+          <span id="rec-unidad-badge" style="font-size:13px;font-weight:600;color:var(--pink);white-space:nowrap;min-width:30px;">—</span>
+        </div>
+      </div>
+      <div class="form-group" style="display:flex;flex-direction:column;justify-content:flex-end;">
+        <div id="rec-equiv-info" style="font-size:12px;color:var(--text-3);padding:8px;background:var(--bg);border-radius:8px;line-height:1.5;">
+          Selecciona un insumo
+        </div>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('modal-receta')">Cancelar</button>
@@ -1364,14 +1383,18 @@ function renderInsumos(list) {
   if (!list.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-3);">Sin insumos registrados</td></tr>'; return; }
   const catLabel = { ingrediente:'🥝 Ingrediente', empaque:'📦 Empaque', desechable:'🥤 Desechable' };
   tbody.innerHTML = list.map(i => {
-    const alerta = i.stock_actual <= i.stock_minimo;
+    const alerta = i.stock_actual !== null && i.stock_actual <= i.stock_minimo;
     const stockCls = alerta ? 'color:#A32D2D;font-weight:600;' : '';
+    const compraInfo = i.unidad_compra && i.cantidad_por_compra
+      ? `1 ${i.unidad_compra} = ${i.cantidad_por_compra} ${i.unidad}`
+      : '—';
     return `<tr>
       <td><strong>${i.nombre}</strong></td>
       <td>${catLabel[i.categoria]||i.categoria}</td>
-      <td>${i.unidad}</td>
-      <td style="${stockCls}">${i.stock_actual} ${i.unidad} ${alerta ? '⚠️' : ''}</td>
-      <td>${i.stock_minimo} ${i.unidad}</td>
+      <td style="font-weight:500;">${i.unidad}</td>
+      <td style="font-size:12px;color:var(--text-3);">${compraInfo}</td>
+      <td style="${stockCls}">${i.stock_actual ?? 0} ${i.unidad} ${alerta ? '⚠️' : ''}</td>
+      <td>${i.stock_minimo ?? 0} ${i.unidad}</td>
       <td>$${Number(i.costo_unitario).toFixed(2)}</td>
       <td><span class="badge ${i.activo ? 'badge-gerente' : 'badge-cajero'}">${i.activo ? 'Activo' : 'Inactivo'}</span></td>
       <td style="display:flex;gap:6px;">
@@ -1397,7 +1420,24 @@ async function openModalInsumo(ins=null) {
   document.getElementById('ins-costo').value = ins?.costo_unitario || '';
   document.getElementById('ins-stock').value = ins?.stock_actual || '';
   document.getElementById('ins-minimo').value = ins?.stock_minimo || '';
+  document.getElementById('ins-unidad-compra').value = ins?.unidad_compra || '';
+  document.getElementById('ins-cantidad-compra').value = ins?.cantidad_por_compra || '';
+  document.getElementById('ins-unidad-uso-disp').value = ins?.unidad || '';
+  // Sync unidad display when changed
+  document.getElementById('ins-unidad').onchange = () => {
+    document.getElementById('ins-unidad-uso-disp').value = document.getElementById('ins-unidad').value;
+    updateCompraLabel();
+  };
+  updateCompraLabel();
   document.getElementById('modal-insumo').classList.add('open');
+}
+
+function updateCompraLabel() {
+  const uc = document.getElementById('ins-unidad-compra').value || 'unidad';
+  const cant = document.getElementById('ins-cantidad-compra').value || '?';
+  const uu = document.getElementById('ins-unidad').value || '';
+  document.getElementById('ins-compra-label').textContent = uc;
+  document.getElementById('ins-compra-preview').textContent = `Ej: 1 ${uc} = ${cant} ${uu}`;
 }
 
 async function saveInsumo() {
@@ -1408,6 +1448,8 @@ async function saveInsumo() {
     costo_unitario: parseFloat(document.getElementById('ins-costo').value) || 0,
     stock_actual: parseFloat(document.getElementById('ins-stock').value) || 0,
     stock_minimo: parseFloat(document.getElementById('ins-minimo').value) || 0,
+    unidad_compra: document.getElementById('ins-unidad-compra').value.trim() || null,
+    cantidad_por_compra: parseFloat(document.getElementById('ins-cantidad-compra').value) || null,
     activo: true,
   };
   if (!data.nombre) { toast('⚠ El nombre es requerido'); return; }
@@ -1548,17 +1590,43 @@ async function openModalReceta() {
   const productos = await sbGet('productos', 'activo=eq.true&select=nombre&order=nombre.asc');
   document.getElementById('rec-producto').innerHTML = productos.map(p=>`<option value="${p.nombre}" ${selectedProductoReceta===p.nombre?'selected':''}>${p.nombre}</option>`).join('');
   const insActivos = allInsumos.filter(i=>i.activo);
-  document.getElementById('rec-insumo').innerHTML = insActivos.map(i=>`<option value="${i.id}" data-unidad="${i.unidad}">${i.nombre} (${i.unidad})</option>`).join('');
-  // Show unit of selected insumo
-  const updateUnidad = () => {
-    const sel = document.getElementById('rec-insumo');
-    const opt = sel.options[sel.selectedIndex];
-    document.getElementById('rec-unidad-disp').value = opt?.dataset.unidad || '';
-  };
-  document.getElementById('rec-insumo').onchange = updateUnidad;
-  updateUnidad();
+  document.getElementById('rec-insumo').innerHTML = insActivos.map(i=>`<option value="${i.id}">${i.nombre} (${i.unidad})</option>`).join('');
   document.getElementById('rec-cantidad').value = '';
+  onRecInsumoChange();
   document.getElementById('modal-receta').classList.add('open');
+}
+
+function onRecInsumoChange() {
+  const insId = parseInt(document.getElementById('rec-insumo')?.value);
+  const ins = allInsumos.find(i => i.id === insId);
+  if (!ins) return;
+  document.getElementById('rec-unidad-badge').textContent = ins.unidad;
+  updateRecetaEquiv();
+}
+
+function updateRecetaEquiv() {
+  const insId = parseInt(document.getElementById('rec-insumo')?.value);
+  const ins = allInsumos.find(i => i.id === insId);
+  const cantidad = parseFloat(document.getElementById('rec-cantidad').value) || 0;
+  const infoEl = document.getElementById('rec-equiv-info');
+  if (!ins) { infoEl.textContent = 'Selecciona un insumo'; return; }
+
+  let lines = [`<strong>Unidad de uso:</strong> ${ins.unidad}`];
+
+  if (ins.unidad_compra && ins.cantidad_por_compra) {
+    const porciones = ins.cantidad_por_compra / (cantidad || 1);
+    lines.push(`<strong>Compra:</strong> 1 ${ins.unidad_compra} = ${ins.cantidad_por_compra} ${ins.unidad}`);
+    if (cantidad > 0) {
+      lines.push(`<strong>1 ${ins.unidad_compra}</strong> alcanza para <strong>${porciones.toFixed(0)} porciones</strong>`);
+      const costoXPorcion = (ins.costo_unitario * cantidad);
+      lines.push(`<strong>Costo por porción:</strong> $${costoXPorcion.toFixed(3)}`);
+    }
+  } else if (cantidad > 0) {
+    const costoXPorcion = (ins.costo_unitario * cantidad);
+    lines.push(`<strong>Costo por porción:</strong> $${costoXPorcion.toFixed(3)}`);
+  }
+
+  infoEl.innerHTML = lines.join('<br>');
 }
 
 async function saveReceta() {
