@@ -2212,8 +2212,8 @@ async function loadEntradasPendientes() {
 
       // Mode toggle
       + '<div style="display:flex;gap:6px;margin-bottom:10px;">'
-      +   '<button id="ep-mode-inv-' + e.id + '" class="btn btn-ghost btn-sm" style="flex:1;background:var(--pink-light);color:var(--pink);" onclick="epSetMode(' + e.id + ','inv')">📦 Inventario</button>'
-      +   '<button id="ep-mode-gasto-' + e.id + '" class="btn btn-ghost btn-sm" style="flex:1;" onclick="epSetMode(' + e.id + ','gasto')">💸 Gasto operativo</button>'
+      +   '<button id="ep-mode-inv-' + e.id + '" class="btn btn-ghost btn-sm" style="flex:1;background:var(--pink-light);color:var(--pink);" onclick="epSetMode(' + e.id + ',&quot;inv&quot;)">📦 Inventario</button>'
+      +   '<button id="ep-mode-gasto-' + e.id + '" class="btn btn-ghost btn-sm" style="flex:1;" onclick="epSetMode(' + e.id + ',&quot;gasto&quot;)">💸 Gasto operativo</button>'
       + '</div>'
 
       // Gasto mode fields (hidden by default)
