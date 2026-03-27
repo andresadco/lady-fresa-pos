@@ -263,21 +263,50 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 
     <!-- OVERVIEW -->
     <div class="page active" id="page-overview">
-      <div class="page-title">Resumen</div>
-      <div class="page-sub">Vista general del sistema Lady Fresa</div>
-      <div class="mini-stats" id="overview-stats"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:20px;">
+        <div>
+          <div class="page-title" style="margin-bottom:2px;">Dashboard</div>
+          <div class="page-sub" id="dash-fecha">Cargando...</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadOverview()">↻ Actualizar</button>
+      </div>
+
+      <!-- BLOQUE 1: KPIs operativos -->
+      <div id="dash-kpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;"></div>
+
+      <!-- BLOQUE 2: Ventas + Gastos del mes -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
         <div class="card">
-          <div class="card-title">Usuarios activos</div>
-          <div id="overview-users"></div>
+          <div class="card-title">💰 Ventas del mes</div>
+          <div id="dash-ventas-mes"></div>
         </div>
         <div class="card">
-          <div class="card-title">Sucursales</div>
-          <div id="overview-sucursales"></div>
+          <div class="card-title">💸 Gastos del mes</div>
+          <div id="dash-gastos-mes"></div>
         </div>
       </div>
-      <div class="card" style="margin-top:20px;">
-        <div class="card-title">Últimos turnos cerrados</div>
+
+      <!-- BLOQUE 3: Inventario -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+        <div class="card">
+          <div class="card-title">⚠️ Stock bajo</div>
+          <div id="dash-stock-bajo"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">📦 Top consumo este mes</div>
+          <div id="dash-top-consumo"></div>
+        </div>
+      </div>
+
+      <!-- BLOQUE 4: Costos por producto -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-title">🍓 Margen estimado por producto</div>
+        <div id="dash-margenes"></div>
+      </div>
+
+      <!-- BLOQUE 5: Últimos turnos -->
+      <div class="card">
+        <div class="card-title">🔒 Últimos turnos cerrados</div>
         <div id="overview-turnos"></div>
       </div>
     </div>
@@ -761,44 +790,203 @@ function fmt(n) { return '$'+Number(n||0).toLocaleString('es-MX',{minimumFractio
 
 // ── OVERVIEW ──
 async function loadOverview() {
-  const [orders, users, sucursales, turnos] = await Promise.all([
-    sbGet('orders','created_at=gte.'+new Date().toISOString().slice(0,10)+'&select=total'),
-    sbGet('users','active=eq.true&select=id,name,role'),
-    sbGet('sucursales','select=*'),
-    sbGet('turnos','order=created_at.desc&limit=5&select=*'),
+  var hoy = new Date();
+  var todayISO = hoy.toISOString().slice(0,10);
+  var mesISO = todayISO.slice(0,7);
+  var mesInicio = mesISO + '-01';
+  var mesFin = mesISO + '-31';
+
+  document.getElementById('dash-fecha').textContent =
+    hoy.toLocaleDateString('es-MX', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+
+  // Load all data in parallel
+  var [ordersHoy, ordensMes, turnos, insumos, movsMes, gastosMes, recetas] = await Promise.all([
+    sbGet('orders', 'created_at=gte.' + todayISO + 'T00:00:00&select=total,sucursal'),
+    sbGet('orders', 'created_at=gte.' + mesInicio + 'T00:00:00&select=total,sucursal'),
+    sbGet('turnos', 'order=created_at.desc&limit=5&select=*'),
+    sbGet('insumos', 'activo=eq.true&select=*'),
+    sbGet('inv_movimientos', 'tipo=eq.salida&created_at=gte.' + mesInicio + 'T00:00:00&select=insumo_id,cantidad'),
+    sbGet('gastos_operativos', 'fecha=gte.' + mesInicio + '&fecha=lte.' + mesFin + '&select=*'),
+    sbGet('recetas', 'select=producto_nombre,tipo_componente,insumo_id,cantidad,unidad_uso,modificador_opcion'),
   ]);
 
-  const totalHoy = orders.reduce((s,o)=>s+(+o.total||0),0);
-  document.getElementById('overview-stats').innerHTML = `
-    <div class="mini-stat"><div class="mini-stat-label">Ventas hoy</div><div class="mini-stat-val" style="color:var(--pink)">${fmt(totalHoy)}</div></div>
-    <div class="mini-stat"><div class="mini-stat-label">Órdenes hoy</div><div class="mini-stat-val">${orders.length}</div></div>
-    <div class="mini-stat"><div class="mini-stat-label">Usuarios activos</div><div class="mini-stat-val">${users.length}</div></div>
-    <div class="mini-stat"><div class="mini-stat-label">Sucursales</div><div class="mini-stat-val">${sucursales.length}</div></div>
-    <div class="mini-stat"><div class="mini-stat-label">Productos</div><div class="mini-stat-val">${productsData.filter(p=>p.active).length}</div></div>
-  `;
+  var insArr  = Array.isArray(insumos)    ? insumos    : [];
+  var movArr  = Array.isArray(movsMes)    ? movsMes    : [];
+  var gasArr  = Array.isArray(gastosMes)  ? gastosMes  : [];
+  var recArr  = Array.isArray(recetas)    ? recetas    : [];
+  var ordHoy  = Array.isArray(ordersHoy)  ? ordersHoy  : [];
+  var ordMes  = Array.isArray(ordensMes)  ? ordensMes  : [];
+  var turArr  = Array.isArray(turnos)     ? turnos     : [];
 
-  const roleClr = { cajero:'badge-cajero', encargado:'badge-encargado', gerente:'badge-gerente', admin:'badge-admin' };
-  document.getElementById('overview-users').innerHTML = users.slice(0,6).map(u=>`
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
-      <div class="user-av" style="width:28px;height:28px;font-size:11px;">${u.name.charAt(0)}</div>
-      <div style="flex:1;font-size:13px;font-weight:500;">${u.name}</div>
-      <span class="badge ${roleClr[u.role]||''}">${u.role}</span>
-    </div>`).join('');
+  var ventasHoy = ordHoy.reduce(function(s,o){ return s+(+o.total||0); }, 0);
+  var ventasMes = ordMes.reduce(function(s,o){ return s+(+o.total||0); }, 0);
+  var gastosMesTot = gasArr.reduce(function(s,g){ return s+(+g.monto||0); }, 0);
+  var insMap = {};
+  insArr.forEach(function(i){ insMap[i.id] = i; });
 
-  document.getElementById('overview-sucursales').innerHTML = sucursales.map(s=>`
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
-      <span style="font-size:18px">🏪</span>
-      <div style="flex:1;"><div style="font-size:13px;font-weight:500;">${s.name}</div><div style="font-size:11px;color:var(--text-3);">${s.direccion||'Sin dirección'}</div></div>
-      <span class="badge ${s.active?'badge-active':'badge-inactive'}">${s.active?'Activa':'Inactiva'}</span>
-    </div>`).join('');
+  // ── BLOQUE 1: KPIs ──
+  var ticketProm = ordHoy.length ? Math.round(ventasHoy / ordHoy.length) : 0;
+  var stockBajoCount = insArr.filter(function(i){ return (i.stock_actual||0) <= (i.stock_minimo||0); }).length;
+  var valorStock = insArr.reduce(function(s,i){ return s + ((i.stock_actual||0) * (i.costo_unitario||0)); }, 0);
+  var margenMes = ventasMes > 0 ? Math.round(((ventasMes - gastosMesTot) / ventasMes) * 100) : 0;
 
-  document.getElementById('overview-turnos').innerHTML = !turnos.length ?
-    '<div style="text-align:center;padding:20px;color:var(--text-3);">Sin turnos cerrados aún</div>' :
-    turnos.map(t=>`
-    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
-      <div style="flex:1;"><div style="font-size:13px;font-weight:500;">${t.cajero_name} · ${t.sucursal}</div><div style="font-size:11px;color:var(--text-3);">${new Date(t.cerrado_at||t.created_at).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div></div>
-      <div style="text-align:right;"><div style="font-size:13px;font-weight:600;color:var(--pink)">${fmt(t.total_ventas)}</div><div style="font-size:11px;color:var(--text-3);">${t.total_ordenes} órdenes</div></div>
-    </div>`).join('');
+  var kpiColor = function(val, good) { return good ? (val >= 0 ? 'var(--green)' : '#A32D2D') : (val > 0 ? '#BA7517' : 'var(--green)'); };
+
+  document.getElementById('dash-kpis').innerHTML = [
+    { label:'Ventas hoy', val:'$'+ventasHoy.toLocaleString('es-MX'), sub: ordHoy.length+' órdenes · $'+ticketProm+' prom', color:'var(--pink)' },
+    { label:'Ventas del mes', val:'$'+ventasMes.toLocaleString('es-MX'), sub: ordMes.length+' órdenes', color:'var(--pink)' },
+    { label:'Margen estimado', val: margenMes+'%', sub:'Ventas - Gastos op.', color: margenMes >= 0 ? 'var(--green)' : '#A32D2D' },
+    { label:'⚠️ Stock bajo', val: stockBajoCount+' insumos', sub:'$'+Math.round(valorStock).toLocaleString('es-MX')+' valor total', color: stockBajoCount > 0 ? '#A32D2D' : 'var(--green)' },
+  ].map(function(k){
+    return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;">'
+      + '<div style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">' + k.label + '</div>'
+      + '<div style="font-size:24px;font-weight:700;color:' + k.color + ';line-height:1.1;">' + k.val + '</div>'
+      + '<div style="font-size:11px;color:var(--text-3);margin-top:4px;">' + k.sub + '</div>'
+      + '</div>';
+  }).join('');
+
+  // ── BLOQUE 2: Ventas por sucursal ──
+  var ventasPorSuc = {};
+  ordMes.forEach(function(o){ var s = o.sucursal||'Principal'; ventasPorSuc[s] = (ventasPorSuc[s]||0)+(+o.total||0); });
+  document.getElementById('dash-ventas-mes').innerHTML = Object.keys(ventasPorSuc).length
+    ? Object.entries(ventasPorSuc).sort(function(a,b){return b[1]-a[1];}).map(function(e){
+        var pct = ventasMes ? Math.round((e[1]/ventasMes)*100) : 0;
+        return '<div style="margin-bottom:10px;">'
+          + '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
+          +   '<span style="font-size:13px;font-weight:600;">🏪 '+e[0]+'</span>'
+          +   '<span style="font-size:13px;font-weight:700;color:var(--pink);">$'+e[1].toLocaleString('es-MX')+'</span>'
+          + '</div>'
+          + '<div style="height:6px;background:var(--bg);border-radius:3px;"><div style="height:100%;width:'+pct+'%;background:var(--pink);border-radius:3px;"></div></div>'
+          + '</div>';
+      }).join('')
+    + '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;">'
+    + '<span style="font-size:12px;color:var(--text-3);">Total mes</span>'
+    + '<span style="font-size:14px;font-weight:700;color:var(--pink);">$'+ventasMes.toLocaleString('es-MX')+'</span></div>'
+    : '<div style="text-align:center;padding:20px;color:var(--text-3);">Sin ventas este mes</div>';
+
+  // ── Gastos por categoría ──
+  var porCat = {};
+  gasArr.forEach(function(g){ porCat[g.categoria] = (porCat[g.categoria]||0)+(+g.monto||0); });
+  document.getElementById('dash-gastos-mes').innerHTML = Object.keys(porCat).length
+    ? Object.entries(porCat).sort(function(a,b){return b[1]-a[1];}).slice(0,6).map(function(e){
+        var pct = gastosMesTot ? Math.round((e[1]/gastosMesTot)*100) : 0;
+        var emoji = CAT_EMOJI[e[0]] || '📦';
+        return '<div style="margin-bottom:8px;">'
+          + '<div style="display:flex;justify-content:space-between;margin-bottom:3px;">'
+          +   '<span style="font-size:12px;">'+emoji+' '+e[0]+'</span>'
+          +   '<span style="font-size:12px;font-weight:600;">$'+e[1].toLocaleString('es-MX')+'</span>'
+          + '</div>'
+          + '<div style="height:5px;background:var(--bg);border-radius:3px;"><div style="height:100%;width:'+pct+'%;background:#BA7517;border-radius:3px;"></div></div>'
+          + '</div>';
+      }).join('')
+    + '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;">'
+    + '<span style="font-size:12px;color:var(--text-3);">Total egresos</span>'
+    + '<span style="font-size:14px;font-weight:700;color:#BA7517;">$'+gastosMesTot.toLocaleString('es-MX')+'</span></div>'
+    : '<div style="text-align:center;padding:20px;color:var(--text-3);">Sin gastos registrados</div>';
+
+  // ── BLOQUE 3: Stock bajo ──
+  var stockBajo = insArr.filter(function(i){ return (i.stock_actual||0) <= (i.stock_minimo||0); })
+    .sort(function(a,b){ return (a.stock_actual/Math.max(a.stock_minimo,1)) - (b.stock_actual/Math.max(b.stock_minimo,1)); });
+
+  document.getElementById('dash-stock-bajo').innerHTML = stockBajo.length
+    ? stockBajo.slice(0,8).map(function(i){
+        var pct = i.stock_minimo > 0 ? Math.min(100, Math.round((i.stock_actual/i.stock_minimo)*100)) : 0;
+        var color = pct === 0 ? '#A32D2D' : '#BA7517';
+        return '<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);">'
+          + '<div style="flex:1;min-width:0;">'
+          +   '<div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+i.nombre+'</div>'
+          +   '<div style="font-size:11px;color:'+color+';">'+i.stock_actual+' / '+i.stock_minimo+' '+i.unidad+'</div>'
+          + '</div>'
+          + '<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:'+(pct===0?'#FCEBEB':'#FAEEDA')+';color:'+color+';">'+(pct===0?'Agotado':'⚠️ Bajo')+'</span>'
+          + '</div>';
+      }).join('')
+    : '<div style="text-align:center;padding:20px;color:var(--green);font-weight:600;">✅ Todo en niveles correctos</div>';
+
+  // ── Top consumo del mes ──
+  var consumoPorIns = {};
+  movArr.forEach(function(m){ consumoPorIns[m.insumo_id] = (consumoPorIns[m.insumo_id]||0)+(+m.cantidad||0); });
+  var topConsumo = Object.entries(consumoPorIns)
+    .sort(function(a,b){return b[1]-a[1];}).slice(0,6)
+    .map(function(e){ return { ins: insMap[e[0]], cant: e[1] }; })
+    .filter(function(x){ return x.ins; });
+
+  document.getElementById('dash-top-consumo').innerHTML = topConsumo.length
+    ? topConsumo.map(function(x){
+        var costo = x.ins.costo_unitario * x.cant;
+        return '<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);">'
+          + '<div style="flex:1;">'
+          +   '<div style="font-size:13px;font-weight:600;">'+x.ins.nombre+'</div>'
+          +   '<div style="font-size:11px;color:var(--text-3);">'+x.cant.toFixed(1)+' '+x.ins.unidad+' consumidos</div>'
+          + '</div>'
+          + '<div style="text-align:right;font-size:12px;font-weight:600;color:var(--purple);">$'+costo.toFixed(2)+'</div>'
+          + '</div>';
+      }).join('')
+    : '<div style="text-align:center;padding:20px;color:var(--text-3);">Sin movimientos este mes</div>';
+
+  // ── BLOQUE 4: Márgenes por producto ──
+  var insMapLocal = {};
+  insArr.forEach(function(i){ insMapLocal[i.id] = i; });
+
+  // Group recetas by producto
+  var recPorProd = {};
+  recArr.forEach(function(r){
+    if (!recPorProd[r.producto_nombre]) recPorProd[r.producto_nombre] = [];
+    recPorProd[r.producto_nombre].push(r);
+  });
+
+  // For each product calculate base cost (fruta + ingredientes, no toppings)
+  var productos = productsData.filter(function(p){ return p.active && recPorProd[p.name]; });
+
+  function calcCostoBase(nombre) {
+    var lines = (recPorProd[nombre]||[]).filter(function(r){ return r.tipo_componente !== 'topping'; });
+    // Use first tamaño found or flat recipe
+    var costoTotal = 0;
+    lines.forEach(function(l){
+      var ins = insMapLocal[l.insumo_id];
+      if (!ins) return;
+      var uu = l.unidad_uso || ins.unidad;
+      var f = getConvFactor(uu, ins.unidad);
+      var cantBase = f ? l.cantidad * f : l.cantidad;
+      costoTotal += ins.costo_unitario * cantBase;
+    });
+    return costoTotal;
+  }
+
+  var margenesHtml = productos.slice(0,8).map(function(p){
+    var costo = calcCostoBase(p.name);
+    var precio = p.price || 0;
+    var margen = precio > 0 ? Math.round(((precio - costo) / precio) * 100) : 0;
+    var margenColor = margen >= 60 ? 'var(--green)' : margen >= 40 ? '#BA7517' : '#A32D2D';
+    return '<tr>'
+      + '<td><strong>'+p.name+'</strong></td>'
+      + '<td style="color:var(--text-3);">$'+costo.toFixed(2)+'</td>'
+      + '<td style="font-weight:600;">$'+precio+'</td>'
+      + '<td><span style="font-weight:700;color:'+margenColor+';">'+margen+'%</span></td>'
+      + '<td style="color:var(--green);">$'+(precio-costo).toFixed(2)+'</td>'
+      + '</tr>';
+  }).join('');
+
+  document.getElementById('dash-margenes').innerHTML = margenesHtml
+    ? '<table class="data-table" style="font-size:12px;">'
+      + '<thead><tr><th>Producto</th><th>Costo receta</th><th>Precio venta</th><th>Margen</th><th>Ganancia</th></tr></thead>'
+      + '<tbody>'+margenesHtml+'</tbody></table>'
+      + '<div style="font-size:11px;color:var(--text-3);margin-top:8px;">* Costo base sin toppings variables</div>'
+    : '<div style="text-align:center;padding:20px;color:var(--text-3);">Captura recetas para ver márgenes</div>';
+
+  // ── BLOQUE 5: Últimos turnos ──
+  document.getElementById('overview-turnos').innerHTML = !turArr.length
+    ? '<div style="text-align:center;padding:20px;color:var(--text-3);">Sin turnos cerrados aún</div>'
+    : turArr.map(function(t){
+        return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">'
+          + '<div style="flex:1;">'
+          +   '<div style="font-size:13px;font-weight:500;">'+(t.cajero_name||'—')+' · '+(t.sucursal||'—')+'</div>'
+          +   '<div style="font-size:11px;color:var(--text-3);">'+new Date(t.cerrado_at||t.created_at).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})+'</div>'
+          + '</div>'
+          + '<div style="text-align:right;">'
+          +   '<div style="font-size:13px;font-weight:600;color:var(--pink);">$'+(+t.total_ventas||0).toLocaleString('es-MX')+'</div>'
+          +   '<div style="font-size:11px;color:var(--text-3);">'+(t.total_ordenes||0)+' órdenes</div>'
+          + '</div></div>';
+      }).join('');
 }
 
 // ── USUARIOS ──
