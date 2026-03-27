@@ -2170,16 +2170,42 @@ async function confirmarEntrada(entradaId, monto) {
   const totalUnidades = cant * (ins.cantidad_por_compra || 1);
   const nuevoStock = (ins.stock_actual || 0) + totalUnidades;
 
-  // 1. Update stock
-  await sbPatch('insumos', insId, { stock_actual: Math.round(nuevoStock * 1000) / 1000 });
+  // ── Calcular costo promedio histórico ──
+  // Traer todas las entradas confirmadas previas de este insumo
+  const historial = await sbGet('entradas_pendientes',
+    'insumo_id=eq.' + insId + '&estado=eq.confirmada&select=monto,cantidad_sugerida'
+  );
+
+  // Incluir la compra actual en el promedio
+  var todasCompras = Array.isArray(historial) ? historial.filter(function(h){ return h.monto && h.cantidad_sugerida; }) : [];
+  todasCompras.push({ monto: monto, cantidad_sugerida: cant });
+
+  // Promedio ponderado: suma(montos) / suma(cantidades)
+  var totalMonto = todasCompras.reduce(function(s, h){ return s + Number(h.monto); }, 0);
+  var totalCant  = todasCompras.reduce(function(s, h){ return s + Number(h.cantidad_sugerida); }, 0);
+  var nuevoCostoCompra  = totalCant > 0 ? Math.round((totalMonto / totalCant) * 100) / 100 : ins.costo_compra;
+  var nuevoCostoUnit    = (ins.cantidad_por_compra && ins.cantidad_por_compra > 0)
+    ? Math.round((nuevoCostoCompra / ins.cantidad_por_compra) * 1000000) / 1000000
+    : nuevoCostoCompra;
+
+  var costoAnterior = ins.costo_compra || ins.costo_unitario;
+  var cambio = costoAnterior ? Math.round(((nuevoCostoCompra - costoAnterior) / costoAnterior) * 100) : 0;
+
+  // 1. Update stock + costo promedio
+  await sbPatch('insumos', insId, {
+    stock_actual:   Math.round(nuevoStock * 1000) / 1000,
+    costo_compra:   nuevoCostoCompra,
+    costo_unitario: nuevoCostoUnit,
+  });
 
   // 2. Register movement
   await sbPost('inv_movimientos', {
-    insumo_id: insId,
-    tipo: 'entrada',
-    cantidad: totalUnidades,
-    nota: 'Compra confirmada: $' + monto,
-    usuario_name: currentUser ? currentUser.name : 'Admin',
+    insumo_id:     insId,
+    tipo:          'entrada',
+    cantidad:      totalUnidades,
+    nota:          'Compra $' + monto + ' · ' + cant + ' ' + (ins.unidad_compra || ins.unidad)
+                 + ' · Costo prom: $' + nuevoCostoCompra + (cambio !== 0 ? ' (' + (cambio > 0 ? '+' : '') + cambio + '%)' : ''),
+    usuario_name:  currentUser ? currentUser.name : 'Admin',
   });
 
   // 3. Mark as confirmed
@@ -2189,7 +2215,11 @@ async function confirmarEntrada(entradaId, monto) {
     body: JSON.stringify({ estado: 'confirmada', insumo_id: insId, cantidad_sugerida: cant })
   });
 
-  toast('✓ Entrada confirmada — stock actualizado');
+  // 4. Toast con info del nuevo costo
+  var msg = '✓ Entrada confirmada · Costo actualizado: $' + nuevoCostoCompra + ' / ' + (ins.unidad_compra || ins.unidad);
+  if (cambio !== 0) msg += ' (' + (cambio > 0 ? '▲ +' : '▼ ') + cambio + '% vs anterior)';
+  toast(msg);
+
   await loadInventario();
   loadEntradasPendientes();
 }
