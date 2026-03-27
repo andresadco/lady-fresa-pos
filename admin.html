@@ -2070,56 +2070,94 @@ async function loadEntradasPendientes() {
     return;
   }
 
-  // Pre-match each gasto with an insumo by name similarity
+  // Match insumo by name
   function matchInsumo(concepto) {
     if (!concepto) return null;
     const lower = concepto.toLowerCase();
-    // Exact match first
     let match = allInsumos.find(function(i){ return i.nombre.toLowerCase() === lower; });
     if (match) return match;
-    // Partial match
     match = allInsumos.find(function(i){ return lower.includes(i.nombre.toLowerCase()) || i.nombre.toLowerCase().includes(lower); });
     return match || null;
   }
 
-  function calcCantidad(insumo, monto) {
+  // Parse nota like "4 cajas de $250" → { cantidad: 4, precioUnit: 250 }
+  function parseNota(nota) {
+    if (!nota) return {};
+    var result = {};
+    // Match quantity: "4 cajas", "4 bolsas", "4 piezas", etc.
+    var cantMatch = nota.match(/(\d+[\.,]?\d*)\s*(caja|bolsa|pieza|pza|kilo|kg|litro|lt|costal|paquete|rollo|pack|lata|cubeta|garraf)/i);
+    if (cantMatch) result.cantidad = parseFloat(cantMatch[1].replace(',', '.'));
+    // Match price: "$250", "250 pesos", "a $250"
+    var precioMatch = nota.match(/\$\s*(\d+[\.,]?\d*)/);
+    if (precioMatch) result.precioUnit = parseFloat(precioMatch[1].replace(',', '.'));
+    return result;
+  }
+
+  function calcCantidad(insumo, monto, notaParsed) {
+    // Priority: from nota > from monto/costo_compra
+    if (notaParsed && notaParsed.cantidad) return notaParsed.cantidad;
     if (!insumo || !insumo.costo_compra || !monto) return null;
     return Math.round((monto / insumo.costo_compra) * 100) / 100;
+  }
+
+  function calcPrecioUnit(insumo, monto, notaParsed, cantSugerida) {
+    // If nota has explicit price, use it
+    if (notaParsed && notaParsed.precioUnit) return notaParsed.precioUnit;
+    // If we have quantity, divide monto / qty
+    if (cantSugerida && monto) return Math.round((monto / cantSugerida) * 100) / 100;
+    return null;
   }
 
   const html = pendientes.map(function(e) {
     const sugerido = e.insumo_id
       ? allInsumos.find(function(i){ return i.id === e.insumo_id; })
       : matchInsumo(e.concepto);
-    const cantSugerida = e.cantidad_sugerida || calcCantidad(sugerido, e.monto);
+
+    const notaParsed = parseNota(e.nota_gasto || '');
+    const cantSugerida = e.cantidad_sugerida || calcCantidad(sugerido, e.monto, notaParsed);
+    const precioUnit = calcPrecioUnit(sugerido, e.monto, notaParsed, cantSugerida);
+
     const insOpts = allInsumos.filter(function(i){ return i.activo; }).map(function(i){
       return '<option value="' + i.id + '"' + (sugerido && i.id === sugerido.id ? ' selected' : '') + '>' + i.nombre + ' (' + i.unidad + ')</option>';
     }).join('');
 
+    var costoActual = sugerido ? (sugerido.costo_compra || null) : null;
+    var precioInfo = '';
+    if (precioUnit) {
+      precioInfo = ' · <strong>$' + precioUnit + ' c/u</strong>';
+      if (costoActual) {
+        var diff = Math.round(((precioUnit - costoActual) / costoActual) * 100);
+        if (diff !== 0) precioInfo += ' <span style="color:' + (diff > 0 ? '#A32D2D' : '#3B6D11') + ';">' + (diff > 0 ? '▲ +' : '▼ ') + diff + '% vs anterior</span>';
+      }
+    }
+
     return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;">'
       // Header
-      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">'
-      +   '<div>'
+      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">'
+      +   '<div style="flex:1;min-width:0;">'
       +     '<div style="font-weight:600;font-size:14px;">' + (e.concepto || '—') + '</div>'
       +     '<div style="font-size:11px;color:var(--text-3);margin-top:2px;">' + (e.fecha || '') + (e.quien ? ' · ' + e.quien : '') + (e.categoria ? ' · ' + e.categoria : '') + '</div>'
+      +     (e.nota_gasto ? '<div style="font-size:11px;color:var(--purple);margin-top:3px;font-style:italic;">📝 ' + e.nota_gasto + precioInfo + '</div>' : '')
       +   '</div>'
-      +   '<div style="font-size:18px;font-weight:700;color:var(--pink);">$' + Number(e.monto).toFixed(2) + '</div>'
+      +   '<div style="font-size:18px;font-weight:700;color:var(--pink);margin-left:12px;">$' + Number(e.monto).toFixed(2) + '</div>'
       + '</div>'
 
-      // Insumo selector
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'
+      // Insumo + cantidad + precio unit
+      + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">'
       +   '<div><label class="form-label">Insumo</label>'
       +     '<select class="form-select" id="ep-ins-' + e.id + '" onchange="onEpInsumoChange(' + e.id + ',' + e.monto + ')" style="margin-top:4px;">'
       +     '<option value="">— Seleccionar —</option>' + insOpts
       +     '</select></div>'
-      +   '<div><label class="form-label">Cantidad <span id="ep-unidad-' + e.id + '" style="color:var(--text-3);">' + (sugerido ? '(' + sugerido.unidad_compra + ')' : '') + '</span></label>'
-      +     '<input class="form-input" id="ep-cant-' + e.id + '" type="number" step="0.01" value="' + (cantSugerida || '') + '" placeholder="ej: 4" style="margin-top:4px;"></div>'
+      +   '<div><label class="form-label">Cantidad <span id="ep-unidad-' + e.id + '" style="color:var(--text-3);">' + (sugerido ? '(' + (sugerido.unidad_compra || sugerido.unidad) + ')' : '') + '</span></label>'
+      +     '<input class="form-input" id="ep-cant-' + e.id + '" type="number" step="0.01" value="' + (cantSugerida || '') + '" placeholder="ej: 4" style="margin-top:4px;" oninput="onEpCantChange(' + e.id + ',' + e.monto + ')"></div>'
+      +   '<div><label class="form-label">Precio / unidad</label>'
+      +     '<input class="form-input" id="ep-precio-' + e.id + '" type="number" step="0.01" value="' + (precioUnit || '') + '" placeholder="$0" style="margin-top:4px;" oninput="onEpPrecioChange(' + e.id + ')"></div>'
       + '</div>'
 
       // Info box
       + '<div id="ep-info-' + e.id + '" style="font-size:12px;padding:8px 10px;background:var(--bg);border-radius:8px;color:var(--text-3);margin-bottom:10px;">'
       + (sugerido && cantSugerida
-          ? '📦 ' + cantSugerida + ' ' + (sugerido.unidad_compra || sugerido.unidad) + ' de ' + sugerido.nombre + ' → stock actual: ' + (sugerido.stock_actual || 0) + ' ' + sugerido.unidad
+          ? '📦 ' + cantSugerida + ' ' + (sugerido.unidad_compra || sugerido.unidad) + ' → stock actual: ' + (sugerido.stock_actual || 0) + ' ' + sugerido.unidad
           : 'Selecciona el insumo para ver el detalle')
       + '</div>'
 
@@ -2137,25 +2175,56 @@ async function loadEntradasPendientes() {
 function onEpInsumoChange(entradaId, monto) {
   const insId = parseInt(document.getElementById('ep-ins-' + entradaId).value);
   const ins = allInsumos.find(function(i){ return i.id === insId; });
-  const infoEl = document.getElementById('ep-info-' + entradaId);
-  const cantEl = document.getElementById('ep-cant-' + entradaId);
   const unidadEl = document.getElementById('ep-unidad-' + entradaId);
+  if (!ins) return;
+  unidadEl.textContent = '(' + (ins.unidad_compra || ins.unidad) + ')';
+  // Suggest quantity from monto / costo_compra if not already filled
+  const cantEl = document.getElementById('ep-cant-' + entradaId);
+  if (!cantEl.value && ins.costo_compra && monto) {
+    cantEl.value = Math.round((monto / ins.costo_compra) * 100) / 100;
+  }
+  // Suggest price from costo_compra
+  const precioEl = document.getElementById('ep-precio-' + entradaId);
+  if (!precioEl.value && ins.costo_compra) {
+    precioEl.value = ins.costo_compra;
+  }
+  updateEpInfo(entradaId, monto);
+}
+
+function onEpCantChange(entradaId, monto) {
+  const cant = parseFloat(document.getElementById('ep-cant-' + entradaId).value) || 0;
+  const precioEl = document.getElementById('ep-precio-' + entradaId);
+  // Auto-calculate price from monto / cant
+  if (cant > 0 && monto) {
+    precioEl.value = Math.round((monto / cant) * 100) / 100;
+  }
+  updateEpInfo(entradaId, monto);
+}
+
+function onEpPrecioChange(entradaId) {
+  updateEpInfo(entradaId, null);
+}
+
+function updateEpInfo(entradaId, monto) {
+  const insId = parseInt(document.getElementById('ep-ins-' + entradaId).value);
+  const ins = allInsumos.find(function(i){ return i.id === insId; });
+  const cant = parseFloat(document.getElementById('ep-cant-' + entradaId).value) || 0;
+  const precio = parseFloat(document.getElementById('ep-precio-' + entradaId).value) || 0;
+  const infoEl = document.getElementById('ep-info-' + entradaId);
   if (!ins) { infoEl.textContent = 'Selecciona el insumo'; return; }
 
-  // Suggest quantity based on monto / costo_compra
-  if (ins.costo_compra && monto) {
-    const cant = Math.round((monto / ins.costo_compra) * 100) / 100;
-    cantEl.value = cant;
-    unidadEl.textContent = '(' + (ins.unidad_compra || ins.unidad) + ')';
-    const totalUnidades = cant * (ins.cantidad_por_compra || 1);
-    infoEl.innerHTML = '📦 Sugerido: <strong>' + cant + ' ' + (ins.unidad_compra || ins.unidad) + '</strong>'
-      + ' = ' + totalUnidades + ' ' + ins.unidad
-      + ' · Stock actual: ' + (ins.stock_actual || 0) + ' ' + ins.unidad
-      + ' → quedará en: <strong style="color:var(--green);">' + ((ins.stock_actual || 0) + totalUnidades) + ' ' + ins.unidad + '</strong>';
-  } else {
-    unidadEl.textContent = '(' + (ins.unidad_compra || ins.unidad) + ')';
-    infoEl.textContent = 'Stock actual: ' + (ins.stock_actual || 0) + ' ' + ins.unidad;
+  const totalUnidades = cant * (ins.cantidad_por_compra || 1);
+  const stockFuturo = (ins.stock_actual || 0) + totalUnidades;
+
+  var lines = [];
+  if (cant > 0) lines.push('📦 <strong>' + cant + ' ' + (ins.unidad_compra || ins.unidad) + '</strong> = ' + totalUnidades.toFixed(2) + ' ' + ins.unidad);
+  lines.push('Stock: ' + (ins.stock_actual || 0) + ' → <strong style="color:var(--green);">' + stockFuturo.toFixed(2) + ' ' + ins.unidad + '</strong>');
+  if (precio > 0 && ins.costo_compra) {
+    var diff = Math.round(((precio - ins.costo_compra) / ins.costo_compra) * 100);
+    var diffStr = diff !== 0 ? ' <span style="color:' + (diff > 0 ? '#A32D2D' : '#3B6D11') + ';">' + (diff > 0 ? '▲ +' : '▼ ') + diff + '%</span>' : ' ✓ igual';
+    lines.push('Precio: $' + precio + ' vs anterior $' + ins.costo_compra + diffStr);
   }
+  infoEl.innerHTML = lines.join('<br>');
 }
 
 async function confirmarEntrada(entradaId, monto) {
@@ -2170,20 +2239,23 @@ async function confirmarEntrada(entradaId, monto) {
   const totalUnidades = cant * (ins.cantidad_por_compra || 1);
   const nuevoStock = (ins.stock_actual || 0) + totalUnidades;
 
+  // ── Precio unitario capturado ──
+  var precioEl = document.getElementById('ep-precio-' + entradaId);
+  var precioUnit = precioEl ? (parseFloat(precioEl.value) || 0) : 0;
+
   // ── Calcular costo promedio histórico ──
-  // Traer todas las entradas confirmadas previas de este insumo
   const historial = await sbGet('entradas_pendientes',
     'insumo_id=eq.' + insId + '&estado=eq.confirmada&select=monto,cantidad_sugerida'
   );
 
-  // Incluir la compra actual en el promedio
+  // Incluir compra actual — usamos precio unitario si está disponible
   var todasCompras = Array.isArray(historial) ? historial.filter(function(h){ return h.monto && h.cantidad_sugerida; }) : [];
-  todasCompras.push({ monto: monto, cantidad_sugerida: cant });
+  todasCompras.push({ monto: precioUnit > 0 ? precioUnit * cant : monto, cantidad_sugerida: cant });
 
-  // Promedio ponderado: suma(montos) / suma(cantidades)
+  // Promedio ponderado: suma(montos) / suma(cantidades) = precio promedio por unidad de compra
   var totalMonto = todasCompras.reduce(function(s, h){ return s + Number(h.monto); }, 0);
   var totalCant  = todasCompras.reduce(function(s, h){ return s + Number(h.cantidad_sugerida); }, 0);
-  var nuevoCostoCompra  = totalCant > 0 ? Math.round((totalMonto / totalCant) * 100) / 100 : ins.costo_compra;
+  var nuevoCostoCompra  = totalCant > 0 ? Math.round((totalMonto / totalCant) * 100) / 100 : (precioUnit || ins.costo_compra);
   var nuevoCostoUnit    = (ins.cantidad_por_compra && ins.cantidad_por_compra > 0)
     ? Math.round((nuevoCostoCompra / ins.cantidad_por_compra) * 1000000) / 1000000
     : nuevoCostoCompra;
