@@ -234,6 +234,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
       <button class="nav-item" onclick="goPage('inventario',this)"><span class="nav-icon">📦</span>Insumos</button>
       <button class="nav-item" onclick="goPage('recetas',this)"><span class="nav-icon">📋</span>Recetas</button>
       <button class="nav-item" onclick="goPage('movimientos',this)"><span class="nav-icon">↕️</span>Movimientos</button>
+      <button class="nav-item" id="nav-entradas" onclick="goPage('entradas',this)"><span class="nav-icon">📥</span>Entradas pendientes</button>
     </div>
     <div class="nav-section">
       <div class="nav-section-label">Reportes</div>
@@ -397,6 +398,20 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
         <div id="resumen-costos-container">
           <div style="text-align:center;padding:40px;color:var(--text-3);">Haz clic en "↻ Actualizar" para calcular</div>
         </div>
+      </div>
+    </div>
+
+    <!-- INVENTARIO - ENTRADAS PENDIENTES -->
+    <div class="page" id="page-entradas">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px;">
+        <div>
+          <div class="page-title" style="margin-bottom:2px;">Entradas pendientes</div>
+          <div class="page-sub">Compras del app de gastos — confirma para agregar al stock</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadEntradasPendientes()">↻ Actualizar</button>
+      </div>
+      <div id="entradas-container">
+        <div style="text-align:center;padding:40px;color:var(--text-3);">Cargando...</div>
       </div>
     </div>
 
@@ -672,6 +687,7 @@ async function loadPage(page) {
   else if (page==='inventario') loadInventario();
   else if (page==='recetas') loadRecetas();
   else if (page==='movimientos') { await loadInventario(); loadMovimientos(); }
+  else if (page==='entradas') { await loadInventario(); loadEntradasPendientes(); }
 }
 
 // ── SUPABASE HELPERS ──
@@ -2024,6 +2040,168 @@ async function loadResumenCostos() {
   });
 
   container.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════
+// ENTRADAS PENDIENTES (desde app de gastos)
+// ═══════════════════════════════════════════════════
+
+async function loadEntradasPendientes() {
+  const container = document.getElementById('entradas-container');
+  container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-3);">Cargando...</div>';
+  if (!allInsumos.length) await loadInventario();
+
+  const pendientes = await sbGet('entradas_pendientes', 'estado=eq.pendiente&order=created_at.desc');
+  if (!Array.isArray(pendientes)) {
+    container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--red);">Error cargando entradas</div>';
+    return;
+  }
+
+  // Update nav badge
+  const navBtn = document.getElementById('nav-entradas');
+  if (navBtn) {
+    navBtn.innerHTML = pendientes.length > 0
+      ? '<span class="nav-icon">📥</span>Entradas pendientes <span style="background:#D4537E;color:white;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:4px;">' + pendientes.length + '</span>'
+      : '<span class="nav-icon">📥</span>Entradas pendientes';
+  }
+
+  if (!pendientes.length) {
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-3);">✅ Sin entradas pendientes</div>';
+    return;
+  }
+
+  // Pre-match each gasto with an insumo by name similarity
+  function matchInsumo(concepto) {
+    if (!concepto) return null;
+    const lower = concepto.toLowerCase();
+    // Exact match first
+    let match = allInsumos.find(function(i){ return i.nombre.toLowerCase() === lower; });
+    if (match) return match;
+    // Partial match
+    match = allInsumos.find(function(i){ return lower.includes(i.nombre.toLowerCase()) || i.nombre.toLowerCase().includes(lower); });
+    return match || null;
+  }
+
+  function calcCantidad(insumo, monto) {
+    if (!insumo || !insumo.costo_compra || !monto) return null;
+    return Math.round((monto / insumo.costo_compra) * 100) / 100;
+  }
+
+  const html = pendientes.map(function(e) {
+    const sugerido = e.insumo_id
+      ? allInsumos.find(function(i){ return i.id === e.insumo_id; })
+      : matchInsumo(e.concepto);
+    const cantSugerida = e.cantidad_sugerida || calcCantidad(sugerido, e.monto);
+    const insOpts = allInsumos.filter(function(i){ return i.activo; }).map(function(i){
+      return '<option value="' + i.id + '"' + (sugerido && i.id === sugerido.id ? ' selected' : '') + '>' + i.nombre + ' (' + i.unidad + ')</option>';
+    }).join('');
+
+    return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;">'
+      // Header
+      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">'
+      +   '<div>'
+      +     '<div style="font-weight:600;font-size:14px;">' + (e.concepto || '—') + '</div>'
+      +     '<div style="font-size:11px;color:var(--text-3);margin-top:2px;">' + (e.fecha || '') + (e.quien ? ' · ' + e.quien : '') + (e.categoria ? ' · ' + e.categoria : '') + '</div>'
+      +   '</div>'
+      +   '<div style="font-size:18px;font-weight:700;color:var(--pink);">$' + Number(e.monto).toFixed(2) + '</div>'
+      + '</div>'
+
+      // Insumo selector
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'
+      +   '<div><label class="form-label">Insumo</label>'
+      +     '<select class="form-select" id="ep-ins-' + e.id + '" onchange="onEpInsumoChange(' + e.id + ',' + e.monto + ')" style="margin-top:4px;">'
+      +     '<option value="">— Seleccionar —</option>' + insOpts
+      +     '</select></div>'
+      +   '<div><label class="form-label">Cantidad <span id="ep-unidad-' + e.id + '" style="color:var(--text-3);">' + (sugerido ? '(' + sugerido.unidad_compra + ')' : '') + '</span></label>'
+      +     '<input class="form-input" id="ep-cant-' + e.id + '" type="number" step="0.01" value="' + (cantSugerida || '') + '" placeholder="ej: 4" style="margin-top:4px;"></div>'
+      + '</div>'
+
+      // Info box
+      + '<div id="ep-info-' + e.id + '" style="font-size:12px;padding:8px 10px;background:var(--bg);border-radius:8px;color:var(--text-3);margin-bottom:10px;">'
+      + (sugerido && cantSugerida
+          ? '📦 ' + cantSugerida + ' ' + (sugerido.unidad_compra || sugerido.unidad) + ' de ' + sugerido.nombre + ' → stock actual: ' + (sugerido.stock_actual || 0) + ' ' + sugerido.unidad
+          : 'Selecciona el insumo para ver el detalle')
+      + '</div>'
+
+      // Actions
+      + '<div style="display:flex;gap:8px;">'
+      +   '<button class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="ignorarEntrada(' + e.id + ')">Ignorar</button>'
+      +   '<button class="btn btn-primary btn-sm" style="flex:1;" onclick="confirmarEntrada(' + e.id + ',' + e.monto + ')">✓ Confirmar entrada</button>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+
+  container.innerHTML = html;
+}
+
+function onEpInsumoChange(entradaId, monto) {
+  const insId = parseInt(document.getElementById('ep-ins-' + entradaId).value);
+  const ins = allInsumos.find(function(i){ return i.id === insId; });
+  const infoEl = document.getElementById('ep-info-' + entradaId);
+  const cantEl = document.getElementById('ep-cant-' + entradaId);
+  const unidadEl = document.getElementById('ep-unidad-' + entradaId);
+  if (!ins) { infoEl.textContent = 'Selecciona el insumo'; return; }
+
+  // Suggest quantity based on monto / costo_compra
+  if (ins.costo_compra && monto) {
+    const cant = Math.round((monto / ins.costo_compra) * 100) / 100;
+    cantEl.value = cant;
+    unidadEl.textContent = '(' + (ins.unidad_compra || ins.unidad) + ')';
+    const totalUnidades = cant * (ins.cantidad_por_compra || 1);
+    infoEl.innerHTML = '📦 Sugerido: <strong>' + cant + ' ' + (ins.unidad_compra || ins.unidad) + '</strong>'
+      + ' = ' + totalUnidades + ' ' + ins.unidad
+      + ' · Stock actual: ' + (ins.stock_actual || 0) + ' ' + ins.unidad
+      + ' → quedará en: <strong style="color:var(--green);">' + ((ins.stock_actual || 0) + totalUnidades) + ' ' + ins.unidad + '</strong>';
+  } else {
+    unidadEl.textContent = '(' + (ins.unidad_compra || ins.unidad) + ')';
+    infoEl.textContent = 'Stock actual: ' + (ins.stock_actual || 0) + ' ' + ins.unidad;
+  }
+}
+
+async function confirmarEntrada(entradaId, monto) {
+  const insId = parseInt(document.getElementById('ep-ins-' + entradaId).value);
+  const cant = parseFloat(document.getElementById('ep-cant-' + entradaId).value);
+  if (!insId || !cant || cant <= 0) { toast('⚠ Selecciona insumo y cantidad'); return; }
+
+  const ins = allInsumos.find(function(i){ return i.id === insId; });
+  if (!ins) return;
+
+  // Convert compra units to uso units
+  const totalUnidades = cant * (ins.cantidad_por_compra || 1);
+  const nuevoStock = (ins.stock_actual || 0) + totalUnidades;
+
+  // 1. Update stock
+  await sbPatch('insumos', insId, { stock_actual: Math.round(nuevoStock * 1000) / 1000 });
+
+  // 2. Register movement
+  await sbPost('inv_movimientos', {
+    insumo_id: insId,
+    tipo: 'entrada',
+    cantidad: totalUnidades,
+    nota: 'Compra confirmada: $' + monto,
+    usuario_name: currentUser ? currentUser.name : 'Admin',
+  });
+
+  // 3. Mark as confirmed
+  await fetch(SB_URL + '/rest/v1/entradas_pendientes?id=eq.' + entradaId, {
+    method: 'PATCH',
+    headers: SB_H,
+    body: JSON.stringify({ estado: 'confirmada', insumo_id: insId, cantidad_sugerida: cant })
+  });
+
+  toast('✓ Entrada confirmada — stock actualizado');
+  await loadInventario();
+  loadEntradasPendientes();
+}
+
+async function ignorarEntrada(entradaId) {
+  await fetch(SB_URL + '/rest/v1/entradas_pendientes?id=eq.' + entradaId, {
+    method: 'PATCH',
+    headers: SB_H,
+    body: JSON.stringify({ estado: 'ignorada' })
+  });
+  toast('Entrada ignorada');
+  loadEntradasPendientes();
 }
 
 async function deleteRecetaLine(id) {
