@@ -237,6 +237,10 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
       <button class="nav-item" id="nav-entradas" onclick="goPage('entradas',this)"><span class="nav-icon">📥</span>Entradas pendientes</button>
     </div>
     <div class="nav-section">
+      <div class="nav-section-label">Finanzas</div>
+      <button class="nav-item" onclick="goPage('gastos',this)"><span class="nav-icon">💸</span>Gastos operativos</button>
+    </div>
+    <div class="nav-section">
       <div class="nav-section-label">Reportes</div>
       <button class="nav-item" onclick="goPage('turnos',this)"><span class="nav-icon">🔒</span>Turnos cerrados</button>
     </div>
@@ -433,6 +437,50 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
         <table class="data-table">
           <thead><tr><th>Fecha</th><th>Insumo</th><th>Tipo</th><th>Cantidad</th><th>Usuario</th><th>Nota</th></tr></thead>
           <tbody id="tbody-movimientos"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-3);">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- GASTOS OPERATIVOS -->
+    <div class="page" id="page-gastos">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px;">
+        <div>
+          <div class="page-title" style="margin-bottom:2px;">Gastos operativos</div>
+          <div class="page-sub">Control de egresos del negocio</div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openModalGasto()">+ Nuevo gasto</button>
+      </div>
+
+      <!-- Filtros de mes -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;">
+        <select class="form-select" id="gastos-mes-sel" onchange="loadGastosOperativos()" style="max-width:160px;">
+        </select>
+        <select class="form-select" id="gastos-cat-sel" onchange="renderGastosTabla()" style="max-width:160px;">
+          <option value="">Todas las categorías</option>
+          <option value="Fruta Fresca">🍓 Fruta Fresca</option>
+          <option value="Lácteos y Cremas">🥛 Lácteos y Cremas</option>
+          <option value="Chocolate">🍫 Chocolate</option>
+          <option value="Toppings / Compl.">🍯 Toppings</option>
+          <option value="Desechables">🥤 Desechables</option>
+          <option value="Publicidad">📢 Publicidad</option>
+          <option value="Limpieza">🧹 Limpieza</option>
+          <option value="Bebidas y Varios">☕ Bebidas y Varios</option>
+          <option value="Nómina">👥 Nómina</option>
+          <option value="Renta">🏪 Renta</option>
+          <option value="Servicios">💡 Servicios</option>
+          <option value="Otros">📦 Otros</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="loadGastosOperativos()">↻</button>
+      </div>
+
+      <!-- KPIs del mes -->
+      <div id="gastos-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;"></div>
+
+      <!-- Tabla -->
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Monto</th><th>Forma pago</th><th>Quién</th><th>Estado</th><th></th></tr></thead>
+          <tbody id="tbody-gastos"><tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-3);">Cargando...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -688,6 +736,7 @@ async function loadPage(page) {
   else if (page==='recetas') loadRecetas();
   else if (page==='movimientos') { await loadInventario(); loadMovimientos(); }
   else if (page==='entradas') { await loadInventario(); loadEntradasPendientes(); }
+  else if (page==='gastos') loadGastosOperativos();
 }
 
 // ── SUPABASE HELPERS ──
@@ -2161,10 +2210,25 @@ async function loadEntradasPendientes() {
           : 'Selecciona el insumo para ver el detalle')
       + '</div>'
 
+      // Mode toggle
+      + '<div style="display:flex;gap:6px;margin-bottom:10px;">'
+      +   '<button id="ep-mode-inv-' + e.id + '" class="btn btn-ghost btn-sm" style="flex:1;background:var(--pink-light);color:var(--pink);" onclick="epSetMode(' + e.id + ','inv')">📦 Inventario</button>'
+      +   '<button id="ep-mode-gasto-' + e.id + '" class="btn btn-ghost btn-sm" style="flex:1;" onclick="epSetMode(' + e.id + ','gasto')">💸 Gasto operativo</button>'
+      + '</div>'
+
+      // Gasto mode fields (hidden by default)
+      + '<div id="ep-gasto-fields-' + e.id + '" style="display:none;margin-bottom:10px;">'
+      +   '<label class="form-label">Categoría del gasto</label>'
+      +   '<select class="form-select" id="ep-gasto-cat-' + e.id + '" style="margin-top:4px;">'
+      +   '<option value="">— Seleccionar —</option>'
+      +   ['Fruta Fresca','Lácteos y Cremas','Chocolate','Toppings / Compl.','Desechables','Publicidad','Limpieza','Bebidas y Varios','Nómina','Renta','Servicios','Otros'].map(function(c){ return '<option value="' + c + '">' + c + '</option>'; }).join('')
+      +   '</select>'
+      + '</div>'
+
       // Actions
       + '<div style="display:flex;gap:8px;">'
       +   '<button class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="ignorarEntrada(' + e.id + ')">Ignorar</button>'
-      +   '<button class="btn btn-primary btn-sm" style="flex:1;" onclick="confirmarEntrada(' + e.id + ',' + e.monto + ')">✓ Confirmar entrada</button>'
+      +   '<button id="ep-btn-confirm-' + e.id + '" class="btn btn-primary btn-sm" style="flex:1;" onclick="confirmarEntrada(' + e.id + ',' + e.monto + ')">✓ Confirmar entrada</button>'
       + '</div>'
       + '</div>';
   }).join('');
@@ -2314,5 +2378,298 @@ async function deleteRecetaLine(id) {
 }
 </script>
 
+<!-- MODAL GASTO OPERATIVO -->
+<div class="modal-overlay" id="modal-gasto">
+  <div class="modal-box" style="max-width:520px;">
+    <div class="modal-title" id="modal-gasto-title">Nuevo gasto</div>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Fecha</label>
+        <input class="form-input" id="go-fecha" type="date">
+      </div>
+      <div class="form-group"><label class="form-label">Monto ($)</label>
+        <input class="form-input" id="go-monto" type="number" placeholder="0.00" step="0.01">
+      </div>
+      <div class="form-group full"><label class="form-label">Concepto</label>
+        <input class="form-input" id="go-concepto" placeholder="Ej: Renta marzo, Nómina cajeras...">
+      </div>
+      <div class="form-group"><label class="form-label">Categoría</label>
+        <select class="form-select" id="go-categoria">
+          <option value="Fruta Fresca">🍓 Fruta Fresca</option>
+          <option value="Lácteos y Cremas">🥛 Lácteos y Cremas</option>
+          <option value="Chocolate">🍫 Chocolate</option>
+          <option value="Toppings / Compl.">🍯 Toppings</option>
+          <option value="Desechables">🥤 Desechables</option>
+          <option value="Publicidad">📢 Publicidad</option>
+          <option value="Limpieza">🧹 Limpieza</option>
+          <option value="Bebidas y Varios">☕ Bebidas y Varios</option>
+          <option value="Nómina">👥 Nómina</option>
+          <option value="Renta">🏪 Renta</option>
+          <option value="Servicios">💡 Servicios</option>
+          <option value="Otros">📦 Otros</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Forma de pago</label>
+        <select class="form-select" id="go-forma">
+          <option value="Efectivo">💵 Efectivo</option>
+          <option value="Tarjeta Santander">💳 Tarjeta Santander</option>
+          <option value="Mercado Pago">📲 Mercado Pago</option>
+          <option value="Transfer BBVA">🏦 Transfer BBVA</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Tipo de pago</label>
+        <select class="form-select" id="go-tipo">
+          <option value="contado">✅ Contado</option>
+          <option value="credito">⏳ Crédito</option>
+        </select>
+      </div>
+      <div class="form-group" id="go-vence-wrap" style="display:none;"><label class="form-label">Fecha vencimiento</label>
+        <input class="form-input" id="go-vencimiento" type="date">
+      </div>
+      <div class="form-group"><label class="form-label">¿Quién pagó?</label>
+        <input class="form-input" id="go-quien" placeholder="Andres, José Luis...">
+      </div>
+      <div class="form-group"><label class="form-label">Sucursal</label>
+        <select class="form-select" id="go-sucursal">
+          <option value="">General</option>
+          <option value="Balbuena">Balbuena</option>
+          <option value="Del Valle">Del Valle</option>
+        </select>
+      </div>
+      <div class="form-group full"><label class="form-label">Nota</label>
+        <input class="form-input" id="go-nota" placeholder="Detalle opcional...">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-gasto')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveGastoOperativo()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// GASTOS OPERATIVOS
+// ═══════════════════════════════════════════════════
+let allGastosOp = [];
+let editingGastoId = null;
+
+const CAT_EMOJI = {
+  'Fruta Fresca':'🍓','Lácteos y Cremas':'🥛','Chocolate':'🍫',
+  'Toppings / Compl.':'🍯','Desechables':'🥤','Publicidad':'📢',
+  'Limpieza':'🧹','Bebidas y Varios':'☕','Nómina':'👥',
+  'Renta':'🏪','Servicios':'💡','Otros':'📦'
+};
+
+async function loadGastosOperativos() {
+  const tbody = document.getElementById('tbody-gastos');
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-3);">Cargando...</td></tr>';
+
+  // Build month selector
+  const mesSel = document.getElementById('gastos-mes-sel');
+  const today = new Date();
+  const months = [];
+  for (var i = 0; i < 12; i++) {
+    var d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    var key = d.toISOString().slice(0, 7);
+    var label = d.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+    months.push({ key, label });
+  }
+  if (!mesSel.options.length) {
+    mesSel.innerHTML = '<option value="">Todos los meses</option>'
+      + months.map(function(m){ return '<option value="' + m.key + '">' + m.label + '</option>'; }).join('');
+  }
+  var mes = mesSel.value;
+
+  var query = 'order=fecha.desc';
+  if (mes) query += '&fecha=gte.' + mes + '-01&fecha=lte.' + mes + '-31';
+
+  const res = await sbGet('gastos_operativos', query);
+  allGastosOp = Array.isArray(res) ? res : [];
+  renderGastosKpis(allGastosOp);
+  renderGastosTabla();
+}
+
+function renderGastosKpis(list) {
+  var total = list.reduce(function(s, g){ return s + Number(g.monto); }, 0);
+  var pendiente = list.filter(function(g){ return !g.pagado; }).reduce(function(s, g){ return s + Number(g.monto); }, 0);
+  var catTotals = {};
+  list.forEach(function(g){ catTotals[g.categoria] = (catTotals[g.categoria]||0) + Number(g.monto); });
+  var topCat = Object.entries(catTotals).sort(function(a,b){ return b[1]-a[1]; })[0];
+
+  document.getElementById('gastos-kpis').innerHTML =
+    '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;">'
+    + '<div style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">Total egresos</div>'
+    + '<div style="font-size:22px;font-weight:700;color:var(--pink);">$' + total.toLocaleString('es-MX', {minimumFractionDigits:2}) + '</div>'
+    + '<div style="font-size:11px;color:var(--text-3);">' + list.length + ' registros</div></div>'
+
+    + '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;">'
+    + '<div style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">Por pagar</div>'
+    + '<div style="font-size:22px;font-weight:700;color:' + (pendiente > 0 ? '#BA7517' : '#3B6D11') + ';">$' + pendiente.toLocaleString('es-MX', {minimumFractionDigits:2}) + '</div>'
+    + '<div style="font-size:11px;color:var(--text-3);">' + list.filter(function(g){return !g.pagado;}).length + ' pendientes</div></div>'
+
+    + '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;">'
+    + '<div style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">Top categoría</div>'
+    + '<div style="font-size:16px;font-weight:700;color:var(--text);">' + (topCat ? (CAT_EMOJI[topCat[0]]||'📦') + ' ' + topCat[0] : '—') + '</div>'
+    + '<div style="font-size:11px;color:var(--text-3);">' + (topCat ? '$' + topCat[1].toLocaleString('es-MX', {minimumFractionDigits:2}) : '') + '</div></div>';
+}
+
+function renderGastosTabla() {
+  var catFiltro = document.getElementById('gastos-cat-sel').value;
+  var list = catFiltro ? allGastosOp.filter(function(g){ return g.categoria === catFiltro; }) : allGastosOp;
+  var tbody = document.getElementById('tbody-gastos');
+
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-3);">Sin gastos registrados</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map(function(g) {
+    var pagadoHtml = g.pagado
+      ? '<span style="font-size:11px;background:var(--green-light);color:var(--green);padding:2px 8px;border-radius:6px;font-weight:600;">✓ Pagado</span>'
+      : '<span style="font-size:11px;background:#FAEEDA;color:#BA7517;padding:2px 8px;border-radius:6px;font-weight:600;">⏳ Pendiente</span>';
+    var venceHtml = (!g.pagado && g.fecha_vencimiento)
+      ? '<br><span style="font-size:10px;color:#BA7517;">Vence: ' + g.fecha_vencimiento + '</span>'
+      : '';
+    return '<tr>'
+      + '<td style="color:var(--text-3);font-size:12px;">' + g.fecha + '</td>'
+      + '<td><strong>' + g.concepto + '</strong>' + (g.nota ? '<br><span style="font-size:11px;color:var(--text-3);">' + g.nota + '</span>' : '') + '</td>'
+      + '<td>' + (CAT_EMOJI[g.categoria]||'📦') + ' ' + g.categoria + '</td>'
+      + '<td style="font-weight:700;color:var(--pink);">$' + Number(g.monto).toLocaleString('es-MX',{minimumFractionDigits:2}) + '</td>'
+      + '<td style="font-size:12px;color:var(--text-3);">' + (g.forma_pago||'—') + '</td>'
+      + '<td style="font-size:12px;color:var(--text-3);">' + (g.quien||'—') + '</td>'
+      + '<td>' + pagadoHtml + venceHtml + '</td>'
+      + '<td style="display:flex;gap:4px;">'
+      +   '<button class="btn btn-ghost btn-sm" onclick="editGastoOperativo(' + g.id + ')">Editar</button>'
+      +   '<button class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="deleteGastoOperativo(' + g.id + ')">Borrar</button>'
+      + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+function openModalGasto(g) {
+  editingGastoId = g ? g.id : null;
+  document.getElementById('modal-gasto-title').textContent = g ? 'Editar gasto' : 'Nuevo gasto';
+  var today = new Date().toISOString().slice(0,10);
+  document.getElementById('go-fecha').value = g ? g.fecha : today;
+  document.getElementById('go-monto').value = g ? g.monto : '';
+  document.getElementById('go-concepto').value = g ? g.concepto : '';
+  document.getElementById('go-categoria').value = g ? g.categoria : 'Otros';
+  document.getElementById('go-forma').value = g ? (g.forma_pago||'Efectivo') : 'Efectivo';
+  document.getElementById('go-tipo').value = g ? (g.tipo_pago||'contado') : 'contado';
+  document.getElementById('go-vencimiento').value = g ? (g.fecha_vencimiento||'') : '';
+  document.getElementById('go-quien').value = g ? (g.quien||'') : '';
+  document.getElementById('go-sucursal').value = g ? (g.sucursal||'') : '';
+  document.getElementById('go-nota').value = g ? (g.nota||'') : '';
+  document.getElementById('go-vence-wrap').style.display = (g && g.tipo_pago==='credito') ? '' : 'none';
+  document.getElementById('go-tipo').onchange = function() {
+    document.getElementById('go-vence-wrap').style.display = this.value === 'credito' ? '' : 'none';
+  };
+  document.getElementById('modal-gasto').classList.add('open');
+}
+
+async function editGastoOperativo(id) {
+  const g = allGastosOp.find(function(x){ return x.id === id; });
+  if (g) openModalGasto(g);
+}
+
+async function saveGastoOperativo() {
+  var data = {
+    fecha:             document.getElementById('go-fecha').value,
+    monto:             parseFloat(document.getElementById('go-monto').value),
+    concepto:          document.getElementById('go-concepto').value.trim(),
+    categoria:         document.getElementById('go-categoria').value,
+    forma_pago:        document.getElementById('go-forma').value,
+    tipo_pago:         document.getElementById('go-tipo').value,
+    fecha_vencimiento: document.getElementById('go-vencimiento').value || null,
+    quien:             document.getElementById('go-quien').value.trim() || null,
+    sucursal:          document.getElementById('go-sucursal').value || null,
+    nota:              document.getElementById('go-nota').value.trim() || null,
+    pagado:            document.getElementById('go-tipo').value === 'contado',
+  };
+  if (!data.fecha || !data.monto || !data.concepto) { toast('⚠ Fecha, monto y concepto son requeridos'); return; }
+
+  if (editingGastoId) {
+    await sbPatch('gastos_operativos', editingGastoId, data);
+    toast('✓ Gasto actualizado');
+  } else {
+    await sbPost('gastos_operativos', data);
+    toast('✓ Gasto registrado');
+  }
+  closeModal('modal-gasto');
+  loadGastosOperativos();
+}
+
+async function deleteGastoOperativo(id) {
+  if (!confirm('¿Eliminar este gasto?')) return;
+  await fetch(SB_URL + '/rest/v1/gastos_operativos?id=eq.' + id, {
+    method: 'DELETE', headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY }
+  });
+  toast('✓ Gasto eliminado');
+  loadGastosOperativos();
+}
+
+// ── REGISTRAR DESDE ENTRADAS PENDIENTES COMO GASTO ──
+function epSetMode(entradaId, mode) {
+  var invFields = document.querySelector('#page-entradas [id^="ep-ins-' + entradaId + '"]')?.closest('div[style*="grid"]');
+  var gastoFields = document.getElementById('ep-gasto-fields-' + entradaId);
+  var infoBox = document.getElementById('ep-info-' + entradaId);
+  var btnConfirm = document.getElementById('ep-btn-confirm-' + entradaId);
+  var btnInv = document.getElementById('ep-mode-inv-' + entradaId);
+  var btnGasto = document.getElementById('ep-mode-gasto-' + entradaId);
+
+  if (mode === 'inv') {
+    if (invFields) invFields.style.display = '';
+    if (gastoFields) gastoFields.style.display = 'none';
+    if (infoBox) infoBox.style.display = '';
+    btnInv.style.background = 'var(--pink-light)'; btnInv.style.color = 'var(--pink)';
+    btnGasto.style.background = ''; btnGasto.style.color = '';
+    btnConfirm.textContent = '✓ Confirmar entrada';
+    btnConfirm.setAttribute('onclick', 'confirmarEntrada(' + entradaId + ',' + btnConfirm.dataset.monto + ')');
+  } else {
+    if (invFields) invFields.style.display = 'none';
+    if (gastoFields) gastoFields.style.display = '';
+    if (infoBox) infoBox.style.display = 'none';
+    btnGasto.style.background = 'var(--amber-light)'; btnGasto.style.color = 'var(--amber)';
+    btnInv.style.background = ''; btnInv.style.color = '';
+    btnConfirm.textContent = '💸 Registrar como gasto';
+    btnConfirm.setAttribute('onclick', 'confirmarComoGasto(' + entradaId + ')');
+  }
+}
+
+async function confirmarComoGasto(entradaId) {
+  const catEl = document.getElementById('ep-gasto-cat-' + entradaId);
+  const e = document.querySelector('[data-entrada-id="' + entradaId + '"]');
+  if (!catEl) { toast('⚠ Selecciona una categoría'); return; }
+  var categoria = catEl.value;
+  if (!categoria) { toast('⚠ Selecciona una categoría'); return; }
+
+  // Get data from entry
+  const entrada = await sbGet('entradas_pendientes', 'id=eq.' + entradaId);
+  if (!Array.isArray(entrada) || !entrada.length) return;
+  var ep = entrada[0];
+
+  await sbPost('gastos_operativos', {
+    fecha:      ep.fecha || new Date().toISOString().slice(0,10),
+    concepto:   ep.concepto,
+    categoria:  categoria,
+    monto:      ep.monto,
+    forma_pago: 'Efectivo',
+    tipo_pago:  'contado',
+    quien:      ep.quien || null,
+    nota:       ep.nota_gasto || null,
+    pagado:     true,
+  });
+
+  // Mark as confirmed
+  await fetch(SB_URL + '/rest/v1/entradas_pendientes?id=eq.' + entradaId, {
+    method: 'PATCH', headers: SB_H,
+    body: JSON.stringify({ estado: 'confirmada' })
+  });
+
+  toast('✓ Registrado como gasto operativo');
+  loadEntradasPendientes();
+}
+</script>
 </body>
 </html>
