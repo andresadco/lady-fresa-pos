@@ -678,6 +678,19 @@ const SB_URL = 'https://ngpumyxxxlafuzcsaepy.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ncHVteXh4eGxhZnV6Y3NhZXB5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyNjkzNzYsImV4cCI6MjA4OTg0NTM3Nn0.u4WHkOXLrNn4WSKHJedXXNDYrCMdfaDNK8KlvJNfXLg';
 const SB_H = { 'Content-Type':'application/json', 'apikey':SB_KEY, 'Authorization':'Bearer '+SB_KEY, 'Prefer':'return=representation' };
 
+// App de Gastos - Supabase secundario
+const APP_URL = 'https://tnspshptvqvhhwwckzcc.supabase.co';
+const APP_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRuc3BzaHB0dnF2aGh3d2NremNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyOTE4MzYsImV4cCI6MjA4Nzg2NzgzNn0.VYO6LMiRfv9pTCO-jRrz4ph2S_uKgX-kqYRCyVKCwdU';
+const APP_H  = { 'Content-Type':'application/json', 'apikey':APP_KEY, 'Authorization':'Bearer '+APP_KEY };
+
+async function appGet(table, query) {
+  try {
+    const res = await fetch(APP_URL + '/rest/v1/' + table + '?' + (query||''), { headers: APP_H });
+    if (!res.ok) return [];
+    return await res.json();
+  } catch(e) { return []; }
+}
+
 let currentUser = null;
 let pinBuffer = '';
 let editingUserId = null;
@@ -808,7 +821,7 @@ async function loadOverview() {
     sbGet('inv_movimientos', 'tipo=eq.salida&created_at=gte.' + mesInicio + 'T00:00:00&select=insumo_id,cantidad'),
     sbGet('gastos_operativos', 'fecha=gte.' + mesInicio + '&fecha=lte.' + mesFin + '&select=*'),
     sbGet('recetas', 'select=producto_nombre,tipo_componente,insumo_id,cantidad,unidad_uso,modificador_opcion'),
-    sbGet('entradas_pendientes', 'estado=eq.confirmada&created_at=gte.' + mesInicio + 'T00:00:00&select=monto,concepto,categoria'),
+    appGet('gastos', 'fecha=gte.' + mesInicio + '&fecha=lte.' + mesFin + '&select=monto,concepto,cat,fecha,quien'),
   ]);
 
   var insArr   = Array.isArray(insumos)      ? insumos      : [];
@@ -818,14 +831,14 @@ async function loadOverview() {
   var ordHoy   = Array.isArray(ordersHoy)    ? ordersHoy    : [];
   var ordMes   = Array.isArray(ordensMes)    ? ordensMes    : [];
   var turArr   = Array.isArray(turnos)       ? turnos       : [];
-  var entConf  = Array.isArray(entradasConf) ? entradasConf : [];
+  var gastosApp = Array.isArray(entradasConf) ? entradasConf : [];
 
   var ventasHoy = ordHoy.reduce(function(s,o){ return s+(+o.total||0); }, 0);
   var ventasMes = ordMes.reduce(function(s,o){ return s+(+o.total||0); }, 0);
   var gastosMesTot = gasArr.reduce(function(s,g){ return s+(+g.monto||0); }, 0);
 
-  // Gastos del app de gastos (entradas confirmadas este mes)
-  var gastosAppMes = entConf.reduce(function(s,e){ return s+(+e.monto||0); }, 0);
+  // Gastos del app de gastos (todos los del mes)
+  var gastosAppMes = gastosApp.reduce(function(s,e){ return s+(+e.monto||0); }, 0);
   var totalEgresosMes = gastosMesTot + gastosAppMes;
 
   var insMap = {};
@@ -882,8 +895,18 @@ async function loadOverview() {
   var porCat = {};
   gasArr.forEach(function(g){ porCat[g.categoria] = (porCat[g.categoria]||0)+(+g.monto||0); });
   // Merge gastos operativos + gastos del app por categoría
+  // Map app categories to display names
+  var CAT_MAP_APP = {
+    'fruta':'Fruta Fresca','lacteos':'Lácteos y Cremas','chocolate':'Chocolate',
+    'toppings':'Toppings / Compl.','torani':'Jarabes Torani','azucar':'Azúcar / Endulz.',
+    'bebidas':'Bebidas y Varios','desechables':'Desechables','publicidad':'Publicidad',
+    'limpieza':'Limpieza','otros':'Otros'
+  };
   var porCatApp = {};
-  entConf.forEach(function(e){ porCatApp[e.categoria||'Otros'] = (porCatApp[e.categoria||'Otros']||0)+(+e.monto||0); });
+  gastosApp.forEach(function(e){
+    var cat = CAT_MAP_APP[e.cat] || e.cat || 'Otros';
+    porCatApp[cat] = (porCatApp[cat]||0)+(+e.monto||0);
+  });
   var porCatMerged = Object.assign({}, porCat);
   Object.keys(porCatApp).forEach(function(k){ porCatMerged[k] = (porCatMerged[k]||0) + porCatApp[k]; });
 
