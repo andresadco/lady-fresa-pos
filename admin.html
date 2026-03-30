@@ -800,7 +800,7 @@ async function loadOverview() {
     hoy.toLocaleDateString('es-MX', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
 
   // Load all data in parallel
-  var [ordersHoy, ordensMes, turnos, insumos, movsMes, gastosMes, recetas] = await Promise.all([
+  var [ordersHoy, ordensMes, turnos, insumos, movsMes, gastosMes, recetas, entradasConf] = await Promise.all([
     sbGet('orders', 'created_at=gte.' + todayISO + 'T00:00:00&select=total,sucursal'),
     sbGet('orders', 'created_at=gte.' + mesInicio + 'T00:00:00&select=total,sucursal'),
     sbGet('turnos', 'order=created_at.desc&limit=5&select=*'),
@@ -808,34 +808,48 @@ async function loadOverview() {
     sbGet('inv_movimientos', 'tipo=eq.salida&created_at=gte.' + mesInicio + 'T00:00:00&select=insumo_id,cantidad'),
     sbGet('gastos_operativos', 'fecha=gte.' + mesInicio + '&fecha=lte.' + mesFin + '&select=*'),
     sbGet('recetas', 'select=producto_nombre,tipo_componente,insumo_id,cantidad,unidad_uso,modificador_opcion'),
+    sbGet('entradas_pendientes', 'estado=eq.confirmada&created_at=gte.' + mesInicio + 'T00:00:00&select=monto,concepto,categoria'),
   ]);
 
-  var insArr  = Array.isArray(insumos)    ? insumos    : [];
-  var movArr  = Array.isArray(movsMes)    ? movsMes    : [];
-  var gasArr  = Array.isArray(gastosMes)  ? gastosMes  : [];
-  var recArr  = Array.isArray(recetas)    ? recetas    : [];
-  var ordHoy  = Array.isArray(ordersHoy)  ? ordersHoy  : [];
-  var ordMes  = Array.isArray(ordensMes)  ? ordensMes  : [];
-  var turArr  = Array.isArray(turnos)     ? turnos     : [];
+  var insArr   = Array.isArray(insumos)      ? insumos      : [];
+  var movArr   = Array.isArray(movsMes)      ? movsMes      : [];
+  var gasArr   = Array.isArray(gastosMes)    ? gastosMes    : [];
+  var recArr   = Array.isArray(recetas)      ? recetas      : [];
+  var ordHoy   = Array.isArray(ordersHoy)    ? ordersHoy    : [];
+  var ordMes   = Array.isArray(ordensMes)    ? ordensMes    : [];
+  var turArr   = Array.isArray(turnos)       ? turnos       : [];
+  var entConf  = Array.isArray(entradasConf) ? entradasConf : [];
 
   var ventasHoy = ordHoy.reduce(function(s,o){ return s+(+o.total||0); }, 0);
   var ventasMes = ordMes.reduce(function(s,o){ return s+(+o.total||0); }, 0);
   var gastosMesTot = gasArr.reduce(function(s,g){ return s+(+g.monto||0); }, 0);
+
+  // Gastos del app de gastos (entradas confirmadas este mes)
+  var gastosAppMes = entConf.reduce(function(s,e){ return s+(+e.monto||0); }, 0);
+  var totalEgresosMes = gastosMesTot + gastosAppMes;
+
   var insMap = {};
   insArr.forEach(function(i){ insMap[i.id] = i; });
+
+  // Costo real de insumos consumidos este mes (salidas × costo unitario)
+  var costoInsumosMes = movArr.reduce(function(s,m){
+    var ins = insMap[m.insumo_id];
+    return s + (ins ? (ins.costo_unitario||0) * (+m.cantidad||0) : 0);
+  }, 0);
+
+  // Margen real = Ventas - costo insumos - gastos operativos - gastos app
+  var utilidadMes = ventasMes - costoInsumosMes - totalEgresosMes;
+  var margenMes = ventasMes > 0 ? Math.round((utilidadMes / ventasMes) * 100) : 0;
 
   // ── BLOQUE 1: KPIs ──
   var ticketProm = ordHoy.length ? Math.round(ventasHoy / ordHoy.length) : 0;
   var stockBajoCount = insArr.filter(function(i){ return (i.stock_actual||0) <= (i.stock_minimo||0); }).length;
   var valorStock = insArr.reduce(function(s,i){ return s + ((i.stock_actual||0) * (i.costo_unitario||0)); }, 0);
-  var margenMes = ventasMes > 0 ? Math.round(((ventasMes - gastosMesTot) / ventasMes) * 100) : 0;
-
-  var kpiColor = function(val, good) { return good ? (val >= 0 ? 'var(--green)' : '#A32D2D') : (val > 0 ? '#BA7517' : 'var(--green)'); };
 
   document.getElementById('dash-kpis').innerHTML = [
     { label:'Ventas hoy', val:'$'+ventasHoy.toLocaleString('es-MX'), sub: ordHoy.length+' órdenes · $'+ticketProm+' prom', color:'var(--pink)' },
     { label:'Ventas del mes', val:'$'+ventasMes.toLocaleString('es-MX'), sub: ordMes.length+' órdenes', color:'var(--pink)' },
-    { label:'Margen estimado', val: margenMes+'%', sub:'Ventas - Gastos op.', color: margenMes >= 0 ? 'var(--green)' : '#A32D2D' },
+    { label:'Margen real', val: margenMes+'%', sub:'Ventas - insumos - egresos', color: margenMes >= 30 ? 'var(--green)' : margenMes >= 0 ? '#BA7517' : '#A32D2D' },
     { label:'⚠️ Stock bajo', val: stockBajoCount+' insumos', sub:'$'+Math.round(valorStock).toLocaleString('es-MX')+' valor total', color: stockBajoCount > 0 ? '#A32D2D' : 'var(--green)' },
   ].map(function(k){
     return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;">'
@@ -867,9 +881,17 @@ async function loadOverview() {
   // ── Gastos por categoría ──
   var porCat = {};
   gasArr.forEach(function(g){ porCat[g.categoria] = (porCat[g.categoria]||0)+(+g.monto||0); });
-  document.getElementById('dash-gastos-mes').innerHTML = Object.keys(porCat).length
-    ? Object.entries(porCat).sort(function(a,b){return b[1]-a[1];}).slice(0,6).map(function(e){
-        var pct = gastosMesTot ? Math.round((e[1]/gastosMesTot)*100) : 0;
+  // Merge gastos operativos + gastos del app por categoría
+  var porCatApp = {};
+  entConf.forEach(function(e){ porCatApp[e.categoria||'Otros'] = (porCatApp[e.categoria||'Otros']||0)+(+e.monto||0); });
+  var porCatMerged = Object.assign({}, porCat);
+  Object.keys(porCatApp).forEach(function(k){ porCatMerged[k] = (porCatMerged[k]||0) + porCatApp[k]; });
+
+  var costoInsumosStr = '$'+Math.round(costoInsumosMes).toLocaleString('es-MX');
+
+  document.getElementById('dash-gastos-mes').innerHTML = (Object.keys(porCatMerged).length || costoInsumosMes > 0)
+    ? Object.entries(porCatMerged).sort(function(a,b){return b[1]-a[1];}).slice(0,6).map(function(e){
+        var pct = totalEgresosMes ? Math.round((e[1]/totalEgresosMes)*100) : 0;
         var emoji = CAT_EMOJI[e[0]] || '📦';
         return '<div style="margin-bottom:8px;">'
           + '<div style="display:flex;justify-content:space-between;margin-bottom:3px;">'
@@ -879,10 +901,24 @@ async function loadOverview() {
           + '<div style="height:5px;background:var(--bg);border-radius:3px;"><div style="height:100%;width:'+pct+'%;background:#BA7517;border-radius:3px;"></div></div>'
           + '</div>';
       }).join('')
-    + '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;">'
-    + '<span style="font-size:12px;color:var(--text-3);">Total egresos</span>'
-    + '<span style="font-size:14px;font-weight:700;color:#BA7517;">$'+gastosMesTot.toLocaleString('es-MX')+'</span></div>'
-    : '<div style="text-align:center;padding:20px;color:var(--text-3);">Sin gastos registrados</div>';
+    + '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">'
+    + '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
+    +   '<span style="font-size:11px;color:var(--text-3);">Insumos consumidos</span>'
+    +   '<span style="font-size:12px;font-weight:600;color:var(--pink);">'+costoInsumosStr+'</span>'
+    + '</div>'
+    + '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
+    +   '<span style="font-size:11px;color:var(--text-3);">Gastos operativos</span>'
+    +   '<span style="font-size:12px;font-weight:600;color:#BA7517;">$'+gastosMesTot.toLocaleString('es-MX')+'</span>'
+    + '</div>'
+    + '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
+    +   '<span style="font-size:11px;color:var(--text-3);">Compras del app</span>'
+    +   '<span style="font-size:12px;font-weight:600;color:#BA7517;">$'+gastosAppMes.toLocaleString('es-MX')+'</span>'
+    + '</div>'
+    + '<div style="display:flex;justify-content:space-between;padding-top:4px;border-top:1px solid var(--border);">'
+    +   '<span style="font-size:12px;font-weight:600;color:var(--text-2);">Total egresos</span>'
+    +   '<span style="font-size:14px;font-weight:700;color:#BA7517;">$'+(totalEgresosMes+costoInsumosMes).toLocaleString('es-MX')+'</span>'
+    + '</div></div>'
+    : '<div style="text-align:center;padding:20px;color:var(--text-3);">Sin egresos registrados</div>';
 
   // ── BLOQUE 3: Stock bajo ──
   var stockBajo = insArr.filter(function(i){ return (i.stock_actual||0) <= (i.stock_minimo||0); })
