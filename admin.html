@@ -846,7 +846,7 @@ async function loadOverview() {
     sbGet('orders', 'created_at=gte.' + mesInicio + 'T00:00:00&select=total,sucursal'),
     sbGet('turnos', 'order=created_at.desc&limit=5&select=*'),
     sbGet('insumos', 'activo=eq.true&select=*'),
-    sbGet('inv_movimientos', 'tipo=eq.salida&created_at=gte.' + mesInicio + 'T00:00:00&select=insumo_id,cantidad'),
+    sbGet('inv_movimientos', 'tipo=eq.salida&fecha=gte.' + mesInicio + '&fecha=lte.' + mesFin + '&select=insumo_id,cantidad,fecha'),
     sbGet('gastos_operativos', 'fecha=gte.' + mesInicio + '&fecha=lte.' + mesFin + '&select=*'),
     sbGet('recetas', 'select=producto_nombre,tipo_componente,insumo_id,cantidad,unidad_uso,modificador_opcion'),
     sbGet('gastos', 'fecha=gte.' + mesInicio + '&fecha=lte.' + mesFin + '&select=monto,concepto,cat,fecha,quien'),
@@ -2610,10 +2610,15 @@ async function confirmarEntrada(entradaId, monto) {
   });
 
   // 2. Register movement
+  // Get fecha from entradas_pendientes record
+  var entRec = await sbGet('entradas_pendientes', 'id=eq.' + entradaId + '&select=fecha');
+  var fechaMov = (Array.isArray(entRec) && entRec.length && entRec[0].fecha) ? entRec[0].fecha : new Date().toISOString().slice(0,10);
+
   await sbPost('inv_movimientos', {
     insumo_id:     insId,
     tipo:          'entrada',
     cantidad:      totalUnidades,
+    fecha:         fechaMov,
     nota:          'Compra $' + monto + ' · ' + cant + ' ' + (ins.unidad_compra || ins.unidad)
                  + ' · Costo prom: $' + nuevoCostoCompra + (cambio !== 0 ? ' (' + (cambio > 0 ? '+' : '') + cambio + '%)' : ''),
     usuario_name:  currentUser ? currentUser.name : 'Admin',
@@ -2998,7 +3003,7 @@ async function cargarGastosParaSync() {
   }
 
   // Check which are already in entradas_pendientes
-  var yaEnEntradas = await sbGet('entradas_pendientes', 'created_at=gte.' + inicio + 'T00:00:00&select=concepto,monto,fecha');
+  var yaEnEntradas = await sbGet('entradas_pendientes', 'fecha=gte.' + inicio + '&fecha=lte.' + fin + '&select=concepto,monto,fecha');
   var yaIds = new Set();
   if (Array.isArray(yaEnEntradas)) {
     yaEnEntradas.forEach(function(e){ yaIds.add(e.fecha + '_' + e.concepto.trim() + '_' + e.monto); });
