@@ -699,6 +699,19 @@ const SB_URL = 'https://ngpumyxxxlafuzcsaepy.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ncHVteXh4eGxhZnV6Y3NhZXB5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyNjkzNzYsImV4cCI6MjA4OTg0NTM3Nn0.u4WHkOXLrNn4WSKHJedXXNDYrCMdfaDNK8KlvJNfXLg';
 const SB_H = { 'Content-Type':'application/json', 'apikey':SB_KEY, 'Authorization':'Bearer '+SB_KEY, 'Prefer':'return=representation' };
 
+// App de Gastos — Supabase externo (solo lectura para sync)
+const APP_URL = 'https://tnspshptvqvhhwwckzcc.supabase.co';
+const APP_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRuc3BzaHB0dnF2aGh3d2NremNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyOTE4MzYsImV4cCI6MjA4Nzg2NzgzNn0.VYO6LMiRfv9pTCO-jRrz4ph2S_uKgX-kqYRCyVKCwdU';
+async function appGet(table, query) {
+  try {
+    var res = await fetch(APP_URL + '/rest/v1/' + table + '?' + (query||''), {
+      headers: { 'apikey': APP_KEY, 'Authorization': 'Bearer ' + APP_KEY }
+    });
+    if (!res.ok) return [];
+    return await res.json();
+  } catch(e) { return []; }
+}
+
 
 let currentUser = null;
 let pinBuffer = '';
@@ -849,7 +862,7 @@ async function loadOverview() {
     sbGet('inv_movimientos', 'tipo=eq.salida&fecha=gte.' + mesInicio + '&fecha=lte.' + mesFin + '&select=insumo_id,cantidad,fecha'),
     sbGet('gastos_operativos', 'fecha=gte.' + mesInicio + '&fecha=lte.' + mesFin + '&select=*'),
     sbGet('recetas', 'select=producto_nombre,tipo_componente,insumo_id,cantidad,unidad_uso,modificador_opcion'),
-    sbGet('gastos', 'fecha=gte.' + mesInicio + '&fecha=lte.' + mesFin + '&select=monto,concepto,cat,fecha,quien'),
+    appGet('gastos', 'fecha=gte.' + mesInicio + '&fecha=lte.' + mesFin + '&select=monto,concepto,cat,fecha,quien'),
   ]);
 
   var insArr   = Array.isArray(insumos)      ? insumos      : [];
@@ -2995,10 +3008,10 @@ async function cargarGastosParaSync() {
   var container = document.getElementById('sync-container');
   container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-3);">Cargando gastos...</div>';
 
-  // Fetch gastos del mes
-  var gastos = await sbGet('gastos', 'fecha=gte.' + inicio + '&fecha=lte.' + fin + '&order=fecha.asc&select=*');
+  // Fetch gastos del mes desde app de gastos
+  var gastos = await appGet('gastos', 'fecha=gte.' + inicio + '&fecha=lte.' + fin + '&order=fecha.asc&select=*');
   if (!Array.isArray(gastos) || !gastos.length) {
-    container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-3);">Sin gastos en este mes</div>';
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-3);">Sin gastos en el app para este mes</div>';
     return;
   }
 
