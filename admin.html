@@ -263,12 +263,15 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 
     <!-- OVERVIEW -->
     <div class="page active" id="page-overview">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
         <div>
           <div class="page-title" style="margin-bottom:2px;">Dashboard</div>
           <div class="page-sub" id="dash-fecha">Cargando...</div>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="loadOverview()">↻ Actualizar</button>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select class="form-select" id="dash-mes-sel" onchange="loadOverview()" style="font-size:13px;padding:6px 10px;max-width:180px;"></select>
+          <button class="btn btn-ghost btn-sm" onclick="loadOverview()">↻</button>
+        </div>
       </div>
 
       <!-- BLOQUE 1: KPIs operativos -->
@@ -436,13 +439,31 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 
     <!-- INVENTARIO - ENTRADAS PENDIENTES -->
     <div class="page" id="page-entradas">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;gap:10px;flex-wrap:wrap;">
         <div>
           <div class="page-title" style="margin-bottom:2px;">Entradas pendientes</div>
-          <div class="page-sub">Compras del app de gastos — confirma para agregar al stock</div>
+          <div class="page-sub">Confirma compras para agregar al stock o registrar como gasto</div>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="loadEntradasPendientes()">↻ Actualizar</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-primary btn-sm" onclick="openSincronizarGastos()">⚡ Sincronizar gastos</button>
+          <button class="btn btn-ghost btn-sm" onclick="loadEntradasPendientes()">↻</button>
+        </div>
       </div>
+
+      <!-- Panel sincronizar gastos -->
+      <div id="panel-sincronizar" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div style="font-size:14px;font-weight:600;color:var(--text);">⚡ Sincronizar gastos del mes</div>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('panel-sincronizar').style.display='none'">✕</button>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:12px;">
+          <select class="form-select" id="sync-mes" style="max-width:160px;">
+          </select>
+          <button class="btn btn-secondary btn-sm" onclick="cargarGastosParaSync()">Cargar gastos</button>
+        </div>
+        <div id="sync-container"></div>
+      </div>
+
       <div id="entradas-container">
         <div style="text-align:center;padding:40px;color:var(--text-3);">Cargando...</div>
       </div>
@@ -678,18 +699,6 @@ const SB_URL = 'https://ngpumyxxxlafuzcsaepy.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ncHVteXh4eGxhZnV6Y3NhZXB5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyNjkzNzYsImV4cCI6MjA4OTg0NTM3Nn0.u4WHkOXLrNn4WSKHJedXXNDYrCMdfaDNK8KlvJNfXLg';
 const SB_H = { 'Content-Type':'application/json', 'apikey':SB_KEY, 'Authorization':'Bearer '+SB_KEY, 'Prefer':'return=representation' };
 
-// App de Gastos - Supabase secundario
-const APP_URL = 'https://tnspshptvqvhhwwckzcc.supabase.co';
-const APP_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRuc3BzaHB0dnF2aGh3d2NremNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyOTE4MzYsImV4cCI6MjA4Nzg2NzgzNn0.VYO6LMiRfv9pTCO-jRrz4ph2S_uKgX-kqYRCyVKCwdU';
-const APP_H  = { 'Content-Type':'application/json', 'apikey':APP_KEY, 'Authorization':'Bearer '+APP_KEY };
-
-async function appGet(table, query) {
-  try {
-    const res = await fetch(APP_URL + '/rest/v1/' + table + '?' + (query||''), { headers: APP_H });
-    if (!res.ok) return [];
-    return await res.json();
-  } catch(e) { return []; }
-}
 
 let currentUser = null;
 let pinBuffer = '';
@@ -805,12 +814,31 @@ function fmt(n) { return '$'+Number(n||0).toLocaleString('es-MX',{minimumFractio
 async function loadOverview() {
   var hoy = new Date();
   var todayISO = hoy.toISOString().slice(0,10);
-  var mesISO = todayISO.slice(0,7);
+
+  // Build month selector if empty
+  var mesSel = document.getElementById('dash-mes-sel');
+  if (!mesSel.options.length) {
+    for (var i = 0; i < 12; i++) {
+      var d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+      var key = d.toISOString().slice(0,7);
+      var label = d.toLocaleDateString('es-MX', {month:'long', year:'numeric'});
+      var opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = label.charAt(0).toUpperCase() + label.slice(1);
+      if (i === 0) opt.selected = true;
+      mesSel.appendChild(opt);
+    }
+  }
+  var mesISO = mesSel.value || todayISO.slice(0,7);
   var mesInicio = mesISO + '-01';
   var mesFin = mesISO + '-31';
+  var esHoy = mesISO === todayISO.slice(0,7);
 
-  document.getElementById('dash-fecha').textContent =
-    hoy.toLocaleDateString('es-MX', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  var mesLabel = new Date(mesISO + '-15').toLocaleDateString('es-MX', {month:'long', year:'numeric'});
+  mesLabel = mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1);
+  document.getElementById('dash-fecha').textContent = esHoy
+    ? hoy.toLocaleDateString('es-MX', {weekday:'long', day:'numeric', month:'long', year:'numeric'})
+    : mesLabel;
 
   // Load all data in parallel
   var [ordersHoy, ordensMes, turnos, insumos, movsMes, gastosMes, recetas, entradasConf] = await Promise.all([
@@ -821,7 +849,7 @@ async function loadOverview() {
     sbGet('inv_movimientos', 'tipo=eq.salida&created_at=gte.' + mesInicio + 'T00:00:00&select=insumo_id,cantidad'),
     sbGet('gastos_operativos', 'fecha=gte.' + mesInicio + '&fecha=lte.' + mesFin + '&select=*'),
     sbGet('recetas', 'select=producto_nombre,tipo_componente,insumo_id,cantidad,unidad_uso,modificador_opcion'),
-    appGet('gastos', 'fecha=gte.' + mesInicio + '&fecha=lte.' + mesFin + '&select=monto,concepto,cat,fecha,quien'),
+    sbGet('gastos', 'fecha=gte.' + mesInicio + '&fecha=lte.' + mesFin + '&select=monto,concepto,cat,fecha,quien'),
   ]);
 
   var insArr   = Array.isArray(insumos)      ? insumos      : [];
@@ -934,7 +962,7 @@ async function loadOverview() {
     +   '<span style="font-size:12px;font-weight:600;color:#BA7517;">$'+gastosMesTot.toLocaleString('es-MX')+'</span>'
     + '</div>'
     + '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
-    +   '<span style="font-size:11px;color:var(--text-3);">Compras del app</span>'
+    +   '<span style="font-size:11px;color:var(--text-3);">Compras / insumos</span>'
     +   '<span style="font-size:12px;font-weight:600;color:#BA7517;">$'+gastosAppMes.toLocaleString('es-MX')+'</span>'
     + '</div>'
     + '<div style="display:flex;justify-content:space-between;padding-top:4px;border-top:1px solid var(--border);">'
@@ -2916,6 +2944,195 @@ async function confirmarComoGasto(entradaId) {
 
   toast('✓ Registrado como gasto operativo');
   loadEntradasPendientes();
+}
+</script>
+<script>
+// ═══════════════════════════════════════════════════
+// SINCRONIZAR GASTOS → ENTRADAS PENDIENTES
+// ═══════════════════════════════════════════════════
+
+var _syncGastos = [];
+
+// Categorías de insumos (van a inventario)
+var CATS_INSUMO = ['fruta','lacteos','chocolate','toppings','torani','azucar','bebidas','desechables'];
+// Categorías de gastos operativos (van a gastos_operativos)
+var CATS_GASTO  = ['publicidad','limpieza','otros'];
+
+var CAT_LABEL = {
+  fruta:'Fruta Fresca', lacteos:'Lácteos y Cremas', chocolate:'Chocolate',
+  toppings:'Toppings / Compl.', torani:'Jarabes Torani', azucar:'Azúcar / Endulz.',
+  bebidas:'Bebidas y Varios', desechables:'Desechables', publicidad:'Publicidad',
+  limpieza:'Limpieza', otros:'Otros'
+};
+
+function openSincronizarGastos() {
+  var panel = document.getElementById('panel-sincronizar');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  var sel = document.getElementById('sync-mes');
+  if (!sel.options.length) {
+    var hoy = new Date();
+    for (var i = 0; i < 12; i++) {
+      var d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+      var key = d.toISOString().slice(0,7);
+      var label = d.toLocaleDateString('es-MX', {month:'long', year:'numeric'});
+      label = label.charAt(0).toUpperCase() + label.slice(1);
+      var opt = document.createElement('option');
+      opt.value = key; opt.textContent = label;
+      if (i === 0) opt.selected = true;
+      sel.appendChild(opt);
+    }
+  }
+}
+
+async function cargarGastosParaSync() {
+  var mes = document.getElementById('sync-mes').value;
+  var inicio = mes + '-01', fin = mes + '-31';
+  var container = document.getElementById('sync-container');
+  container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-3);">Cargando gastos...</div>';
+
+  // Fetch gastos del mes
+  var gastos = await sbGet('gastos', 'fecha=gte.' + inicio + '&fecha=lte.' + fin + '&order=fecha.asc&select=*');
+  if (!Array.isArray(gastos) || !gastos.length) {
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-3);">Sin gastos en este mes</div>';
+    return;
+  }
+
+  // Check which are already in entradas_pendientes
+  var yaEnEntradas = await sbGet('entradas_pendientes', 'created_at=gte.' + inicio + 'T00:00:00&select=concepto,monto,fecha');
+  var yaIds = new Set();
+  if (Array.isArray(yaEnEntradas)) {
+    yaEnEntradas.forEach(function(e){ yaIds.add(e.fecha + '_' + e.concepto.trim() + '_' + e.monto); });
+  }
+
+  _syncGastos = gastos.map(function(g) {
+    var key = g.fecha + '_' + (g.concepto||'').trim() + '_' + g.monto;
+    var esInsumo = CATS_INSUMO.indexOf(g.cat) >= 0;
+    return {
+      id: g.id, fecha: g.fecha, concepto: g.concepto, cat: g.cat,
+      monto: g.monto, quien: g.quien, nota: g.nota,
+      tipo: esInsumo ? 'insumo' : 'gasto',
+      yaExiste: yaIds.has(key),
+      seleccionado: !yaIds.has(key),
+    };
+  });
+
+  renderSyncTable();
+}
+
+function renderSyncTable() {
+  var container = document.getElementById('sync-container');
+  var pendientes = _syncGastos.filter(function(g){ return !g.yaExiste; });
+  var yaExisten  = _syncGastos.filter(function(g){ return g.yaExiste; });
+
+  if (!pendientes.length) {
+    container.innerHTML = '<div style="background:var(--green-light);border-radius:8px;padding:12px;font-size:13px;color:var(--green);text-align:center;">✅ Todos los gastos ya están sincronizados</div>';
+    return;
+  }
+
+  var totalSel = pendientes.filter(function(g){ return g.seleccionado; }).length;
+  var montoSel = pendientes.filter(function(g){ return g.seleccionado; }).reduce(function(s,g){ return s + (+g.monto||0); }, 0);
+
+  var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
+    + '<div style="font-size:12px;color:var(--text-3);">' + pendientes.length + ' por sincronizar · ' + yaExisten.length + ' ya existen</div>'
+    + '<div style="display:flex;gap:6px;">'
+    +   '<button class="btn btn-ghost btn-sm" onclick="syncSelAll(true)">Seleccionar todo</button>'
+    +   '<button class="btn btn-ghost btn-sm" onclick="syncSelAll(false)">Deseleccionar</button>'
+    + '</div></div>';
+
+  html += '<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px;">';
+
+  // Header
+  html += '<div style="display:grid;grid-template-columns:28px 70px 1fr 80px 100px 90px;gap:8px;padding:8px 12px;background:var(--bg);font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;">'
+    + '<div></div><div>Fecha</div><div>Concepto</div><div>Monto</div><div>Categoría</div><div>Tipo</div></div>';
+
+  pendientes.forEach(function(g, idx) {
+    var tipoColor = g.tipo === 'insumo' ? 'var(--pink)' : '#BA7517';
+    var tipoBg    = g.tipo === 'insumo' ? 'var(--pink-light)' : '#FAEEDA';
+    var tipoLabel = g.tipo === 'insumo' ? '📦 Inventario' : '💸 Gasto op.';
+    html += '<div style="display:grid;grid-template-columns:28px 70px 1fr 80px 100px 90px;gap:8px;padding:8px 12px;border-top:1px solid var(--border);align-items:center;">'
+      + '<input type="checkbox" ' + (g.seleccionado ? 'checked' : '') + ' onchange="syncToggle(' + idx + ',this.checked)" style="width:15px;height:15px;cursor:pointer;">'
+      + '<div style="font-size:12px;color:var(--text-3);">' + g.fecha + '</div>'
+      + '<div style="font-size:13px;font-weight:500;">' + (g.concepto||'—') + (g.nota ? '<br><span style="font-size:11px;color:var(--text-3);font-style:italic;">' + g.nota + '</span>' : '') + '</div>'
+      + '<div style="font-size:13px;font-weight:600;color:var(--pink);">$' + (+g.monto).toLocaleString('es-MX') + '</div>'
+      + '<div style="font-size:11px;color:var(--text-3);">' + (CAT_LABEL[g.cat]||g.cat||'—') + '</div>'
+      + '<div style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:8px;background:' + tipoBg + ';color:' + tipoColor + ';">'
+      +   '<select style="font-size:10px;background:transparent;border:none;color:' + tipoColor + ';cursor:pointer;font-weight:600;" onchange="syncChangeTipo(' + idx + ',this.value)">'
+      +     '<option value="insumo" ' + (g.tipo==='insumo'?'selected':'') + '>📦 Inv.</option>'
+      +     '<option value="gasto" ' + (g.tipo==='gasto'?'selected':'') + '>💸 Gasto</option>'
+      +   '</select>'
+      + '</div>'
+      + '</div>';
+  });
+  html += '</div>';
+
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;">'
+    + '<div style="font-size:12px;color:var(--text-3);">' + totalSel + ' seleccionados · $' + montoSel.toLocaleString('es-MX') + '</div>'
+    + '<button class="btn btn-primary btn-sm" onclick="ejecutarSync()" ' + (totalSel === 0 ? 'disabled' : '') + '>⚡ Sincronizar ' + totalSel + ' gastos</button>'
+    + '</div>';
+
+  container.innerHTML = html;
+}
+
+function syncToggle(idx, val) {
+  var pendientes = _syncGastos.filter(function(g){ return !g.yaExiste; });
+  pendientes[idx].seleccionado = val;
+  renderSyncTable();
+}
+
+function syncSelAll(val) {
+  _syncGastos.forEach(function(g){ if (!g.yaExiste) g.seleccionado = val; });
+  renderSyncTable();
+}
+
+function syncChangeTipo(idx, val) {
+  var pendientes = _syncGastos.filter(function(g){ return !g.yaExiste; });
+  pendientes[idx].tipo = val;
+  renderSyncTable();
+}
+
+async function ejecutarSync() {
+  var seleccionados = _syncGastos.filter(function(g){ return !g.yaExiste && g.seleccionado; });
+  if (!seleccionados.length) return;
+
+  var container = document.getElementById('sync-container');
+  container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-3);">⏳ Sincronizando ' + seleccionados.length + ' gastos...</div>';
+
+  var insumos  = seleccionados.filter(function(g){ return g.tipo === 'insumo'; });
+  var gastos_op = seleccionados.filter(function(g){ return g.tipo === 'gasto'; });
+
+  // Insert insumos → entradas_pendientes
+  for (var i = 0; i < insumos.length; i++) {
+    var g = insumos[i];
+    await sbPost('entradas_pendientes', {
+      concepto:   g.concepto,
+      monto:      g.monto,
+      categoria:  CAT_LABEL[g.cat] || g.cat,
+      fecha:      g.fecha,
+      quien:      g.quien || null,
+      nota_gasto: g.nota || null,
+      estado:     'pendiente',
+    });
+  }
+
+  // Insert gastos operativos → gastos_operativos
+  for (var j = 0; j < gastos_op.length; j++) {
+    var g2 = gastos_op[j];
+    await sbPost('gastos_operativos', {
+      fecha:      g2.fecha,
+      concepto:   g2.concepto,
+      categoria:  CAT_LABEL[g2.cat] || g2.cat || 'Otros',
+      monto:      g2.monto,
+      forma_pago: 'Efectivo',
+      tipo_pago:  'contado',
+      quien:      g2.quien || null,
+      nota:       g2.nota || null,
+      pagado:     true,
+    });
+  }
+
+  toast('✅ Sincronizados: ' + insumos.length + ' a inventario · ' + gastos_op.length + ' a gastos operativos');
+  document.getElementById('panel-sincronizar').style.display = 'none';
+  await loadEntradasPendientes();
 }
 </script>
 </body>
