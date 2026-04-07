@@ -844,10 +844,12 @@ async function loadOverview() {
   }
   var mesISO = mesSel.value || todayISO.slice(0,7);
   var mesInicio = mesISO + '-01';
-  var mesFin = mesISO + '-31';
+  var _mp = mesISO.split('-').map(Number);
+  var ultimoDia = new Date(_mp[0], _mp[1], 0).getDate();
+  var mesFin = mesISO + '-' + String(ultimoDia).padStart(2, '0');
   var esHoy = mesISO === todayISO.slice(0,7);
 
-  var mesLabel = new Date(mesISO + '-15').toLocaleDateString('es-MX', {month:'long', year:'numeric'});
+  var mesLabel = new Date(_mp[0], _mp[1] - 1, 1).toLocaleDateString('es-MX', {month:'long', year:'numeric'});
   mesLabel = mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1);
   document.getElementById('dash-fecha').textContent = esHoy
     ? hoy.toLocaleDateString('es-MX', {weekday:'long', day:'numeric', month:'long', year:'numeric'})
@@ -856,7 +858,7 @@ async function loadOverview() {
   // Load all data in parallel
   var [ordersHoy, ordensMes, turnos, insumos, movsMes, gastosMes, recetas, entradasConf] = await Promise.all([
     sbGet('orders', 'created_at=gte.' + todayISO + 'T00:00:00&select=total,sucursal'),
-    sbGet('orders', 'created_at=gte.' + mesInicio + 'T00:00:00&select=total,sucursal'),
+    sbGet('orders', 'created_at=gte.' + mesInicio + 'T00:00:00&created_at=lte.' + mesFin + 'T23:59:59&select=total,sucursal'),
     sbGet('turnos', 'order=created_at.desc&limit=5&select=*'),
     sbGet('insumos', 'activo=eq.true&select=*'),
     sbGet('inv_movimientos', 'tipo=eq.salida&fecha=gte.' + mesInicio + '&fecha=lte.' + mesFin + '&select=insumo_id,cantidad,fecha'),
@@ -2775,7 +2777,11 @@ async function loadGastosOperativos() {
   var mes = mesSel.value;
 
   var query = 'order=fecha.desc';
-  if (mes) query += '&fecha=gte.' + mes + '-01&fecha=lte.' + mes + '-31';
+  if (mes) {
+    var _gp = mes.split('-').map(Number);
+    var _gu = new Date(_gp[0], _gp[1], 0).getDate();
+    query += '&fecha=gte.' + mes + '-01&fecha=lte.' + mes + '-' + String(_gu).padStart(2,'0');
+  }
 
   const res = await sbGet('gastos_operativos', query);
   allGastosOp = Array.isArray(res) ? res : [];
@@ -3004,7 +3010,9 @@ function openSincronizarGastos() {
 
 async function cargarGastosParaSync() {
   var mes = document.getElementById('sync-mes').value;
-  var inicio = mes + '-01', fin = mes + '-31';
+  var _sp = mes.split('-').map(Number);
+  var _su = new Date(_sp[0], _sp[1], 0).getDate();
+  var inicio = mes + '-01', fin = mes + '-' + String(_su).padStart(2,'0');
   var container = document.getElementById('sync-container');
   container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-3);">Cargando gastos...</div>';
 
