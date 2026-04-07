@@ -156,9 +156,11 @@ html, body {
   padding-bottom: var(--safe-bottom);
   max-height: 92vh; display: flex; flex-direction: column;
   transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.34,1.2,0.64,1);
+  touch-action: none;
 }
 .sheet.open { transform: translateY(0); }
-.sheet-handle { width: 36px; height: 4px; background: var(--border-2); border-radius: 2px; margin: 12px auto 0; flex-shrink: 0; }
+.sheet-handle { width: 44px; height: 5px; background: var(--border-2); border-radius: 3px; margin: 14px auto 4px; flex-shrink: 0; cursor: grab; transition: background 0.2s; }
+.sheet-handle:hover { background: var(--red-mid); }
 .sheet-header { padding: 16px 20px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .sheet-title { font-family: 'Bebas Neue', serif; font-size: 22px; color: var(--red); letter-spacing: 1px; }
 .sheet-sub { font-size: 12px; color: var(--text-3); margin-top: 2px; }
@@ -368,6 +370,7 @@ html, body {
     </div>
     <div class="tb-actions">
       <button class="tb-btn" onclick="openHist()" title="Historial">📋</button>
+      <button class="tb-btn" onclick="openPrinterCfg()" title="Impresora">🖨️</button>
       <button class="tb-btn" onclick="openOrderSheet()" title="Ver orden" id="tb-order-btn" style="display:none;">🧾</button>
       <button class="tb-btn" style="background:var(--red-light);border-color:var(--red-mid);color:var(--red);" onclick="logout()" title="Salir">⏻</button>
       <div class="tb-badge" id="tb-badge-turno">● Turno</div>
@@ -470,7 +473,9 @@ html, body {
       <button class="pay-btn" onclick="setPay('tarjeta',this)"><span class="pay-icon">💳</span>Tarjeta</button>
       <button class="pay-btn" onclick="setPay('transferencia',this)"><span class="pay-icon">📲</span>Transfer.</button>
     </div>
-    <button class="cobrar-btn" id="cobrar-btn" onclick="openCobro()">COBRAR</button>
+    <div style="display:flex;gap:8px;">
+      <button class="cobrar-btn" id="cobrar-btn" onclick="openCobro()" style="flex:1;">COBRAR</button>
+    </div>
   </div>
 </div>
 
@@ -522,6 +527,10 @@ html, body {
   <div class="sf-title">¡VENTA LISTA!</div>
   <div class="sf-sub" id="sf-sub"></div>
   <div class="sf-cambio" id="sf-cambio"></div>
+  <div style="display:flex;gap:10px;margin-top:20px;">
+    <button id="sf-share-btn" onclick="_sfShare()" style="padding:12px 20px;border:2px solid rgba(255,255,255,0.4);border-radius:14px;background:transparent;color:#fff;font-family:DM Sans,sans-serif;font-size:14px;font-weight:600;cursor:pointer;display:none;">📤 Enviar ticket</button>
+    <button id="sf-reprint-btn" onclick="_sfReprint()" style="padding:12px 20px;border:2px solid rgba(255,255,255,0.4);border-radius:14px;background:transparent;color:#fff;font-family:DM Sans,sans-serif;font-size:14px;font-weight:600;cursor:pointer;display:none;">🖨️ Reimprimir</button>
+  </div>
 </div>
 
 <script>
@@ -1069,14 +1078,24 @@ async function confirmarPago() {
   sales.push(saleData);
   saveToSupabase(saleData);
   descontarInventario(saleData);
+  printSale(saleData);
 
   closeSheet('cobro');
 
   document.getElementById('sf-sub').textContent = (client?client+' · ':'') + '$'+total.toLocaleString('es-MX',{minimumFractionDigits:2});
   document.getElementById('sf-cambio').textContent = cambio>0 ? 'Cambio: $'+cambio.toLocaleString('es-MX',{minimumFractionDigits:2}) : '';
+
+  // Store last sale for share/reprint
+  window._lastSale = saleData;
+  const shareBtn = document.getElementById('sf-share-btn');
+  const reprintBtn = document.getElementById('sf-reprint-btn');
+  if (shareBtn) shareBtn.style.display = 'block';
+  if (reprintBtn && printerCfg.ip) reprintBtn.style.display = 'block';
+
   const sf = document.getElementById('success-flash');
   sf.classList.add('open');
-  setTimeout(() => sf.classList.remove('open'), 1800);
+  // Auto-close after 3s, but stay if user taps share/reprint
+  sf._autoClose = setTimeout(() => sf.classList.remove('open'), 3000);
 
   orderN++; order=[]; discount=0; payMethod='efectivo'; svcType='mostrador';
   document.getElementById('order-num').textContent = String(orderN).padStart(3,'0');
@@ -1136,6 +1155,17 @@ async function flushOfflineQueue() {
   for (const s of pending) await saveToSupabase(s);
 }
 window.addEventListener('online', () => { if (offlineQueue.length) flushOfflineQueue(); });
+
+function _sfShare() {
+  clearTimeout(document.getElementById('success-flash')._autoClose);
+  document.getElementById('success-flash').classList.remove('open');
+  if (window._lastSale) showShareSheet(window._lastSale);
+}
+function _sfReprint() {
+  clearTimeout(document.getElementById('success-flash')._autoClose);
+  document.getElementById('success-flash').classList.remove('open');
+  if (window._lastSale) printSale(window._lastSale);
+}
 
 // ═══════════════════════════════
 // INVENTORY DEDUCTION
@@ -1214,15 +1244,277 @@ async function openHist() {
 function closeHist() { closeSheet('hist'); }
 
 // ═══════════════════════════════
-// SHEET HELPERS
+// SHEET HELPERS + SWIPE TO CLOSE
 // ═══════════════════════════════
+let _sheetStack = []; // track open sheets for back navigation
+
 function openSheet(name) {
   document.getElementById('ov-'+name).classList.add('open');
-  requestAnimationFrame(() => document.getElementById('sheet-'+name).classList.add('open'));
+  requestAnimationFrame(() => {
+    const sheet = document.getElementById('sheet-'+name);
+    sheet.classList.add('open');
+    setupSwipeClose(sheet, name);
+  });
+  _sheetStack.push(name);
 }
+
 function closeSheet(name) {
   document.getElementById('sheet-'+name).classList.remove('open');
   setTimeout(() => document.getElementById('ov-'+name).classList.remove('open'), 300);
+  const idx = _sheetStack.lastIndexOf(name);
+  if (idx !== -1) _sheetStack.splice(idx, 1);
+}
+
+// Swipe down to close any sheet
+function setupSwipeClose(sheet, name) {
+  const handle = sheet.querySelector('.sheet-handle');
+  if (!handle || handle._swipeSetup) return;
+  handle._swipeSetup = true;
+  let startY = 0, curY = 0, dragging = false;
+
+  function onStart(e) {
+    startY = e.touches ? e.touches[0].clientY : e.clientY;
+    dragging = true;
+    sheet.style.transition = 'none';
+  }
+  function onMove(e) {
+    if (!dragging) return;
+    curY = (e.touches ? e.touches[0].clientY : e.clientY) - startY;
+    if (curY < 0) curY = 0;
+    sheet.style.transform = `translateY(${curY}px)`;
+  }
+  function onEnd() {
+    if (!dragging) return;
+    dragging = false;
+    sheet.style.transition = 'transform 0.3s cubic-bezier(0.34,1.2,0.64,1)';
+    if (curY > 100) { closeSheet(name); sheet.style.transform = ''; }
+    else { sheet.style.transform = 'translateY(0)'; }
+    curY = 0;
+  }
+  handle.addEventListener('touchstart', onStart, {passive:true});
+  handle.addEventListener('touchmove', onMove, {passive:true});
+  handle.addEventListener('touchend', onEnd);
+  handle.addEventListener('mousedown', onStart);
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onEnd);
+}
+
+// Hardware back button / swipe back on Android & iOS
+window.addEventListener('popstate', () => {
+  if (_sheetStack.length > 0) {
+    const last = _sheetStack[_sheetStack.length - 1];
+    closeSheet(last);
+  }
+});
+// Push state when opening sheets so back button works
+const _origOpenSheet = openSheet;
+// (already handled above)
+
+// ═══════════════════════════════
+// PRINTING — EPSON ePOS + FALLBACK
+// ═══════════════════════════════
+let printerCfg = JSON.parse(localStorage.getItem('lf_printer_mobile') || '{"ip":"","port":"8008","ticket":true,"comanda":true}');
+
+function buildTicketXML(saleData, type='ticket') {
+  const isComanda = type === 'comanda';
+  const fmtD = n => '$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2});
+  const line = (left, right='', bold=false) => {
+    const pad = 42, l = left.substring(0, pad-right.length-1);
+    const spaces = ' '.repeat(Math.max(1, pad-l.length-right.length));
+    return `<text em="${bold}">${l}${spaces}${right}&#10;</text>`;
+  };
+  const center = (text, bold=false) => `<text align="center" em="${bold}">${text}&#10;</text>`;
+  const divider = () => `<text>${'─'.repeat(42)}&#10;</text>`;
+
+  let xml = `<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print">`;
+
+  if (isComanda) {
+    xml += center('*** COMANDA ***', true);
+    xml += center(`Orden #${String(saleData.id).padStart(3,'0')}`, true);
+    xml += center(new Date(saleData.date).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}));
+    if (saleData.client) xml += center(saleData.client);
+    xml += center(saleData.svcType==='para-llevar'?'▶ PARA LLEVAR':saleData.svcType==='delivery'?'▶ DELIVERY':'MOSTRADOR', true);
+    xml += divider();
+    saleData.items.forEach(item => {
+      xml += `<text em="true">x${item.qty} ${item.name.substring(0,30)}&#10;</text>`;
+      if (item.sel?.['Tamaño']) xml += `<text>  Tamaño: ${item.sel['Tamaño']}&#10;</text>`;
+      if (item.sel?.['Bases']) xml += `<text>  Base: ${item.sel['Bases']}&#10;</text>`;
+      const tops = [...(item.sel?.['Toppings Incluidos']||[]),...(item.sel?.['Toppings Extra Básicos']||[]),...(item.sel?.['Toppings Extra Premium']||[])];
+      if (tops.length) xml += `<text>  + ${tops.join(', ').substring(0,35)}&#10;</text>`;
+      const shots = item.sel?.['Shots Extra']||[];
+      if (shots.length) xml += `<text>  Shot: ${shots.join(', ')}&#10;</text>`;
+      if (item.note) xml += `<text>  ** ${item.note.substring(0,30)}&#10;</text>`;
+    });
+    xml += divider();
+    if (saleData.client) xml += center(saleData.client);
+  } else {
+    xml += center('Lady Fresa', true);
+    xml += center('El sabor que te enamora');
+    xml += divider();
+    xml += center(`Orden #${String(saleData.id).padStart(3,'0')}`);
+    xml += center(new Date(saleData.date).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}));
+    if (currentUser) xml += center(`Atendió: ${currentUser.name}`);
+    xml += divider();
+    saleData.items.forEach(item => {
+      xml += line(`${item.qty}x ${item.name.substring(0,26)}`, fmtD(item.unitPrice*item.qty));
+      if (item.sel?.['Tamaño']) xml += `<text>  ${item.sel['Tamaño']}&#10;</text>`;
+      const tops = [...(item.sel?.['Toppings Incluidos']||[]),...(item.sel?.['Toppings Extra Básicos']||[]),...(item.sel?.['Toppings Extra Premium']||[])];
+      if (tops.length) xml += `<text>  + ${tops.join(', ').substring(0,36)}&#10;</text>`;
+      if (item.note) xml += `<text>  * ${item.note.substring(0,32)}&#10;</text>`;
+    });
+    xml += divider();
+    xml += line('Subtotal', fmtD(saleData.sub));
+    if (saleData.desc > 0) xml += line(`Descuento (${saleData.discount}%)`, '-'+fmtD(saleData.desc));
+    xml += line('IVA (16%)', fmtD(saleData.iva));
+    xml += divider();
+    xml += line('TOTAL', fmtD(saleData.total), true);
+    xml += divider();
+    const payLabel = saleData.payMethod==='efectivo'?'Efectivo':saleData.payMethod==='tarjeta'?'Tarjeta':'Transferencia';
+    xml += line('Pago', payLabel);
+    if (saleData.payMethod==='efectivo' && saleData.cambio > 0) {
+      xml += line('Con', fmtD(saleData.cashReceived||saleData.total));
+      xml += line('Cambio', fmtD(saleData.cambio), true);
+    }
+    xml += divider();
+    xml += center('¡Gracias por tu visita!');
+    xml += center('ladyfresa.mx');
+  }
+  xml += `<cut type="feed"/></epos-print></s:Body></s:Envelope>`;
+  return xml;
+}
+
+async function printEpson(saleData, type='ticket') {
+  const {ip, port} = printerCfg;
+  if (!ip) return false;
+  try {
+    const res = await fetch(`http://${ip}:${port}/cgi-bin/epos/service.cgi?devid=local_printer&timeout=10000`, {
+      method:'POST',
+      headers:{'Content-Type':'text/xml; charset=utf-8','SOAPAction':'""'},
+      body: buildTicketXML(saleData, type),
+      signal: AbortSignal.timeout(8000),
+    });
+    return res.ok;
+  } catch { return false; }
+}
+
+function buildTicketText(saleData) {
+  const fmtD = n => '$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2});
+  let text = `🍓 LADY FRESA\n`;
+  text += `Orden #${String(saleData.id).padStart(3,'0')} · ${new Date(saleData.date).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}\n`;
+  if (saleData.client) text += `Cliente: ${saleData.client}\n`;
+  text += `─────────────────\n`;
+  saleData.items.forEach(item => {
+    text += `${item.qty}x ${item.name} — ${fmtD(item.unitPrice*item.qty)}\n`;
+    if (item.sel?.['Tamaño']) text += `  Tamaño: ${item.sel['Tamaño']}\n`;
+    if (item.sel?.['Bases']) text += `  Base: ${item.sel['Bases']}\n`;
+    const tops = [...(item.sel?.['Toppings Incluidos']||[]),...(item.sel?.['Toppings Extra Básicos']||[]),...(item.sel?.['Toppings Extra Premium']||[])];
+    if (tops.length) text += `  + ${tops.join(', ')}\n`;
+    if (item.note) text += `  📝 ${item.note}\n`;
+  });
+  text += `─────────────────\n`;
+  if (saleData.desc > 0) text += `Descuento (${saleData.discount}%): -${fmtD(saleData.desc)}\n`;
+  text += `Total: ${fmtD(saleData.total)}\n`;
+  const payLabel = saleData.payMethod==='efectivo'?'Efectivo':saleData.payMethod==='tarjeta'?'Tarjeta':'Transferencia';
+  text += `Pago: ${payLabel}\n`;
+  if (saleData.payMethod==='efectivo' && saleData.cambio > 0) text += `Cambio: ${fmtD(saleData.cambio)}\n`;
+  text += `─────────────────\nladyfresa.mx`;
+  return text;
+}
+
+async function printSale(saleData) {
+  if (printerCfg.ticket !== false) {
+    const ok = await printEpson(saleData, 'ticket');
+    if (!ok && !printerCfg.ip) showShareSheet(saleData);
+  }
+  if (printerCfg.comanda !== false) {
+    await printEpson(saleData, 'comanda');
+  }
+}
+
+// ── SHARE TICKET (WhatsApp / Email / etc) ──
+function showShareSheet(saleData) {
+  const text = buildTicketText(saleData);
+  const encoded = encodeURIComponent(text);
+  const waUrl = `https://wa.me/?text=${encoded}`;
+  const mailUrl = `mailto:?subject=Ticket Lady Fresa %23${String(saleData.id).padStart(3,'0')}&body=${encoded}`;
+
+  // Web Share API (iOS native share sheet)
+  if (navigator.share) {
+    navigator.share({ title: `Ticket Lady Fresa #${String(saleData.id).padStart(3,'0')}`, text }).catch(()=>{});
+    return;
+  }
+  // Fallback: show mini share modal
+  const div = document.createElement('div');
+  div.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;display:flex;align-items:flex-end;';
+  div.innerHTML = `<div style="background:#fff;border-radius:24px 24px 0 0;padding:20px;width:100%;padding-bottom:max(20px,env(safe-area-inset-bottom))">
+    <div style="width:44px;height:5px;background:#ddd;border-radius:3px;margin:0 auto 16px;"></div>
+    <div style="font-family:'Bebas Neue',serif;font-size:20px;color:#A6182E;letter-spacing:1px;margin-bottom:16px;">Enviar Ticket</div>
+    <a href="${waUrl}" style="display:flex;align-items:center;gap:12px;padding:14px;border:1.5px solid #e0e0e0;border-radius:14px;margin-bottom:10px;text-decoration:none;color:#1a0508;">
+      <span style="font-size:24px;">💬</span><span style="font-size:14px;font-weight:600;">WhatsApp</span>
+    </a>
+    <a href="${mailUrl}" style="display:flex;align-items:center;gap:12px;padding:14px;border:1.5px solid #e0e0e0;border-radius:14px;margin-bottom:10px;text-decoration:none;color:#1a0508;">
+      <span style="font-size:24px;">✉️</span><span style="font-size:14px;font-weight:600;">Correo</span>
+    </a>
+    <button onclick="this.closest('div[style*=fixed]').remove()" style="width:100%;height:48px;border:none;border-radius:14px;background:#FDF6F7;color:#9a7075;font-family:DM Sans,sans-serif;font-size:14px;cursor:pointer;margin-top:4px;">Cerrar</button>
+  </div>`;
+  div.onclick = e => { if(e.target===div) div.remove(); };
+  document.body.appendChild(div);
+}
+
+// ── PRINTER CONFIG ──
+function openPrinterCfg() {
+  const ip = printerCfg.ip || '';
+  const div = document.createElement('div');
+  div.id = 'printer-cfg-modal';
+  div.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;display:flex;align-items:flex-end;';
+  div.innerHTML = `<div style="background:#fff;border-radius:24px 24px 0 0;padding:20px;width:100%;padding-bottom:max(20px,env(safe-area-inset-bottom))">
+    <div style="width:44px;height:5px;background:#ddd;border-radius:3px;margin:0 auto 16px;"></div>
+    <div style="font-family:'Bebas Neue',serif;font-size:22px;color:#A6182E;letter-spacing:1px;margin-bottom:16px;">🖨️ Impresora Epson</div>
+    <div style="font-size:12px;color:#9a7075;margin-bottom:6px;">IP de la impresora</div>
+    <input id="pcfg-ip" value="${ip}" placeholder="192.168.1.100" style="width:100%;height:46px;border:1.5px solid #e0c0c8;border-radius:12px;padding:0 14px;font-size:16px;font-family:monospace;outline:none;margin-bottom:12px;">
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <label style="display:flex;align-items:center;gap:8px;flex:1;padding:12px;border:1.5px solid #e0e0e0;border-radius:12px;cursor:pointer;">
+        <input type="checkbox" id="pcfg-ticket" ${printerCfg.ticket!==false?'checked':''} style="width:18px;height:18px;accent-color:#A6182E;">
+        <span style="font-size:13px;font-weight:500;">Ticket cliente</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;flex:1;padding:12px;border:1.5px solid #e0e0e0;border-radius:12px;cursor:pointer;">
+        <input type="checkbox" id="pcfg-comanda" ${printerCfg.comanda!==false?'checked':''} style="width:18px;height:18px;accent-color:#A6182E;">
+        <span style="font-size:13px;font-weight:500;">Comanda</span>
+      </label>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="savePrinterCfg()" style="flex:2;height:50px;background:#A6182E;color:#fff;border:none;border-radius:14px;font-family:'Bebas Neue',serif;font-size:18px;letter-spacing:2px;cursor:pointer;">GUARDAR</button>
+      <button onclick="document.getElementById('printer-cfg-modal').remove()" style="flex:1;height:50px;background:#FDF6F7;border:none;border-radius:14px;color:#9a7075;font-family:DM Sans,sans-serif;font-size:14px;cursor:pointer;">Cancelar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(div);
+}
+
+function savePrinterCfg() {
+  printerCfg = {
+    ip: document.getElementById('pcfg-ip').value.trim(),
+    port: '8008',
+    ticket: document.getElementById('pcfg-ticket').checked,
+    comanda: document.getElementById('pcfg-comanda').checked,
+  };
+  localStorage.setItem('lf_printer_mobile', JSON.stringify(printerCfg));
+  document.getElementById('printer-cfg-modal')?.remove();
+  showToast('✅ Impresora guardada');
+}
+
+// ── TOAST ──
+function showToast(msg) {
+  let t = document.getElementById('_toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = '_toast';
+    t.style.cssText = 'position:fixed;bottom:calc(80px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(20px);background:#1a0508;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;opacity:0;transition:all 0.3s;pointer-events:none;z-index:600;white-space:nowrap;font-family:DM Sans,sans-serif;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  t.style.transform = 'translateX(-50%) translateY(0)';
+  setTimeout(() => { t.style.opacity='0'; t.style.transform='translateX(-50%) translateY(20px)'; }, 2500);
 }
 </script>
 </body>
