@@ -8,34 +8,34 @@
 <meta name="apple-mobile-web-app-title" content="Lady Fresa">
 <meta name="theme-color" content="#1a0a0f">
 <title>Lady Fresa · Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
 :root {
-  --pink: #D4537E;
-  --pink-dark: #A83D62;
-  --pink-glow: rgba(212,83,126,0.18);
+  --pink: #A6182E;
+  --pink-dark: #672626;
+  --pink-glow: rgba(166,24,46,0.20);
   --gold: #C9A84C;
   --gold-light: rgba(201,168,76,0.12);
-  --bg: #0f0608;
-  --surface: #1a0d11;
-  --surface-2: #231318;
-  --surface-3: #2d1a20;
-  --border: rgba(212,83,126,0.12);
-  --border-2: rgba(212,83,126,0.22);
-  --text: #f5eaee;
-  --text-2: #c4a0b0;
-  --text-3: #7a5060;
+  --bg: #0d0305;
+  --surface: #180608;
+  --surface-2: #200a0c;
+  --surface-3: #2a1012;
+  --border: rgba(166,24,46,0.14);
+  --border-2: rgba(166,24,46,0.25);
+  --text: #fff5f6;
+  --text-2: #d4a0a8;
+  --text-3: #8a5560;
   --green: #5cb87a;
   --green-bg: rgba(92,184,122,0.1);
-  --red: #e05c5c;
-  --red-bg: rgba(224,92,92,0.1);
+  --red: #FF1728;
+  --red-bg: rgba(255,23,40,0.1);
   --amber: #d4943e;
   --amber-bg: rgba(212,148,62,0.1);
-  --blue: #5c9ee0;
-  --blue-bg: rgba(92,158,224,0.1);
+  --blue: #A9D4DB;
+  --blue-bg: rgba(169,212,219,0.1);
   --radius: 16px;
   --radius-sm: 10px;
 }
@@ -48,14 +48,14 @@ body { padding-top: env(safe-area-inset-top); }
 /* ── HEADER ── */
 #header {
   position: sticky; top: 0; z-index: 100;
-  background: linear-gradient(180deg, var(--bg) 0%, rgba(15,6,8,0.95) 100%);
+  background: linear-gradient(180deg, #0d0305 0%, rgba(13,3,5,0.96) 100%);
   backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
   padding: 16px 20px 12px;
   border-bottom: 1px solid var(--border);
 }
 .header-row { display: flex; align-items: center; justify-content: space-between; }
-.logo-mark { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 700; color: var(--pink); letter-spacing: 0.5px; }
-.logo-sub { font-size: 10px; color: var(--text-3); font-weight: 400; letter-spacing: 1px; text-transform: uppercase; margin-top: 1px; }
+.logo-mark { font-family: 'Bebas Neue', serif; letter-spacing: 1px; font-size: 22px; font-weight: 700; color: var(--pink); letter-spacing: 0.5px; }
+.logo-sub { font-size: 9px; color: var(--text-3); font-weight: 400; letter-spacing: 2px; text-transform: uppercase; margin-top: 1px; }
 .header-right { display: flex; align-items: center; gap: 10px; }
 #live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse-dot 2s infinite; }
 @keyframes pulse-dot { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.5; transform:scale(0.8); } }
@@ -76,14 +76,14 @@ body { padding-top: env(safe-area-inset-top); }
   font-family: 'DM Sans', sans-serif; font-weight: 500;
   cursor: pointer; transition: all 0.2s; white-space: nowrap;
 }
-.filter-chip.active { background: var(--pink-glow); border-color: var(--pink); color: var(--pink); }
+.filter-chip.active { background: rgba(166,24,46,0.18); border-color: #A6182E; color: #fff; font-weight: 600; }
 
 /* ── MAIN SCROLL ── */
 #main { padding: 16px 16px 100px; display: flex; flex-direction: column; gap: 14px; }
 
 /* ── HERO KPI ── */
 #hero-card {
-  background: linear-gradient(135deg, var(--surface-2) 0%, var(--surface-3) 100%);
+  background: linear-gradient(135deg, #200a0c 0%, #2a1012 100%);
   border: 1px solid var(--border-2); border-radius: 20px;
   padding: 22px 20px 18px; position: relative; overflow: hidden;
   animation: fadeUp 0.4s ease both;
@@ -91,12 +91,12 @@ body { padding-top: env(safe-area-inset-top); }
 #hero-card::before {
   content: ''; position: absolute; top: -60px; right: -40px;
   width: 180px; height: 180px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(212,83,126,0.15) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(166,24,46,0.15) 0%, transparent 70%);
   pointer-events: none;
 }
 .hero-label { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 6px; }
-.hero-amount {
-  font-family: 'Cormorant Garamond', serif; font-size: 48px; font-weight: 700;
+.hero-amount { font-family: 'Bebas Neue', serif !important;
+  font-family: 'Bebas Neue', serif; letter-spacing: 1px; font-size: 48px; font-weight: 700;
   color: var(--text); line-height: 1; margin-bottom: 4px;
   background: linear-gradient(135deg, #f5eaee, var(--pink));
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
@@ -124,7 +124,7 @@ body { padding-top: env(safe-area-inset-top); }
   background: var(--accent, var(--pink)); opacity: 0.4; border-radius: 0 0 var(--radius) var(--radius);
 }
 .kpi-icon { font-size: 18px; margin-bottom: 8px; display: block; }
-.kpi-val { font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 700; color: var(--text); line-height: 1; margin-bottom: 3px; }
+.kpi-val { font-family: 'Bebas Neue', serif; letter-spacing: 1px; font-size: 24px; font-weight: 700; color: var(--text); line-height: 1; margin-bottom: 3px; }
 .kpi-label { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.8px; }
 .kpi-sub { font-size: 11px; color: var(--text-2); margin-top: 4px; }
 
@@ -180,7 +180,7 @@ body { padding-top: env(safe-area-inset-top); }
 }
 .order-row:last-child { border-bottom: none; }
 .order-row.new-order { animation: highlightNew 2s ease; }
-@keyframes highlightNew { 0%,5% { background: rgba(212,83,126,0.15); } 100% { background: transparent; } }
+@keyframes highlightNew { 0%,5% { background: rgba(166,24,46,0.15); } 100% { background: transparent; } }
 .order-num-badge {
   font-size: 11px; font-weight: 700; color: var(--pink-dark);
   background: var(--pink-glow); border: 1px solid var(--border-2);
@@ -221,7 +221,7 @@ body { padding-top: env(safe-area-inset-top); }
   background: var(--surface-3); transition: all 0.3s;
   cursor: default;
 }
-.heat-cell.active { box-shadow: 0 2px 8px rgba(212,83,126,0.3); }
+.heat-cell.active { box-shadow: 0 2px 8px rgba(166,24,46,0.3); }
 .heat-label { font-size: 9px; color: var(--text-3); text-align: center; margin-top: 4px; }
 .heat-row { display: flex; gap: 4px; }
 .heat-row-labels { display: flex; gap: 4px; margin-top: 4px; }
@@ -229,7 +229,7 @@ body { padding-top: env(safe-area-inset-top); }
 /* ── BOTTOM NAV ── */
 #bottom-nav {
   position: fixed; bottom: 0; left: 0; right: 0;
-  background: linear-gradient(0deg, var(--bg) 0%, rgba(15,6,8,0.97) 100%);
+  background: linear-gradient(0deg, #0d0305 0%, rgba(13,3,5,0.97) 100%);
   border-top: 1px solid var(--border);
   padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
   display: flex; justify-content: space-around; align-items: center;
@@ -237,8 +237,8 @@ body { padding-top: env(safe-area-inset-top); }
   z-index: 100;
 }
 .nav-btn { display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; padding: 4px 16px; border-radius: 12px; transition: all 0.2s; background: none; border: none; }
-.nav-btn.active .nav-icon { color: var(--pink); }
-.nav-btn.active .nav-lbl { color: var(--pink); }
+.nav-btn.active .nav-icon { color: #FD9CB3; }
+.nav-btn.active .nav-lbl { color: #FD9CB3; }
 .nav-icon { font-size: 20px; color: var(--text-3); transition: color 0.2s; }
 .nav-lbl { font-size: 9px; color: var(--text-3); font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; transition: color 0.2s; font-family: 'DM Sans', sans-serif; }
 
@@ -306,7 +306,7 @@ body { padding-top: env(safe-area-inset-top); }
 @keyframes slideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
 .od-handle { width: 36px; height: 4px; background: var(--border-2); border-radius: 2px; margin: 12px auto 16px; }
 .od-header { padding: 0 20px 14px; border-bottom: 1px solid var(--border); }
-.od-title { font-family: 'Cormorant Garamond', serif; font-size: 22px; color: var(--pink); margin-bottom: 2px; }
+.od-title { font-family: 'Bebas Neue', serif; letter-spacing: 1px; font-size: 22px; color: var(--pink); margin-bottom: 2px; }
 .od-meta { font-size: 12px; color: var(--text-3); }
 .od-body { padding: 14px 20px; }
 .od-item-row { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
@@ -332,12 +332,12 @@ body { padding-top: env(safe-area-inset-top); }
 .pd-cat { font-size: 11px; color: var(--text-3); margin-top: 2px; }
 .pd-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
 .pd-stat { background: var(--surface-3); border-radius: var(--radius-sm); padding: 10px; text-align: center; }
-.pd-stat-val { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 700; color: var(--text); }
+.pd-stat-val { font-family: 'Bebas Neue', serif; letter-spacing: 1px; font-size: 20px; font-weight: 700; color: var(--text); }
 .pd-stat-lbl { font-size: 9px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.6px; margin-top: 2px; }
 .pd-bar-wrap { margin-top: 10px; }
 .pd-bar-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-3); margin-bottom: 5px; }
 .pd-bar-bg { height: 4px; background: var(--surface-3); border-radius: 2px; overflow: hidden; }
-.pd-bar-fill { height: 100%; border-radius: 2px; background: var(--pink); transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+.pd-bar-fill { height: 100%; border-radius: 2px; background: #A6182E; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
 </style>
 </head>
 <body>
@@ -345,7 +345,7 @@ body { padding-top: env(safe-area-inset-top); }
 <div id="header">
   <div class="header-row">
     <div>
-      <div class="logo-mark">Lady Fresa</div>
+      <div class="logo-mark" style="font-family:'Bebas Neue',serif;letter-spacing:3px;">LADY FRESA</div>
       <div class="logo-sub">Dashboard · <span id="header-date">—</span></div>
     </div>
     <div class="header-right">

@@ -4,21 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lady Fresa · POS</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --pink: #D4537E; --pink-dark: #A83D62; --pink-light: #FBEAF0; --pink-mid: #F4C0D1;
-  --green: #3B6D11; --green-light: #EAF3DE;
-  --amber: #BA7517; --amber-light: #FAEEDA;
+  --pink: #A6182E; --pink-dark: #672626; --pink-light: #FDEEF1; --pink-mid: #FD9CB3;
+  --green: #053A0A; --green-light: #E6F0E7;
+  --amber: #B5860D; --amber-light: #FDF3DC;
   --purple: #534AB7; --purple-light: #EEEDFE;
-  --red: #A32D2D; --red-light: #FCEBEB;
-  --text: #1a1a1a; --text-2: #5a5a5a; --text-3: #9a9a9a;
-  --bg: #f7f3f0; --surface: #fff;
-  --border: rgba(0,0,0,0.08); --border-2: rgba(0,0,0,0.14);
+  --red: #FF1728; --red-light: #FFF0F1;
+  --text: #1a0508; --text-2: #5a2830; --text-3: #9a7075;
+  --bg: #FDF6F7; --surface: #fff;
+  --border: rgba(166,24,46,0.08); --border-2: rgba(166,24,46,0.16);
   --radius: 12px; --radius-sm: 8px;
-  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
-  --shadow-md: 0 4px 20px rgba(0,0,0,0.12);
+  --shadow: 0 1px 3px rgba(103,38,38,0.06), 0 4px 12px rgba(103,38,38,0.05);
+  --shadow-md: 0 4px 20px rgba(103,38,38,0.14);
 }
 html, body { height: 100%; overflow: hidden; }
 body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
@@ -26,36 +26,36 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 #left { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
 
 #topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 20px; height: 56px; display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
-.logo { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--pink); }
-.logo span { font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 400; color: var(--text-3); display: block; margin-top: -4px; }
+.logo { font-family: 'Bebas Neue', serif; font-size: 20px; color: var(--pink); letter-spacing: 2px; }
+.logo span { font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 400; color: var(--text-3); display: block; margin-top: -2px; letter-spacing: 1.5px; text-transform: uppercase; }
 #search-wrap { flex: 1; max-width: 300px; position: relative; }
 #search { width: 100%; height: 36px; border: 1px solid var(--border-2); border-radius: 20px; padding: 0 14px 0 34px; font-size: 13px; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); outline: none; transition: border-color 0.15s; }
 #search:focus { border-color: var(--pink); background: white; }
 .search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--text-3); font-size: 13px; pointer-events: none; }
 .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
-.badge-turno { background: var(--green-light); color: var(--green); font-size: 11px; font-weight: 500; padding: 4px 12px; border-radius: 20px; }
+.badge-turno { background: #E6F0E7; color: #053A0A; font-size: 11px; font-weight: 600; padding: 4px 12px; border-radius: 20px; }
 #clock { font-size: 13px; color: var(--text-2); font-weight: 500; min-width: 50px; text-align: right; }
 .top-action { padding: 6px 12px; border: 1px solid var(--border-2); border-radius: 20px; background: transparent; font-size: 12px; font-weight: 500; color: var(--text-2); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
 .top-action:hover { border-color: var(--pink); color: var(--pink); }
 
 #tabs { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 20px; display: flex; gap: 2px; flex-shrink: 0; overflow-x: auto; }
 .tab { padding: 10px 14px; font-size: 13px; font-weight: 400; color: var(--text-3); cursor: pointer; white-space: nowrap; border: none; background: none; border-bottom: 2px solid transparent; transition: color 0.15s; font-family: 'DM Sans', sans-serif; }
-.tab.active { color: var(--pink); border-bottom-color: var(--pink); font-weight: 500; }
+.tab.active { color: #A6182E; border-bottom-color: #A6182E; font-weight: 600; }
 .tab:hover:not(.active) { color: var(--text-2); }
 
 #products-area { flex: 1; overflow-y: auto; padding: 16px 20px; }
 #products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 10px; }
 .product-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 7px; transition: border-color 0.15s, transform 0.1s, box-shadow 0.15s; user-select: none; position: relative; overflow: hidden; }
-.product-card:hover { border-color: var(--pink-mid); box-shadow: var(--shadow); transform: translateY(-1px); }
+.product-card:hover { border-color: #FD9CB3; box-shadow: 0 4px 16px rgba(166,24,46,0.12); transform: translateY(-1px); }
 .product-card:active { transform: scale(0.97); }
 .prod-emoji { font-size: 26px; line-height: 1; }
 .prod-name { font-size: 12px; font-weight: 500; text-align: center; line-height: 1.3; }
 .prod-desc { font-size: 10px; color: var(--text-3); text-align: center; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.prod-price { font-size: 13px; font-weight: 600; color: var(--pink); }
+.prod-price { font-size: 13px; font-weight: 700; color: #A6182E; }
 .prod-badge { position: absolute; top: 6px; right: 6px; font-size: 9px; font-weight: 600; padding: 2px 6px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.3px; }
 .badge-especial { background: var(--purple-light); color: var(--purple); }
 .badge-popular { background: var(--amber-light); color: var(--amber); }
-.qty-bubble { position: absolute; top: 6px; left: 6px; background: var(--pink); color: white; font-size: 10px; font-weight: 600; min-width: 18px; height: 18px; border-radius: 9px; display: flex; align-items: center; justify-content: center; padding: 0 4px; }
+.qty-bubble { position: absolute; top: 6px; left: 6px; background: #A6182E; color: white; font-size: 10px; font-weight: 600; min-width: 18px; height: 18px; border-radius: 9px; display: flex; align-items: center; justify-content: center; padding: 0 4px; }
 
 #right { width: 310px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
 #order-header { padding: 14px 16px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
@@ -64,7 +64,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .order-date { font-size: 11px; color: var(--text-3); }
 .service-row { display: flex; gap: 5px; margin-bottom: 10px; }
 .svc-btn { flex: 1; padding: 6px 4px; border: 1px solid var(--border-2); border-radius: var(--radius-sm); background: transparent; font-size: 11px; font-weight: 500; color: var(--text-2); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; text-align: center; }
-.svc-btn.active { background: var(--pink-light); border-color: var(--pink-mid); color: var(--pink-dark); }
+.svc-btn.active { background: #FDEEF1; border-color: #FD9CB3; color: #672626; font-weight: 600; }
 #client-input { width: 100%; height: 30px; border: 1px solid var(--border-2); border-radius: var(--radius-sm); padding: 0 10px; font-size: 12px; font-family: 'DM Sans', sans-serif; color: var(--text); background: var(--bg); outline: none; }
 #client-input:focus { border-color: var(--pink); background: white; }
 
@@ -101,14 +101,14 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 #totals { padding: 12px 14px; border-top: 1px solid var(--border); flex-shrink: 0; }
 .total-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 12px; color: var(--text-2); }
 .total-row.main { font-size: 16px; font-weight: 600; color: var(--text); margin-top: 8px; margin-bottom: 12px; padding-top: 8px; border-top: 1px solid var(--border); }
-.total-row.main span:last-child { color: var(--pink); }
+.total-row.main span:last-child { color: #A6182E; font-family: 'Bebas Neue', serif; font-size: 22px; letter-spacing: 0.5px; }
 .total-row.disc-line { color: var(--green); }
 .pay-methods { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 10px; }
 .pay-btn { padding: 7px 4px; border: 1px solid var(--border-2); border-radius: var(--radius-sm); background: transparent; font-size: 11px; font-weight: 500; color: var(--text-2); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .pay-btn .pay-icon { font-size: 14px; }
-.pay-btn.active { background: var(--pink-light); border-color: var(--pink-mid); color: var(--pink-dark); }
-#btn-cobrar { width: 100%; height: 44px; border-radius: var(--radius); border: none; background: var(--pink); color: white; font-size: 15px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background 0.15s, transform 0.1s; }
-#btn-cobrar:hover { background: var(--pink-dark); }
+.pay-btn.active { background: #FDEEF1; border-color: #FD9CB3; color: #672626; font-weight: 600; }
+#btn-cobrar { width: 100%; height: 46px; border-radius: var(--radius); border: none; background: #A6182E; color: white; font-size: 14px; font-weight: 700; font-family: 'Bebas Neue', serif; letter-spacing: 3px; cursor: pointer; transition: background 0.15s, transform 0.1s; }
+#btn-cobrar:hover { background: #672626; }
 #btn-cobrar:active { transform: scale(0.98); }
 #btn-cobrar:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
 #btn-cancel { width: 100%; height: 32px; border-radius: var(--radius-sm); border: 1px solid var(--border-2); background: transparent; color: var(--text-3); font-size: 12px; font-family: 'DM Sans', sans-serif; cursor: pointer; margin-top: 6px; transition: color 0.15s, border-color 0.15s; }
@@ -122,7 +122,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 #modal-custom { background: white; border-radius: 18px; width: 520px; max-height: 82vh; display: flex; flex-direction: column; box-shadow: var(--shadow-md); animation: popIn 0.2s ease; overflow: hidden; margin-bottom: 40px; }
 .mc-header { padding: 20px 24px 0; flex-shrink: 0; display: flex; align-items: flex-start; gap: 14px; }
 .mc-emoji { font-size: 36px; line-height: 1; flex-shrink: 0; }
-.mc-prod-title { font-family: 'Playfair Display', serif; font-size: 19px; color: var(--text); margin-bottom: 3px; }
+.mc-prod-title { font-family: 'Bebas Neue', serif; font-size: 22px; color: #A6182E; margin-bottom: 3px; letter-spacing: 1px; }
 .mc-prod-desc { font-size: 12px; color: var(--text-3); line-height: 1.4; }
 .mc-body { flex: 1; overflow-y: auto; padding: 18px 24px; }
 .mc-section { margin-bottom: 22px; }
@@ -190,13 +190,13 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .mc-price-val { font-size: 22px; font-weight: 700; color: var(--text); }
 .mc-footer-btns { margin-left: auto; display: flex; gap: 8px; }
 .btn-sec { height: 40px; padding: 0 18px; border-radius: var(--radius-sm); border: 1px solid var(--border-2); background: transparent; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text-2); cursor: pointer; }
-.btn-pri { height: 40px; padding: 0 22px; border-radius: var(--radius-sm); border: none; background: var(--pink); color: white; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
-.btn-pri:hover { background: var(--pink-dark); }
+.btn-pri { height: 40px; padding: 0 22px; border-radius: var(--radius-sm); border: none; background: #A6182E; color: white; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+.btn-pri:hover { background: #672626; }
 .btn-pri:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* COBRO */
 #modal-cobro { background: white; border-radius: 16px; padding: 26px; width: 330px; box-shadow: var(--shadow-md); animation: popIn 0.2s ease; margin-bottom: 40px; }
-.cobro-title { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--pink); margin-bottom: 4px; }
+.cobro-title { font-family: 'Bebas Neue', serif; font-size: 24px; color: #A6182E; margin-bottom: 4px; letter-spacing: 1px; }
 .cobro-sub { font-size: 12px; color: var(--text-3); margin-bottom: 16px; }
 .cobro-total-num { text-align: center; font-size: 36px; font-weight: 700; color: var(--text); margin-bottom: 16px; letter-spacing: -1px; }
 .efec-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
@@ -211,7 +211,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .cambio-box span { font-size: 18px; font-weight: 700; color: var(--green); }
 .modal-actions { display: flex; gap: 8px; }
 
-#success-flash { display: none; position: fixed; inset: 0; background: rgba(59,109,17,0.92); z-index: 300; align-items: center; justify-content: center; flex-direction: column; gap: 10px; color: white; }
+#success-flash { display: none; position: fixed; inset: 0; background: linear-gradient(135deg, #672626, #A6182E); z-index: 300; align-items: center; justify-content: center; flex-direction: column; gap: 10px; color: white; }
 #success-flash.open { display: flex; }
 
 #hist-panel { display: none; position: fixed; right: 0; top: 0; bottom: 0; width: 380px; background: white; border-left: 1px solid var(--border); z-index: 50; flex-direction: column; box-shadow: -4px 0 20px rgba(0,0,0,0.08); }
@@ -248,8 +248,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   background: var(--pink-light); padding: 28px 28px 20px;
   text-align: center; border-bottom: 1px solid var(--pink-mid);
 }
-.login-logo { font-family: 'Playfair Display', serif; font-size: 26px; color: var(--pink); margin-bottom: 4px; }
-.login-sub { font-size: 12px; color: var(--text-3); }
+.login-logo { font-family: 'Bebas Neue', serif; font-size: 32px; color: #fff; margin-bottom: 4px; letter-spacing: 4px; }
+.login-sub { font-size: 11px; color: rgba(255,255,255,0.65); letter-spacing: 1.5px; text-transform: uppercase; }
 .login-body { padding: 24px 28px; }
 
 /* Tabs email/PIN */
@@ -278,8 +278,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .pin-key:hover { background: var(--pink-light); border-color: var(--pink-mid); }
 .pin-key:active { transform: scale(0.95); }
 .pin-key.del { font-size: 16px; color: var(--text-3); }
-.pin-key.enter { background: var(--pink); color: white; border-color: var(--pink); font-size: 14px; }
-.pin-key.enter:hover { background: var(--pink-dark); }
+.pin-key.enter { background: #A6182E; color: white; border-color: #A6182E; font-size: 14px; font-weight: 700; letter-spacing: 1px; }
+.pin-key.enter:hover { background: #672626; }
 
 .login-btn {
   width: 100%; height: 44px; background: var(--pink); color: white; border: none;
@@ -306,9 +306,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   display: flex; flex-direction: column; box-shadow: 0 4px 40px rgba(0,0,0,0.15);
   animation: popIn 0.2s ease; overflow: hidden; margin-bottom: 40px;
 }
-.cierre-header { background: var(--pink-light); padding: 22px 26px; border-bottom: 1px solid var(--pink-mid); flex-shrink: 0; }
-.cierre-title { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--pink); margin-bottom: 2px; }
-.cierre-sub { font-size: 12px; color: var(--text-3); }
+.cierre-header { background: linear-gradient(135deg, #672626 0%, #A6182E 100%); padding: 22px 26px; border-bottom: none; flex-shrink: 0; }
+.cierre-title { font-family: 'Bebas Neue', serif; font-size: 24px; color: #A6182E; margin-bottom: 2px; letter-spacing: 1px; }
+.cierre-sub { font-size: 12px; color: rgba(255,255,255,0.7); }
 .cierre-body { flex: 1; overflow-y: auto; padding: 22px 26px; }
 .cierre-kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
 .cierre-kpi { background: var(--bg); border-radius: 10px; padding: 14px 16px; }
@@ -332,12 +332,12 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .btn-cierre-confirm:hover { background: var(--pink-dark); }
 .cierre-success { text-align: center; padding: 30px 20px; }
 .cierre-success-icon { font-size: 52px; margin-bottom: 12px; }
-.cierre-success-title { font-family: 'Playfair Display', serif; font-size: 22px; color: var(--green); margin-bottom: 6px; }
+.cierre-success-title { font-family: 'Bebas Neue', serif; font-size: 26px; color: #053A0A; margin-bottom: 6px; letter-spacing: 1px; }
 .cierre-success-sub { font-size: 13px; color: var(--text-3); }
 
 /* ── IMPRESIÓN ── */
 #modal-print-cfg { background: white; border-radius: 16px; padding: 26px; width: 360px; box-shadow: 0 4px 30px rgba(0,0,0,0.15); animation: popIn 0.2s ease; margin-bottom: 40px; }
-.print-title { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--text); margin-bottom: 16px; }
+.print-title { font-family: 'Bebas Neue', serif; font-size: 22px; color: #A6182E; margin-bottom: 16px; letter-spacing: 1px; }
 .print-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .print-row:last-of-type { border-bottom: none; }
 .print-label { font-size: 13px; font-weight: 500; }
@@ -366,7 +366,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   color: #000; max-width: 300px; margin: 0 auto;
 }
 .ticket-header { text-align: center; margin-bottom: 8px; }
-.ticket-logo { font-size: 18px; font-weight: bold; letter-spacing: 2px; }
+.ticket-logo { font-size: 18px; font-weight: bold; letter-spacing: 4px; font-family: sans-serif; }
 .ticket-divider { border-top: 1px dashed #000; margin: 6px 0; }
 .ticket-row { display: flex; justify-content: space-between; margin: 2px 0; font-size: 11px; }
 .ticket-total-row { display: flex; justify-content: space-between; margin: 2px 0; font-size: 13px; font-weight: bold; }
@@ -379,8 +379,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 <div id="login-screen">
   <div class="login-box">
     <div class="login-header">
-      <div class="login-logo">Lady Fresa</div>
-      <div class="login-sub">Sistema de Ventas · Acceso</div>
+      <div class="login-logo">LADY FRESA</div>
+      <div class="login-sub">EST. 2025 · SISTEMA DE VENTAS</div>
     </div>
     <div class="login-body">
       <div class="login-tabs">
@@ -426,7 +426,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 <div id="app">
   <div id="left">
     <div id="topbar">
-      <div class="logo">Lady Fresa <span>Sistema de Ventas</span></div>
+      <div class="logo" style="font-family:'Bebas Neue',serif;font-size:20px;letter-spacing:2px;color:#A6182E;">LADY FRESA <span style="font-family:'DM Sans',sans-serif;font-size:10px;font-weight:400;color:#9a7075;letter-spacing:1.5px;text-transform:uppercase;display:block;margin-top:-2px;">Sistema de Ventas</span></div>
       <div id="search-wrap">
         <span class="search-icon">⌕</span>
         <input type="text" id="search" placeholder="Buscar producto..." oninput="onSearch(this.value)">
