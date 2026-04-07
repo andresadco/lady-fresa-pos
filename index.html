@@ -25,18 +25,20 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 #app { display: flex; height: 100vh; }
 #left { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
 
-#topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 20px; height: 56px; display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
-.logo { font-family: 'Bebas Neue', serif; font-size: 20px; color: var(--pink); letter-spacing: 2px; }
-.logo span { font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 400; color: var(--text-3); display: block; margin-top: -2px; letter-spacing: 1.5px; text-transform: uppercase; }
-#search-wrap { flex: 1; max-width: 300px; position: relative; }
+#topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; height: 60px; display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+.logo { font-family: 'Bebas Neue', serif; font-size: 22px; color: #A6182E; letter-spacing: 2.5px; line-height: 1; flex-shrink: 0; }
+.logo span { font-family: 'DM Sans', sans-serif; font-size: 9px; font-weight: 400; color: var(--text-3); display: block; margin-top: 1px; letter-spacing: 2px; text-transform: uppercase; }
+#search-wrap { flex: 1; max-width: 260px; position: relative; }
 #search { width: 100%; height: 36px; border: 1px solid var(--border-2); border-radius: 20px; padding: 0 14px 0 34px; font-size: 13px; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); outline: none; transition: border-color 0.15s; }
 #search:focus { border-color: var(--pink); background: white; }
 .search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--text-3); font-size: 13px; pointer-events: none; }
-.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
-.badge-turno { background: #E6F0E7; color: #053A0A; font-size: 11px; font-weight: 600; padding: 4px 12px; border-radius: 20px; }
-#clock { font-size: 13px; color: var(--text-2); font-weight: 500; min-width: 50px; text-align: right; }
-.top-action { padding: 6px 12px; border: 1px solid var(--border-2); border-radius: 20px; background: transparent; font-size: 12px; font-weight: 500; color: var(--text-2); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
-.top-action:hover { border-color: var(--pink); color: var(--pink); }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.badge-turno { background: #E6F0E7; color: #053A0A; font-size: 11px; font-weight: 600; padding: 5px 12px; border-radius: 20px; display: flex; align-items: center; gap: 5px; }
+#clock { font-size: 13px; color: var(--text-2); font-weight: 600; min-width: 42px; text-align: right; letter-spacing: 0.5px; }
+.top-action { padding: 6px 12px; border: 1px solid var(--border-2); border-radius: 20px; background: transparent; font-size: 12px; font-weight: 500; color: var(--text-2); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; white-space: nowrap; }
+.top-action:hover { border-color: #A6182E; color: #A6182E; }
+/* Separador visual en topbar */
+.topbar-sep { width: 1px; height: 24px; background: var(--border-2); flex-shrink: 0; }
 
 #tabs { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 20px; display: flex; gap: 2px; flex-shrink: 0; overflow-x: auto; }
 .tab { padding: 10px 14px; font-size: 13px; font-weight: 400; color: var(--text-3); cursor: pointer; white-space: nowrap; border: none; background: none; border-bottom: 2px solid transparent; transition: color 0.15s; font-family: 'DM Sans', sans-serif; }
@@ -426,24 +428,53 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 <div id="app">
   <div id="left">
     <div id="topbar">
-      <div class="logo" style="font-family:'Bebas Neue',serif;font-size:20px;letter-spacing:2px;color:#A6182E;">LADY FRESA <span style="font-family:'DM Sans',sans-serif;font-size:10px;font-weight:400;color:#9a7075;letter-spacing:1.5px;text-transform:uppercase;display:block;margin-top:-2px;">Sistema de Ventas</span></div>
+      <!-- Logo -->
+      <div class="logo">LADY FRESA <span>Ventas</span></div>
+
+      <!-- Search -->
       <div id="search-wrap">
         <span class="search-icon">⌕</span>
         <input type="text" id="search" placeholder="Buscar producto..." oninput="onSearch(this.value)">
       </div>
+
       <div class="topbar-right">
+        <!-- Acciones operativas -->
         <button class="top-action" onclick="toggleHist()">📋 Historial</button>
-        <button class="top-action" id="btn-print-cfg" onclick="openPrintCfg()" title="Configurar impresora">🖨️</button>
-        <button class="top-action" onclick="openCierre()" style="border-color:var(--pink-mid);color:var(--pink);" id="btn-cierre-turno">🔒 Cierre del día</button>
-        <a href="admin.html" id="admin-link" style="padding:6px 12px;border:1px solid var(--border-2);border-radius:20px;background:transparent;font-size:12px;font-weight:500;color:var(--text-2);cursor:pointer;font-family:DM Sans,sans-serif;text-decoration:none;transition:all 0.15s;display:none" onmouseover="this.style.borderColor='#D4537E';this.style.color='#D4537E'" onmouseout="this.style.borderColor='';this.style.color=''">🔧 Admin</a>
-        <a href="dashboard.html" style="padding:6px 12px;border:1px solid var(--border-2);border-radius:20px;background:transparent;font-size:12px;font-weight:500;color:var(--text-2);cursor:pointer;font-family:DM Sans,sans-serif;text-decoration:none;transition:all 0.15s;" onmouseover="this.style.borderColor='#D4537E';this.style.color='#D4537E'" onmouseout="this.style.borderColor='';this.style.color=''">📊 Dashboard</a>
-        <div id="db-status" style="font-size:11px;font-weight:500;padding:4px 12px;border-radius:20px;background:#FAEEDA;color:#BA7517;transition:background 0.3s,color 0.3s;">⟳ Conectando...</div>
-        <div id="sucursal-badge" style="font-size:11px;font-weight:500;padding:4px 10px;border-radius:12px;background:var(--purple-light);color:var(--purple);display:none;">🏪 <span id="sucursal-disp">—</span></div>
-        <div id="user-badge" onclick="logout()" title="Cerrar sesión">
-          <div class="user-avatar" id="user-avatar">?</div>
-          <div><div class="user-name" id="user-name-disp">—</div><div class="user-role" id="user-role-disp">—</div></div>
+        <button class="top-action" onclick="openCierre()" id="btn-cierre-turno"
+          style="background:#FDEEF1;border-color:#FD9CB3;color:#A6182E;font-weight:600;">
+          🔒 Cerrar turno
+        </button>
+
+        <div class="topbar-sep"></div>
+
+        <!-- Links secundarios — solo iconos con tooltip -->
+        <button class="top-action" id="btn-print-cfg" onclick="openPrintCfg()" title="Impresora" style="padding:6px 10px;">🖨️</button>
+        <a href="admin.html" id="admin-link" title="Admin"
+          style="padding:6px 10px;border:1px solid var(--border-2);border-radius:20px;background:transparent;font-size:13px;color:var(--text-2);text-decoration:none;transition:all 0.15s;display:none;"
+          onmouseover="this.style.color='#A6182E';this.style.borderColor='#A6182E'" onmouseout="this.style.color='';this.style.borderColor=''">⚙️</a>
+        <a href="dashboard.html" title="Dashboard"
+          style="padding:6px 10px;border:1px solid var(--border-2);border-radius:20px;background:transparent;font-size:13px;color:var(--text-2);text-decoration:none;transition:all 0.15s;"
+          onmouseover="this.style.color='#A6182E';this.style.borderColor='#A6182E'" onmouseout="this.style.color='';this.style.borderColor=''">📊</a>
+
+        <div class="topbar-sep"></div>
+
+        <!-- Estado BD + Sucursal -->
+        <div id="db-status" style="font-size:11px;font-weight:500;padding:4px 10px;border-radius:20px;background:#FDF3DC;color:#B5860D;transition:background 0.3s,color 0.3s;white-space:nowrap;">⟳</div>
+        <div id="sucursal-badge" style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:12px;background:#FDEEF1;color:#A6182E;display:none;white-space:nowrap;">🏪 <span id="sucursal-disp">—</span></div>
+
+        <div class="topbar-sep"></div>
+
+        <!-- Usuario -->
+        <div id="user-badge" onclick="logout()" title="Cerrar sesión" style="cursor:pointer;display:flex;align-items:center;gap:7px;padding:4px 8px;border:1px solid var(--border-2);border-radius:20px;transition:all 0.15s;" onmouseover="this.style.borderColor='#A6182E'" onmouseout="this.style.borderColor=''">
+          <div class="user-avatar" id="user-avatar" style="width:24px;height:24px;border-radius:50%;background:#FDEEF1;color:#A6182E;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;">?</div>
+          <div style="line-height:1.2;">
+            <div class="user-name" id="user-name-disp" style="font-size:12px;font-weight:600;color:var(--text);">—</div>
+            <div class="user-role" id="user-role-disp" style="font-size:10px;color:var(--text-3);">—</div>
+          </div>
         </div>
-        <div class="badge-turno">● Turno abierto</div>
+
+        <!-- Turno + reloj -->
+        <div class="badge-turno">● Turno</div>
         <div id="clock"></div>
       </div>
     </div>
