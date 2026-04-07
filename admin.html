@@ -4,41 +4,44 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lady Fresa · Admin</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --pink: #D4537E; --pink-dark: #A83D62; --pink-light: #FBEAF0; --pink-mid: #F4C0D1;
-  --green: #3B6D11; --green-light: #EAF3DE;
-  --amber: #BA7517; --amber-light: #FAEEDA;
+  /* Lady Fresa Brand Colors */
+  --pink: #A6182E; --pink-dark: #672626; --pink-light: #FDEEF1; --pink-mid: #FD9CB3;
+  --green: #053A0A; --green-light: #E6F0E7;
+  --amber: #B5860D; --amber-light: #FDF3DC;
   --purple: #534AB7; --purple-light: #EEEDFE;
-  --red: #A32D2D; --red-light: #FCEBEB;
-  --blue: #185FA5; --blue-light: #E6F1FB;
-  --text: #1a1a1a; --text-2: #5a5a5a; --text-3: #9a9a9a;
-  --bg: #f7f3f0; --surface: #fff;
-  --border: rgba(0,0,0,0.07); --border-2: rgba(0,0,0,0.13);
+  --red: #672626; --red-light: #FDEEF1;
+  --blue: #2A7A85; --blue-light: #E8F5F6;
+  --text: #1a0a0d; --text-2: #5a3038; --text-3: #9a7078;
+  --bg: #FDF6F7; --surface: #fff;
+  --border: rgba(166,24,46,0.08); --border-2: rgba(166,24,46,0.16);
   --radius: 12px; --radius-sm: 8px;
-  --shadow: 0 1px 3px rgba(0,0,0,0.05), 0 4px 16px rgba(0,0,0,0.04);
+  --shadow: 0 1px 3px rgba(103,38,38,0.06), 0 4px 16px rgba(103,38,38,0.05);
 }
-html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; }
+html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', 'Instrument Serif', sans-serif; font-size: 14px; }
 
 /* LOGIN */
 #login-screen { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; align-items: center; justify-content: center; }
 .login-box { background: var(--surface); border-radius: 20px; border: 1px solid var(--border); width: 100%; max-width: 340px; overflow: hidden; box-shadow: 0 8px 40px rgba(0,0,0,0.10); }
-.login-header { background: var(--pink-light); padding: 26px 28px 18px; text-align: center; border-bottom: 1px solid var(--pink-mid); }
-.login-logo { font-family: 'Playfair Display', serif; font-size: 24px; color: var(--pink); margin-bottom: 2px; }
+.login-header { background: linear-gradient(135deg, #672626 0%, #A6182E 100%); padding: 26px 28px 22px; text-align: center; border-bottom: none; }
+.login-logo { color: #fff !important; }
+.login-sub { color: rgba(255,255,255,0.7) !important; }
+.login-logo { font-family: 'Bebas Neue', 'Instrument Serif', serif; letter-spacing: 0.5px; font-size: 24px; color: var(--pink); margin-bottom: 2px; }
 .login-sub { font-size: 11px; color: var(--text-3); }
 .login-body { padding: 22px 28px; }
 .pin-display { display: flex; gap: 10px; justify-content: center; margin-bottom: 18px; }
 .pin-dot { width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--border-2); background: transparent; transition: all 0.15s; }
-.pin-dot.filled { background: var(--pink); border-color: var(--pink); }
+.pin-dot.filled { background: #A6182E; border-color: #A6182E; }
 .pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.pin-key { height: 50px; border: 1px solid var(--border-2); border-radius: 10px; background: var(--surface); font-size: 20px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; color: var(--text); transition: all 0.1s; display: flex; align-items: center; justify-content: center; }
+.pin-key { height: 50px; border: 1px solid var(--border-2); border-radius: 10px; background: var(--surface); font-size: 20px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', 'Instrument Serif', sans-serif; color: var(--text); transition: all 0.1s; display: flex; align-items: center; justify-content: center; }
 .pin-key:hover { background: var(--pink-light); border-color: var(--pink-mid); }
 .pin-key:active { transform: scale(0.95); }
 .pin-key.del { font-size: 16px; color: var(--text-3); }
-.pin-key.enter { background: var(--pink); color: white; border-color: var(--pink); font-size: 14px; font-weight: 600; }
-.pin-key.enter:hover { background: var(--pink-dark); }
+.pin-key.enter { background: #A6182E; color: white; border-color: #A6182E; font-size: 14px; font-weight: 700; letter-spacing: 1px; }
+.pin-key.enter:hover { background: #672626; }
 .login-error { font-size: 12px; color: var(--red); text-align: center; margin-top: 10px; min-height: 18px; }
 
 /* LAYOUT */
@@ -51,30 +54,30 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
   position: sticky; top: 0; height: 100vh; overflow-y: auto;
 }
 .sidebar-logo { padding: 20px 20px 16px; border-bottom: 1px solid var(--border); }
-.sidebar-logo-text { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--pink); }
+.sidebar-logo-text { font-family: 'Bebas Neue', 'Instrument Serif', serif; letter-spacing: 0.5px; font-size: 18px; color: var(--pink); }
 .sidebar-logo-sub { font-size: 10px; color: var(--text-3); margin-top: 1px; }
 .nav-section { padding: 16px 12px 8px; }
 .btn-sm { height: 30px; padding: 0 12px; font-size: 12px; }
 .btn-ghost { background: var(--surface); border: 1px solid var(--border-2); color: var(--text-2); }
 .btn-ghost:hover { border-color: var(--pink); color: var(--pink); background: var(--pink-light); }
 .nav-section-label { font-size: 10px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.7px; padding: 0 8px; margin-bottom: 4px; }
-.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 400; color: var(--text-2); transition: all 0.15s; margin-bottom: 2px; border: none; background: none; width: 100%; text-align: left; font-family: 'DM Sans', sans-serif; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 400; color: var(--text-2); transition: all 0.15s; margin-bottom: 2px; border: none; background: none; width: 100%; text-align: left; font-family: 'DM Sans', 'Instrument Serif', sans-serif; }
 .nav-item:hover { background: var(--bg); color: var(--text); }
-.nav-item.active { background: var(--pink-light); color: var(--pink-dark); font-weight: 500; }
+.nav-item.active { background: #FDEEF1; color: #672626; font-weight: 600; border-left: 3px solid #A6182E; padding-left: 7px; }
 .nav-icon { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
 .sidebar-footer { margin-top: auto; padding: 16px 12px; border-top: 1px solid var(--border); }
 .sidebar-user { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; }
 .user-av { width: 30px; height: 30px; border-radius: 50%; background: var(--pink-light); color: var(--pink-dark); font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .user-nm { font-size: 13px; font-weight: 500; }
 .user-rl { font-size: 10px; color: var(--text-3); }
-.btn-logout { width: 100%; margin-top: 8px; padding: 7px; border: 1px solid var(--border-2); border-radius: var(--radius-sm); background: transparent; font-size: 12px; color: var(--text-3); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
+.btn-logout { width: 100%; margin-top: 8px; padding: 7px; border: 1px solid var(--border-2); border-radius: var(--radius-sm); background: transparent; font-size: 12px; color: var(--text-3); cursor: pointer; font-family: 'DM Sans', 'Instrument Serif', sans-serif; transition: all 0.15s; }
 .btn-logout:hover { color: var(--red); border-color: var(--red); }
 
 /* MAIN */
 #main-content { flex: 1; min-width: 0; padding: 28px; }
 .page { display: none; }
 .page.active { display: block; }
-.page-title { font-family: 'Playfair Display', serif; font-size: 24px; color: var(--text); margin-bottom: 4px; }
+.page-title { font-family: 'Bebas Neue', 'Instrument Serif', serif; letter-spacing: 0.5px; font-size: 24px; color: var(--text); margin-bottom: 4px; }
 .page-sub { font-size: 13px; color: var(--text-3); margin-bottom: 24px; }
 
 /* CARDS */
@@ -93,14 +96,14 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 .badge-cajero { background: var(--blue-light); color: var(--blue); }
 .badge-encargado { background: var(--amber-light); color: var(--amber); }
 .badge-gerente { background: var(--purple-light); color: var(--purple); }
-.badge-admin { background: var(--pink-light); color: var(--pink-dark); }
+.badge-admin { background: #FDEEF1; color: #672626; }
 .badge-active { background: var(--green-light); color: var(--green); }
 .badge-inactive { background: var(--red-light); color: var(--red); }
 
 /* BUTTONS */
-.btn { height: 36px; padding: 0 16px; border-radius: var(--radius-sm); border: none; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
-.btn-primary { background: var(--pink); color: white; }
-.btn-primary:hover { background: var(--pink-dark); }
+.btn { height: 36px; padding: 0 16px; border-radius: var(--radius-sm); border: none; font-family: 'DM Sans', 'Instrument Serif', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+.btn-primary { background: #A6182E; color: white; font-weight: 600; letter-spacing: 0.3px; }
+.btn-primary:hover { background: #672626; }
 .btn-secondary { background: transparent; border: 1px solid var(--border-2); color: var(--text-2); }
 .btn-secondary:hover { border-color: var(--pink); color: var(--pink); }
 .btn-danger { background: transparent; border: 1px solid var(--border-2); color: var(--red); }
@@ -113,9 +116,9 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 .form-group { display: flex; flex-direction: column; gap: 6px; }
 .form-group.full { grid-column: 1/-1; }
 .form-label { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; }
-.form-input { height: 38px; border: 1px solid var(--border-2); border-radius: var(--radius-sm); padding: 0 12px; font-size: 13px; font-family: 'DM Sans', sans-serif; color: var(--text); outline: none; background: var(--surface); }
+.form-input { height: 38px; border: 1px solid var(--border-2); border-radius: var(--radius-sm); padding: 0 12px; font-size: 13px; font-family: 'DM Sans', 'Instrument Serif', sans-serif; color: var(--text); outline: none; background: var(--surface); }
 .form-input:focus { border-color: var(--pink); }
-.form-select { height: 38px; border: 1px solid var(--border-2); border-radius: var(--radius-sm); padding: 0 12px; font-size: 13px; font-family: 'DM Sans', sans-serif; color: var(--text); outline: none; background: var(--surface); }
+.form-select { height: 38px; border: 1px solid var(--border-2); border-radius: var(--radius-sm); padding: 0 12px; font-size: 13px; font-family: 'DM Sans', 'Instrument Serif', sans-serif; color: var(--text); outline: none; background: var(--surface); }
 .form-select:focus { border-color: var(--pink); }
 .form-actions { display: flex; gap: 8px; margin-top: 20px; justify-content: flex-end; }
 
@@ -124,13 +127,13 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 .modal-overlay.open { display: flex; }
 .modal-box { background: white; border-radius: 16px; padding: 28px; width: 100%; max-width: 460px; box-shadow: 0 4px 30px rgba(0,0,0,0.15); animation: popIn 0.2s ease; }
 @keyframes popIn { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }
-.modal-title { font-family: 'Playfair Display', serif; font-size: 18px; margin-bottom: 20px; color: var(--text); }
+.modal-title { font-family: 'Bebas Neue', 'Instrument Serif', serif; letter-spacing: 0.5px; font-size: 18px; margin-bottom: 20px; color: var(--text); }
 .modal-actions { display: flex; gap: 8px; margin-top: 22px; justify-content: flex-end; }
 
 /* TOGGLE */
 .toggle-wrap { display: flex; align-items: center; gap: 10px; }
 .toggle { width: 40px; height: 22px; border-radius: 11px; background: var(--border-2); border: none; cursor: pointer; position: relative; transition: background 0.2s; flex-shrink: 0; }
-.toggle.on { background: var(--pink); }
+.toggle.on { background: #A6182E; }
 .toggle::after { content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: white; top: 3px; left: 3px; transition: left 0.2s; }
 .toggle.on::after { left: 21px; }
 .toggle-label { font-size: 13px; color: var(--text-2); }
@@ -158,7 +161,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 .config-info { flex: 1; }
 .config-key { font-size: 13px; font-weight: 500; }
 .config-desc { font-size: 11px; color: var(--text-3); margin-top: 2px; }
-.config-val-input { height: 34px; border: 1px solid var(--border-2); border-radius: var(--radius-sm); padding: 0 10px; font-size: 13px; font-family: 'DM Sans', sans-serif; color: var(--text); outline: none; width: 160px; text-align: right; }
+.config-val-input { height: 34px; border: 1px solid var(--border-2); border-radius: var(--radius-sm); padding: 0 10px; font-size: 13px; font-family: 'DM Sans', 'Instrument Serif', sans-serif; color: var(--text); outline: none; width: 160px; text-align: right; }
 .config-val-input:focus { border-color: var(--pink); }
 
 /* Toast */
@@ -176,8 +179,8 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 <div id="login-screen">
   <div class="login-box">
     <div class="login-header">
-      <div class="login-logo">Lady Fresa</div>
-      <div class="login-sub">Panel de Administración</div>
+      <div class="login-logo" style="font-family:'Bebas Neue',serif;font-size:32px;letter-spacing:3px;color:#A6182E;line-height:1;">LADY FRESA</div>
+      <div class="login-sub" style="letter-spacing:2px;text-transform:uppercase;font-size:10px;margin-top:4px;">EST. 2025 · PANEL ADMIN</div>
     </div>
     <div class="login-body">
       <div class="pin-display">
@@ -211,8 +214,8 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
   <!-- SIDEBAR -->
   <div id="sidebar">
     <div class="sidebar-logo">
-      <div class="sidebar-logo-text">Lady Fresa</div>
-      <div class="sidebar-logo-sub">Panel Admin</div>
+      <div class="sidebar-logo-text" style="font-family:'Bebas Neue',serif;font-size:22px;letter-spacing:2px;color:#A6182E;line-height:1;">LADY FRESA</div>
+      <div class="sidebar-logo-sub" style="letter-spacing:2px;text-transform:uppercase;font-size:9px;color:#9a7078;margin-top:2px;">EST. 2025 · ADMIN</div>
     </div>
 
     <div class="nav-section">
