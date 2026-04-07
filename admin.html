@@ -854,14 +854,15 @@ async function loadOverview() {
 
   var mesLabel = new Date(_mp[0], _mp[1] - 1, 1).toLocaleDateString('es-MX', {month:'long', year:'numeric'});
   mesLabel = mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1);
+  // Siempre mostrar el mes seleccionado como subtítulo
   document.getElementById('dash-fecha').textContent = esHoy
-    ? hoy.toLocaleDateString('es-MX', {weekday:'long', day:'numeric', month:'long', year:'numeric'})
+    ? mesLabel + ' · ' + hoy.toLocaleDateString('es-MX', {weekday:'long', day:'numeric'})
     : mesLabel;
 
   // Load all data in parallel
   var [ordersHoy, ordensMes, turnos, insumos, movsMes, gastosMes, recetas, entradasConf] = await Promise.all([
     sbGet('orders', 'created_at=gte.' + todayISO + 'T00:00:00&select=total,sucursal'),
-    sbGet('orders', 'created_at=gte.' + mesInicio + 'T00:00:00&created_at=lte.' + mesFin + 'T23:59:59&select=total,sucursal'),
+    sbGet('orders', 'created_at=gte.' + mesInicio + 'T00:00:00&created_at=lt.' + (function(){ var d=new Date(_mp[0],_mp[1],1); return d.toISOString().slice(0,10); })() + 'T00:00:00&select=total,sucursal'),
     sbGet('turnos', 'order=created_at.desc&limit=5&select=*'),
     sbGet('insumos', 'activo=eq.true&select=*'),
     sbGet('inv_movimientos', 'tipo=eq.salida&fecha=gte.' + mesInicio + '&fecha=lte.' + mesFin + '&select=insumo_id,cantidad,fecha'),
