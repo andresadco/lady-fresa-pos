@@ -818,6 +818,13 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 
 <script>
 const SB_URL = 'https://ngpumyxxxlafuzcsaepy.supabase.co';
+
+const CAT_EMOJI = {
+  'Fruta Fresca':'🍓','Lácteos y Cremas':'🥛','Chocolate':'🍫',
+  'Toppings / Compl.':'🍯','Desechables':'🥤','Publicidad':'📢',
+  'Limpieza':'🧹','Bebidas y Varios':'☕','Nómina':'👥',
+  'Renta':'🏪','Servicios':'💡','Otros':'📦'
+};
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ncHVteXh4eGxhZnV6Y3NhZXB5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyNjkzNzYsImV4cCI6MjA4OTg0NTM3Nn0.u4WHkOXLrNn4WSKHJedXXNDYrCMdfaDNK8KlvJNfXLg';
 const SB_H = { 'Content-Type':'application/json', 'apikey':SB_KEY, 'Authorization':'Bearer '+SB_KEY, 'Prefer':'return=representation' };
 
@@ -3207,12 +3214,7 @@ function getConvFactor(from, to) { return getConversionFactor(from, to); }
 let allGastosOp = [];
 let editingGastoId = null;
 
-const CAT_EMOJI = {
-  'Fruta Fresca':'🍓','Lácteos y Cremas':'🥛','Chocolate':'🍫',
-  'Toppings / Compl.':'🍯','Desechables':'🥤','Publicidad':'📢',
-  'Limpieza':'🧹','Bebidas y Varios':'☕','Nómina':'👥',
-  'Renta':'🏪','Servicios':'💡','Otros':'📦'
-};
+// CAT_EMOJI moved to top
 
 async function loadGastosOperativos() {
   const tbody = document.getElementById('tbody-gastos');
