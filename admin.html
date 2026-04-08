@@ -923,6 +923,7 @@ async function loadPage(page) {
   else if (page==='movimientos') { await loadInventario(); loadMovimientos(); }
   else if (page==='entradas') { await loadInventario(); loadEntradasPendientes(); }
   else if (page==='gastos') loadGastosOperativos();
+  else if (page==='promociones') loadPromociones();
 }
 
 // ── SUPABASE HELPERS ──
@@ -3197,13 +3198,7 @@ RFC: ' + rfc + '
 }
 
 // ── HOOK loadPage para nuevas páginas ──
-const _origLoadPage = loadPage;
-async function loadPage(page) {
-  if (page === 'promociones') { loadPromociones(); return; }
-  return _origLoadPage(page);
-}
-
-// ── ALSO FIX getConvFactor alias ──
+// Se ejecuta después de que loadPage original esté definida
 function getConvFactor(from, to) { return getConversionFactor(from, to); }
 
 // ═══════════════════════════════════════════════════
