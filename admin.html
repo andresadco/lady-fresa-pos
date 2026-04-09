@@ -1349,6 +1349,7 @@ async function loadOverview() {
 // ── USUARIOS ──
 async function loadUsuarios() {
   const users = await sbGet('users','order=created_at.asc&select=*');
+  allUsuarios = Array.isArray(users) ? users : [];
   const roleClr = { cajero:'badge-cajero', encargado:'badge-encargado', gerente:'badge-gerente', admin:'badge-admin' };
   document.getElementById('tbody-usuarios').innerHTML = !users.length ?
     '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-3);">Sin usuarios</td></tr>' :
