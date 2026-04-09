@@ -725,7 +725,7 @@ function showPOS() {
   document.getElementById('order-num-2').textContent = String(orderN).padStart(3,'0');
   // Show discount if has permission
   const p = PERMS[currentUser.role] || PERMS.cajero;
-  document.getElementById('disc-section').style.display = p.discount ? 'block' : 'none';
+  window._hasDiscount = p.discount; // store permission for when order sheet opens
   loadCatalog();
   cargarPromos();
 }
@@ -1013,6 +1013,9 @@ function renderOrderBar() {
 }
 
 function openOrderSheet() {
+  // Show discount section based on permission
+  var discEl = document.getElementById('disc-section');
+  if (discEl) discEl.style.display = window._hasDiscount ? 'block' : 'none';
   verificarPromoHora();
   renderOrderItems();
   openSheet('order');
@@ -1565,16 +1568,33 @@ function buildTicketXML(saleData, type='ticket') {
   return xml;
 }
 
+function buildCajonXML() {
+  // ESC/POS command to open cash drawer (pin 2)
+  return '<?xml version="1.0" encoding="utf-8"?>'
+    + '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">'
+    + '<s:Body><epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print">'
+    + '<pulse drawer="drawer_1" time="pulse_100"/>'
+    + '</epos-print></s:Body></s:Envelope>';
+}
+
 async function printEpson(saleData, type='ticket') {
   const {ip, port} = printerCfg;
   if (!ip) return false;
   try {
-    const res = await fetch(`http://${ip}:${port}/cgi-bin/epos/service.cgi?devid=local_printer&timeout=10000`, {
+    const res = await fetch('http://' + ip + ':' + port + '/cgi-bin/epos/service.cgi?devid=local_printer&timeout=10000', {
       method:'POST',
       headers:{'Content-Type':'text/xml; charset=utf-8','SOAPAction':'""'},
       body: buildTicketXML(saleData, type),
       signal: AbortSignal.timeout(8000),
     });
+    // Open cash drawer after ticket (only on efectivo payment)
+    if (res.ok && type === 'ticket' && saleData.payMethod === 'efectivo') {
+      fetch('http://' + ip + ':' + port + '/cgi-bin/epos/service.cgi?devid=local_printer&timeout=5000', {
+        method:'POST',
+        headers:{'Content-Type':'text/xml; charset=utf-8','SOAPAction':'""'},
+        body: buildCajonXML(),
+      }).catch(function(){});
+    }
     return res.ok;
   } catch { return false; }
 }
