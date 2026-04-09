@@ -942,6 +942,9 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 <div id="toast"></div>
 
 <script>
+var allSucursales = [];
+var allUsuarios = [];
+
 const SB_URL = 'https://ngpumyxxxlafuzcsaepy.supabase.co';
 
 const CAT_EMOJI = {
@@ -1413,6 +1416,7 @@ async function toggleUsuario(id, active) {
 // ── SUCURSALES ──
 async function loadSucursales() {
   const suc = await sbGet('sucursales','order=created_at.asc&select=*');
+  allSucursales = Array.isArray(suc) ? suc : [];
   document.getElementById('tbody-sucursales').innerHTML = !suc.length ?
     '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text-3);">Sin sucursales</td></tr>' :
     suc.map(s=>`<tr>
