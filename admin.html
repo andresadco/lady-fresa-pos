@@ -1235,7 +1235,7 @@ async function loadUsuarios() {
       <td>${u.sucursal||'Principal'}</td>
       <td><span class="badge ${u.active?'badge-active':'badge-inactive'}">${u.active?'Activo':'Inactivo'}</span></td>
       <td style="display:flex;gap:6px;">
-        <button class="btn btn-secondary btn-sm" onclick="openModalUsuario(${JSON.stringify(u).replace(/"/g,'&quot;')})">Editar</button>
+        <button class="btn btn-secondary btn-sm" onclick="openModalUsuarioById(${u.id})">Editar</button>
         <button class="btn btn-danger btn-sm" onclick="toggleUsuario(${u.id},${u.active})">${u.active?'Desactivar':'Activar'}</button>
       </td>
     </tr>`).join('');
@@ -1295,7 +1295,7 @@ async function loadSucursales() {
       <td style="color:var(--text-3)">${s.telefono||'—'}</td>
       <td><span class="badge ${s.active?'badge-active':'badge-inactive'}">${s.active?'Activa':'Inactiva'}</span></td>
       <td style="display:flex;gap:6px;">
-        <button class="btn btn-secondary btn-sm" onclick="openModalSucursal(${JSON.stringify(s).replace(/"/g,'&quot;')})">Editar</button>
+        <button class="btn btn-secondary btn-sm" onclick="openModalSucursalById(${s.id})">Editar</button>
         <button class="btn btn-danger btn-sm" onclick="toggleSucursal(${s.id},${s.active})">${s.active?'Desactivar':'Activar'}</button>
       </td>
     </tr>`).join('');
@@ -1357,7 +1357,7 @@ async function renderMenu() {
       <div class="prod-admin-actions">
         <button class="btn btn-secondary btn-sm" style="flex:1" onclick="openModalProducto(${p.id})">✏️ Editar</button>
         <button class="btn btn-sm ${p.active?'btn-danger':'btn-secondary'}" onclick="toggleProducto(${p.id},${p.active})">${p.active?'Ocultar':'Mostrar'}</button>
-        <button class="btn btn-sm btn-danger" onclick="eliminarProducto(${p.id},'${p.name.replace(/'/g,"\\'")}')" title="Eliminar">🗑</button>
+        <button class="btn btn-sm btn-danger" onclick="eliminarProductoById(${p.id})" title="Eliminar">🗑</button>
       </div>
     </div>`).join('');
 }
@@ -1495,7 +1495,7 @@ async function loadConfig() {
   document.getElementById('config-rows').innerHTML = cfg.map(c=>`
     <div class="config-row">
       <div class="config-info">
-        <div class="config-key">${c.key.replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase())}</div>
+        <div class="config-key">${c.key.split('_').join(' ')}</div>
         <div class="config-desc">${c.descripcion||''}</div>
       </div>
       <input class="config-val-input" data-key="${c.key}" value="${c.value}" placeholder="${c.value}">
@@ -1578,9 +1578,9 @@ function renderGrupos() {
           <div style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--border-2);border-radius:8px;background:${o.activo?'white':'var(--bg)'};opacity:${o.activo?1:0.5};">
             <span style="font-size:13px;font-weight:500;color:var(--text);">${o.nombre}</span>
             ${o.precio_extra > 0 ? `<span style="font-size:11px;color:var(--green);font-weight:600;">+$${o.precio_extra}</span>` : '<span style="font-size:11px;color:var(--text-3);">gratis</span>'}
-            <button onclick="openModalOpcionEdit(${o.id},${g.id},'${o.nombre.replace(/'/g,"\'")}',${o.precio_extra})" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--text-3);padding:0 2px;" title="Editar">✏️</button>
+            <button onclick="openModalOpcionEditById(${o.id},${g.id},${o.precio_extra})" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--text-3);padding:0 2px;" title="Editar">✏️</button>
             <button onclick="toggleOpcion(${o.id},${o.activo})" style="background:none;border:none;cursor:pointer;font-size:11px;color:${o.activo?'var(--amber)':'var(--green)'};padding:0 2px;" title="${o.activo?'Desactivar':'Activar'}">${o.activo?'⏸':'▶'}</button>
-            <button onclick="eliminarOpcion(${o.id},'${o.nombre.replace(/'/g,"\'")}',${g.id})" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--red);padding:0 2px;" title="Eliminar">🗑</button>
+            <button onclick="eliminarOpcionById(${o.id},${g.id})" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--red);padding:0 2px;" title="Eliminar">🗑</button>
           </div>`).join('') : '<div style="color:var(--text-3);font-size:13px;padding:4px;">Sin opciones — agrega con el botón + Opción</div>'}
       </div>
     </div>`).join('');
@@ -1721,6 +1721,35 @@ document.querySelectorAll('.nav-item').forEach(btn => {
     btn.setAttribute('onclick', "goPage('modificadores',this);loadModificadores()");
   }
 });
+
+// ── Wrappers para evitar regex en onclick handlers ──
+function openModalUsuarioById(id) {
+  var u = allUsuarios ? allUsuarios.find(function(x){return x.id===id;}) : null;
+  if (u) openModalUsuario(u);
+}
+function openModalSucursalById(id) {
+  var s = allSucursales ? allSucursales.find(function(x){return x.id===id;}) : null;
+  if (s) openModalSucursal(s);
+}
+function eliminarProductoById(id) {
+  var PRODS = window._adminProds || [];
+  var p = PRODS.find(function(x){return x.id===id;});
+  eliminarProducto(id, p ? (p.name||p.nombre||String(id)) : String(id));
+}
+function openModalOpcionEditById(oid, gid, precio) {
+  var g = todosGrupos ? todosGrupos.find(function(x){return x.id===gid;}) : null;
+  var ops = g ? (g.opciones||[]) : [];
+  var o = ops.find(function(x){return x.id===oid;}) || {};
+  openModalOpcionEdit(oid, gid, o.nombre||o.name||'', precio);
+}
+function eliminarOpcionById(oid, gid) {
+  var g = todosGrupos ? todosGrupos.find(function(x){return x.id===gid;}) : null;
+  var ops = g ? (g.opciones||[]) : [];
+  var o = ops.find(function(x){return x.id===oid;}) || {};
+  eliminarOpcion(oid, o.nombre||o.name||String(oid), gid);
+}
+
+function getConvFactor(from,to){var g={kg:1000,g:1,gr:1},m={l:1000,ml:1};return(g[from]&&g[to])?g[from]/g[to]:(m[from]&&m[to])?m[from]/m[to]:null;}
 </script>
 
 
@@ -2896,53 +2925,62 @@ async function loadPromociones() {
 }
 
 function renderPromos() {
-  const activas = allPromos.filter(p => p.activo).length;
-  const conCodigo = allPromos.filter(p => p.tipo === 'codigo').length;
+  var activas = allPromos.filter(function(p){ return p.activo; }).length;
+  var conCodigo = allPromos.filter(function(p){ return p.tipo === 'codigo'; }).length;
 
-  document.getElementById('promos-kpis').innerHTML = [
+  var kpis = [
     { label:'Total promos', val: allPromos.length, color:'var(--pink)' },
     { label:'Activas', val: activas, color:'var(--green)' },
-    { label:'Con código', val: conCodigo, color:'var(--purple)' },
-  ].map(k => `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;">
-    <div style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">${k.label}</div>
-    <div style="font-size:24px;font-weight:700;color:${k.color};">${k.val}</div>
-  </div>`).join('');
+    { label:'Con codigo', val: conCodigo, color:'var(--purple)' }
+  ];
+  document.getElementById('promos-kpis').innerHTML = kpis.map(function(k) {
+    return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;">'
+      + '<div style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">' + k.label + '</div>'
+      + '<div style="font-size:24px;font-weight:700;color:' + k.color + ';">' + k.val + '</div>'
+      + '</div>';
+  }).join('');
 
   if (!allPromos.length) {
-    document.getElementById('promos-list').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-3);">Sin promociones — crea la primera con el botón +</div>';
+    document.getElementById('promos-list').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-3);">Sin promociones</div>';
     return;
   }
 
-  const tipoLabel = { porcentaje:'% Porcentaje', monto_fijo:'$ Monto fijo', codigo:'🔑 Código', '2x1':'2×1', hora:'⏰ Por hora', cumpleanos:'🎂 Cumpleaños' };
-  const tipoColor = { porcentaje:'var(--pink)', monto_fijo:'var(--green)', codigo:'var(--purple)', '2x1':'var(--amber)', hora:'var(--blue)', cumpleanos:'var(--pink)' };
+  var tipoLabel = { porcentaje:'% Porcentaje', monto_fijo:'$ Monto fijo', codigo:'Codigo', '2x1':'2x1', hora:'Por hora', cumpleanos:'Cumpleanos' };
+  var tipoColor = { porcentaje:'var(--pink)', monto_fijo:'var(--green)', codigo:'var(--purple)', '2x1':'var(--amber)', hora:'var(--blue)', cumpleanos:'var(--pink)' };
 
-  document.getElementById('promos-list').innerHTML = allPromos.map(p => {
-    const valorStr = p.tipo === 'porcentaje' ? p.valor + '%' :
-                     p.tipo === 'monto_fijo' ? '$' + p.valor :
-                     p.tipo === 'codigo' ? 'Código: ' + (p.codigo||'—') + ' · ' + p.valor + '%' :
-                     p.tipo === 'hora' ? (p.hora_inicio||'--') + ' – ' + (p.hora_fin||'--') + ' · ' + p.valor + '%' :
-                     p.tipo === 'cumpleanos' ? p.valor + '%' : p.valor + '%';
-    const vigencia = p.fecha_fin ? ' · Hasta ' + p.fecha_fin : '';
-    const usos = p.usos_max ? ` · ${p.usos_actuales||0}/${p.usos_max} usos` : '';
+  document.getElementById('promos-list').innerHTML = allPromos.map(function(p) {
+    var valorStr = p.tipo === 'porcentaje' ? p.valor + '%' :
+                   p.tipo === 'monto_fijo' ? '$' + p.valor :
+                   p.tipo === 'codigo' ? 'Codigo: ' + (p.codigo||'-') + ' - ' + p.valor + '%' :
+                   p.tipo === 'hora' ? (p.hora_inicio||'--') + ' a ' + (p.hora_fin||'--') + ' - ' + p.valor + '%' :
+                   p.valor + '%';
+    var vigencia = p.fecha_fin ? ' · Hasta ' + p.fecha_fin : '';
+    var usos = p.usos_max ? ' · ' + (p.usos_actuales||0) + '/' + p.usos_max + ' usos' : '';
+    var activoColor = p.activo ? 'var(--green-light)' : 'var(--red-light)';
+    var activoTextColor = p.activo ? 'var(--green)' : 'var(--red)';
+    var activoLabel = p.activo ? 'Activa' : 'Inactiva';
+    var btnToggle = p.activo ? 'Pausar' : 'Activar';
+    var tipoBg = tipoColor[p.tipo] || 'var(--pink)';
+    var tipoText = tipoLabel[p.tipo] || p.tipo;
 
-    return `<div style="background:var(--surface);border:1px solid ${p.activo?'var(--border)':'var(--border)'};border-radius:12px;padding:16px;opacity:${p.activo?1:0.55};">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
-        <div style="flex:1;">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-            <span style="font-size:14px;font-weight:600;">${p.nombre}</span>
-            <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:8px;background:${tipoColor[p.tipo]||'var(--pink)'};color:white;">${tipoLabel[p.tipo]||p.tipo}</span>
-            <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:8px;background:${p.activo?'var(--green-light)':'var(--red-light)'};color:${p.activo?'var(--green)':'var(--red)'};">${p.activo?'Activa':'Inactiva'}</span>
-          </div>
-          <div style="font-size:13px;color:var(--pink);font-weight:600;">${valorStr}</div>
-          <div style="font-size:11px;color:var(--text-3);margin-top:3px;">${p.descripcion||''}${vigencia}${usos}</div>
-        </div>
-        <div style="display:flex;gap:6px;flex-shrink:0;">
-          <button class="btn btn-secondary btn-sm" onclick="openModalPromo(${p.id})">Editar</button>
-          <button class="btn btn-sm ${p.activo?'btn-danger':'btn-secondary'}" onclick="togglePromo(${p.id},${p.activo})">${p.activo?'Pausar':'Activar'}</button>
-          <button class="btn btn-sm btn-danger" onclick="deletePromo(${p.id},'${p.nombre.replace(/'/g,"\'")}')">🗑</button>
-        </div>
-      </div>
-    </div>`;
+    return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;opacity:' + (p.activo?1:0.55) + ';">'
+      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">'
+      + '<div style="flex:1;">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
+      + '<span style="font-size:14px;font-weight:600;">' + p.nombre + '</span>'
+      + '<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:8px;background:' + tipoBg + ';color:white;">' + tipoText + '</span>'
+      + '<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:8px;background:' + activoColor + ';color:' + activoTextColor + ';">' + activoLabel + '</span>'
+      + '</div>'
+      + '<div style="font-size:13px;color:var(--pink);font-weight:600;">' + valorStr + '</div>'
+      + '<div style="font-size:11px;color:var(--text-3);margin-top:3px;">' + (p.descripcion||'') + vigencia + usos + '</div>'
+      + '</div>'
+      + '<div style="display:flex;gap:6px;flex-shrink:0;">'
+      + '<button class="btn btn-secondary btn-sm" onclick="openModalPromo(' + p.id + ')">Editar</button>'
+      + '<button class="btn btn-sm btn-secondary" onclick="togglePromo(' + p.id + ',' + p.activo + ')">' + btnToggle + '</button>'
+      + '<button class="btn btn-sm btn-danger" onclick="deletePromo(' + p.id + ')">🗑</button>'
+      + '</div>'
+      + '</div>'
+      + '</div>';
   }).join('');
 }
 
@@ -3015,10 +3053,12 @@ async function togglePromo(id, activo) {
   loadPromociones();
 }
 
-async function deletePromo(id, nombre) {
-  if (!confirm('¿Eliminar "' + nombre + '"?')) return;
+async function deletePromo(id) {
+  var promo = allPromos.find(function(p){ return p.id === id; });
+  var nombre = promo ? promo.nombre : 'esta promocion';
+  if (!confirm('Eliminar "' + nombre + '"?')) return;
   await fetch(SB_URL + '/rest/v1/promociones?id=eq.' + id, { method:'DELETE', headers: { apikey:SB_KEY, Authorization:'Bearer '+SB_KEY } });
-  toast('✓ Promoción eliminada');
+  toast('Promocion eliminada');
   loadPromociones();
 }
 
@@ -3060,25 +3100,26 @@ async function loadTicketConfig() {
     { key:'ticket_mostrar_cajero',label:'Mostrar nombre cajero',   type:'toggle',   hint:'' },
   ];
 
-  document.getElementById('ticket-config-rows').innerHTML = TICKET_FIELDS.map(f => {
-    const val = allConfig[f.key] || '';
+  document.getElementById('ticket-config-rows').innerHTML = TICKET_FIELDS.map(function(f) {
+    var val = allConfig[f.key] || '';
+    var hintHtml = f.hint ? '<div class="config-desc">' + f.hint + '</div>' : '';
     if (f.type === 'toggle') {
-      const isOn = val === 'true';
-      return `<div class="config-row">
-        <div class="config-info"><div class="config-key">${f.label}</div>${f.hint?`<div class="config-desc">${f.hint}</div>`:''}</div>
-        <button class="toggle ${isOn?'on':''}" data-key="${f.key}" onclick="this.classList.toggle('on')"></button>
-      </div>`;
+      var isOn = val === 'true';
+      return '<div class="config-row">'
+        + '<div class="config-info"><div class="config-key">' + f.label + '</div>' + hintHtml + '</div>'
+        + '<button class="toggle ' + (isOn?'on':'') + '" data-key="' + f.key + '" onclick="this.classList.toggle('on')"></button>'
+        + '</div>';
     }
     if (f.type === 'textarea') {
-      return `<div class="config-row" style="align-items:flex-start;">
-        <div class="config-info"><div class="config-key">${f.label}</div>${f.hint?`<div class="config-desc">${f.hint}</div>`:''}</div>
-        <textarea class="config-val-input" data-key="${f.key}" style="height:60px;width:240px;resize:vertical;padding:6px 10px;">${val}</textarea>
-      </div>`;
+      return '<div class="config-row" style="align-items:flex-start;">'
+        + '<div class="config-info"><div class="config-key">' + f.label + '</div>' + hintHtml + '</div>'
+        + '<textarea class="config-val-input" data-key="' + f.key + '" style="height:60px;width:240px;resize:vertical;padding:6px 10px;">' + val + '</textarea>'
+        + '</div>';
     }
-    return `<div class="config-row">
-      <div class="config-info"><div class="config-key">${f.label}</div>${f.hint?`<div class="config-desc">${f.hint}</div>`:''}</div>
-      <input class="config-val-input" data-key="${f.key}" value="${val}" placeholder="${f.hint}">
-    </div>`;
+    return '<div class="config-row">'
+      + '<div class="config-info"><div class="config-key">' + f.label + '</div>' + hintHtml + '</div>'
+      + '<input class="config-val-input" data-key="' + f.key + '" value="' + val + '" placeholder="' + f.hint + '">'
+      + '</div>';
   }).join('');
 
   renderTicketPreview();
@@ -3113,11 +3154,11 @@ async function loadSucursalesConfig() {
     { key:'suc_delvalle_tel',       label:'Del Valle — Teléfono',  type:'text', hint:'55 XXXX XXXX' },
   ];
 
-  document.getElementById('sucursales-config-rows').innerHTML = SUC_FIELDS.map(f => {
-    return `<div class="config-row">
-      <div class="config-info"><div class="config-key">${f.label}</div><div class="config-desc">${f.hint}</div></div>
-      <input class="config-val-input" data-key="${f.key}" value="${cfgMap[f.key]||''}" placeholder="${f.hint}" style="width:220px;">
-    </div>`;
+  document.getElementById('sucursales-config-rows').innerHTML = SUC_FIELDS.map(function(f) {
+    return '<div class="config-row">'
+      + '<div class="config-info"><div class="config-key">' + f.label + '</div><div class="config-desc">' + f.hint + '</div></div>'
+      + '<input class="config-val-input" data-key="' + f.key + '" value="' + (cfgMap[f.key]||'') + '" placeholder="' + f.hint + '" style="width:220px;">'
+      + '</div>';
   }).join('');
 }
 
