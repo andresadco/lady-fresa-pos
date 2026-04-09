@@ -817,6 +817,8 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 <div id="toast"></div>
 
 <script>
+function toggleCfgBtn(b){b.classList.toggle("on");}
+
 const SB_URL = 'https://ngpumyxxxlafuzcsaepy.supabase.co';
 
 const CAT_EMOJI = {
@@ -3107,7 +3109,7 @@ async function loadTicketConfig() {
       var isOn = val === 'true';
       return '<div class="config-row">'
         + '<div class="config-info"><div class="config-key">' + f.label + '</div>' + hintHtml + '</div>'
-        + '<button class="toggle ' + (isOn?'on':'') + '" data-key="' + f.key + '" onclick="this.classList.toggle('on')"></button>'
+        + '<button class="toggle ' + (isOn?'on':'') + '" data-key="' + f.key + '" onclick="toggleCfgBtn(this)"></button>'
         + '</div>';
     }
     if (f.type === 'textarea') {
