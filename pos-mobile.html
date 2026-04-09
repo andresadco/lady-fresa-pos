@@ -332,6 +332,16 @@ html, body {
 .disc-row { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
 .disc-btn { padding: 6px 14px; border: 1.5px solid var(--border-2); border-radius: 20px; background: transparent; font-size: 12px; font-weight: 500; color: var(--text-2); cursor: pointer; font-family: 'DM Sans', sans-serif; }
 .disc-btn.active { background: var(--amber-light); border-color: var(--amber); color: var(--amber); font-weight: 600; }
+/* Promo code input */
+.promo-code-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.promo-code-input { flex: 1; height: 40px; border: 1.5px solid var(--border-2); border-radius: 10px; padding: 0 12px; font-size: 14px; font-family: 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: 1px; color: var(--text); outline: none; background: var(--surface); }
+.promo-code-input:focus { border-color: var(--red); }
+.promo-code-btn { height: 40px; padding: 0 14px; border-radius: 10px; border: none; background: var(--red); color: #fff; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.promo-code-btn:active { background: var(--red-dark); }
+.promo-applied { display: none; background: var(--green-light); border-radius: 10px; padding: 8px 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+.promo-applied.hidden { display: none; }
+.promo-applied-text { font-size: 13px; font-weight: 600; color: var(--green); }
+.promo-applied-remove { font-size: 18px; color: var(--green); cursor: pointer; background: none; border: none; line-height: 1; }
 
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar { display: none; }
@@ -476,12 +486,25 @@ html, body {
     <input type="text" class="client-input" id="client-input" placeholder="Nombre del cliente (opcional)">
     <!-- Items -->
     <div id="order-items-list"></div>
-    <!-- Descuento -->
-    <div class="disc-row" id="disc-row" style="margin-top:12px;display:none;">
-      <button class="disc-btn active" onclick="setDiscount(0,this)">Sin descuento</button>
-      <button class="disc-btn" onclick="setDiscount(10,this)">10%</button>
-      <button class="disc-btn" onclick="setDiscount(15,this)">15%</button>
-      <button class="disc-btn" onclick="setDiscount(20,this)">20%</button>
+    <!-- Descuento / Promociones -->
+    <div id="disc-section" style="margin-top:12px;display:none;">
+      <!-- Código de promo -->
+      <div class="promo-code-row">
+        <input type="text" class="promo-code-input" id="promo-code-input" placeholder="Código de descuento" maxlength="20">
+        <button class="promo-code-btn" onclick="aplicarCodigo()">Aplicar</button>
+      </div>
+      <!-- Promo aplicada -->
+      <div class="promo-applied hidden" id="promo-applied-bar">
+        <span class="promo-applied-text" id="promo-applied-text">🎁 Promo aplicada</span>
+        <button class="promo-applied-remove" onclick="quitarPromo()">✕</button>
+      </div>
+      <!-- Descuentos manuales -->
+      <div class="disc-row" id="disc-row">
+        <button class="disc-btn active" onclick="setDiscount(0,this)">Sin descuento</button>
+        <button class="disc-btn" onclick="setDiscount(10,this)">10%</button>
+        <button class="disc-btn" onclick="setDiscount(15,this)">15%</button>
+        <button class="disc-btn" onclick="setDiscount(20,this)">20%</button>
+      </div>
     </div>
     <!-- Totals -->
     <div class="order-totals" id="order-totals"></div>
@@ -652,6 +675,8 @@ let order = [];
 let orderN = parseInt(localStorage.getItem('lf_order_n') || '1');
 let sales = [];
 let discount = 0;
+let promoActiva = null; // { id, nombre, tipo, valor, codigo }
+let promosCargadas = []; // cache de promos de Supabase
 let payMethod = 'efectivo';
 let svcType = 'mostrador';
 let catFilter = 'all';
@@ -700,8 +725,9 @@ function showPOS() {
   document.getElementById('order-num-2').textContent = String(orderN).padStart(3,'0');
   // Show discount if has permission
   const p = PERMS[currentUser.role] || PERMS.cajero;
-  document.getElementById('disc-row').style.display = p.discount ? 'flex' : 'none';
+  document.getElementById('disc-section').style.display = p.discount ? 'block' : 'none';
   loadCatalog();
+  cargarPromos();
 }
 
 function logout() {
@@ -711,7 +737,9 @@ function logout() {
   document.getElementById('screen-pos').classList.remove('active');
   document.getElementById('screen-login').classList.add('active');
   document.getElementById('login-error').textContent = '';
-  order = []; discount = 0; payMethod = 'efectivo'; svcType = 'mostrador';
+  order = []; discount = 0; promoActiva = null; payMethod = 'efectivo'; svcType = 'mostrador';
+  document.getElementById('promo-applied-bar').classList.add('hidden');
+  document.getElementById('disc-row').style.display = 'flex';
   renderOrderBar();
 }
 
@@ -985,6 +1013,7 @@ function renderOrderBar() {
 }
 
 function openOrderSheet() {
+  verificarPromoHora();
   renderOrderItems();
   openSheet('order');
 }
@@ -1066,7 +1095,9 @@ function setDiscount(p, btn) {
 
 function cancelOrder() {
   if (!confirm('¿Cancelar esta orden?')) return;
-  order = []; discount = 0; payMethod = 'efectivo'; svcType = 'mostrador';
+  order = []; discount = 0; promoActiva = null; payMethod = 'efectivo'; svcType = 'mostrador';
+  document.getElementById('promo-applied-bar').classList.add('hidden');
+  document.getElementById('disc-row').style.display = 'flex';
   document.querySelectorAll('.svc-btn')[0].click();
   document.querySelectorAll('.pay-btn')[0].click();
   closeSheet('order');
@@ -1290,6 +1321,78 @@ async function openHist() {
   } catch { body.innerHTML='<div class="empty-state"><div class="e-icon">⚠️</div><p>Error cargando historial</p></div>'; }
 }
 function closeHist() { closeSheet('hist'); }
+
+// ═══════════════════════════════
+// PROMOCIONES
+// ═══════════════════════════════
+
+async function cargarPromos() {
+  try {
+    const res = await fetch(SB_URL + '/rest/v1/promociones?activo=eq.true&select=*', {
+      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY }
+    });
+    if (res.ok) promosCargadas = await res.json();
+  } catch(e) { promosCargadas = []; }
+}
+
+function aplicarCodigo() {
+  var codigo = (document.getElementById('promo-code-input').value || '').trim().toUpperCase();
+  if (!codigo) return;
+  var promo = promosCargadas.find(function(p) {
+    return p.tipo === 'codigo' && (p.codigo || '').toUpperCase() === codigo;
+  });
+  if (!promo) { showToast('❌ Código no válido'); return; }
+  // Check vigencia
+  if (promo.fecha_fin && new Date(promo.fecha_fin) < new Date()) { showToast('❌ Código expirado'); return; }
+  if (promo.usos_max && promo.usos_actuales >= promo.usos_max) { showToast('❌ Código agotado'); return; }
+  aplicarPromo(promo);
+}
+
+function verificarPromoHora() {
+  if (promoActiva) return; // ya hay una promo
+  var now = new Date();
+  var hhmm = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+  var promo = promosCargadas.find(function(p) {
+    return p.tipo === 'hora' && p.hora_inicio && p.hora_fin && hhmm >= p.hora_inicio && hhmm <= p.hora_fin;
+  });
+  if (promo) aplicarPromo(promo);
+}
+
+function aplicarPromo(promo) {
+  promoActiva = promo;
+  // Set discount
+  discount = parseFloat(promo.valor) || 0;
+  // Hide manual disc buttons
+  document.getElementById('disc-row').style.display = 'none';
+  // Show applied bar
+  var bar = document.getElementById('promo-applied-bar');
+  var txt = document.getElementById('promo-applied-text');
+  bar.classList.remove('hidden');
+  txt.textContent = '🎁 ' + promo.nombre + ' — ' + promo.valor + '% OFF';
+  document.getElementById('promo-code-input').value = '';
+  showToast('✅ ' + promo.nombre + ' aplicada');
+  renderOrderItems();
+  renderOrderBar();
+  // Increment usage counter async
+  fetch(SB_URL + '/rest/v1/promociones?id=eq.' + promo.id, {
+    method: 'PATCH',
+    headers: { 'Content-Type':'application/json', apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY },
+    body: JSON.stringify({ usos_actuales: (promo.usos_actuales || 0) + 1 })
+  }).catch(function(){});
+}
+
+function quitarPromo() {
+  promoActiva = null;
+  discount = 0;
+  document.getElementById('promo-applied-bar').classList.add('hidden');
+  document.getElementById('disc-row').style.display = 'flex';
+  // Reset disc buttons
+  document.querySelectorAll('.disc-btn').forEach(function(b, i) {
+    if (i === 0) b.classList.add('active'); else b.classList.remove('active');
+  });
+  renderOrderItems();
+  renderOrderBar();
+}
 
 // ═══════════════════════════════
 // SHEET HELPERS + SWIPE TO CLOSE
