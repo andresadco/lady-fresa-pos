@@ -728,6 +728,7 @@ function showPOS() {
   window._hasDiscount = p.discount; // store permission for when order sheet opens
   loadCatalog();
   cargarPromos();
+  loadTicketComandaConfig();
 }
 
 function logout() {
@@ -771,6 +772,23 @@ function logout() {
 // ═══════════════════════════════
 // CATALOG
 // ═══════════════════════════════
+// Ticket + Comanda config cache
+var ticketCfg = {};
+var comandaCfg = {};
+
+async function loadTicketComandaConfig() {
+  try {
+    var r = await fetch(SB_URL + '/rest/v1/config?key=like.ticket_*&order=key.asc', {
+      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY }
+    });
+    if (r.ok) { var rows = await r.json(); rows.forEach(function(c){ ticketCfg[c.key]=c.value; }); }
+    var r2 = await fetch(SB_URL + '/rest/v1/config?key=like.comanda_*&order=key.asc', {
+      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY }
+    });
+    if (r2.ok) { var rows2 = await r2.json(); rows2.forEach(function(c){ comandaCfg[c.key]=c.value; }); }
+  } catch(e) {}
+}
+
 async function loadCatalog() {
   try {
     const [prods, grupos, opciones, pm] = await Promise.all([
@@ -1513,56 +1531,109 @@ function buildTicketXML(saleData, type='ticket') {
 
   let xml = `<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print">`;
 
+  // Load config helpers
+  var tc = ticketCfg;
+  var cc = comandaCfg;
+  var tcGet = function(k,def){ return tc[k]||def||''; };
+  var ccGet = function(k,def){ return cc[k]||def||''; };
+
+  // Font helper for comanda
+  var fontTag = function(fontType, text) {
+    if (fontType==='double') return '<text width="2" height="2">' + text + '</text>';
+    if (fontType==='bold') return '<text em="true">' + text + '</text>';
+    if (fontType==='double-bold') return '<text width="2" height="2" em="true">' + text + '</text>';
+    return '<text>' + text + '</text>';
+  };
+
   if (isComanda) {
-    xml += center('*** COMANDA ***', true);
-    xml += center(`Orden #${String(saleData.id).padStart(3,'0')}`, true);
+    // Margins
+    var marginTop = parseInt(ccGet('comanda_margin_top','0'))||0;
+    var marginBot = parseInt(ccGet('comanda_margin_bot','0'))||0;
+    var itemSpace = parseInt(ccGet('comanda_item_space','1'))||1;
+    var showTitulos = ccGet('comanda_titulos_grupos','true') !== 'false';
+
+    for (var mt=0; mt<marginTop; mt++) xml += '<text>&#10;</text>';
+    xml += fontTag(ccGet('comanda_font_marca','bold'), '*** COMANDA ***&#10;');
+    xml += fontTag(ccGet('comanda_font_orden','double'), 'Orden #' + String(saleData.id).padStart(3,'0') + '&#10;');
     xml += center(new Date(saleData.date).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}));
     if (saleData.client) xml += center(saleData.client);
-    xml += center(saleData.svcType==='para-llevar'?'▶ PARA LLEVAR':saleData.svcType==='delivery'?'▶ DELIVERY':'MOSTRADOR', true);
+    xml += fontTag(ccGet('comanda_font_tipo','bold'), (saleData.svcType==='para-llevar'?'PARA LLEVAR':saleData.svcType==='delivery'?'DELIVERY':'MOSTRADOR') + '&#10;');
     xml += divider();
-    saleData.items.forEach(item => {
-      xml += `<text em="true">x${item.qty} ${item.name.substring(0,30)}&#10;</text>`;
-      if (item.sel?.['Tamaño']) xml += `<text>  Tamaño: ${item.sel['Tamaño']}&#10;</text>`;
-      if (item.sel?.['Bases']) xml += `<text>  Base: ${item.sel['Bases']}&#10;</text>`;
-      const tops = [...(item.sel?.['Toppings Incluidos']||[]),...(item.sel?.['Toppings Extra Básicos']||[]),...(item.sel?.['Toppings Extra Premium']||[])];
-      if (tops.length) xml += `<text>  + ${tops.join(', ').substring(0,35)}&#10;</text>`;
-      const shots = item.sel?.['Shots Extra']||[];
-      if (shots.length) xml += `<text>  Shot: ${shots.join(', ')}&#10;</text>`;
-      if (item.note) xml += `<text>  ** ${item.note.substring(0,30)}&#10;</text>`;
+
+    saleData.items.forEach(function(item) {
+      xml += fontTag(ccGet('comanda_font_items','bold'), 'x' + item.qty + ' ' + item.name.substring(0,30) + '&#10;');
+      var sel = item.sel || {};
+      if (sel['Tamano'] || sel['Tamaño']) {
+        var tam = sel['Tamano'] || sel['Tamaño'];
+        if (showTitulos) xml += fontTag(ccGet('comanda_font_mods','normal'), '  Tamano: ' + tam + '&#10;');
+        else xml += fontTag(ccGet('comanda_font_mods','normal'), '  ' + tam + '&#10;');
+      }
+      if (sel['Bases']) xml += fontTag(ccGet('comanda_font_mods','normal'), '  ' + (showTitulos?'Base: ':'') + sel['Bases'] + '&#10;');
+      var tops = (sel['Toppings Incluidos']||[]).concat(sel['Toppings Extra Basicos']||[]).concat(sel['Toppings Extra Básicos']||[]).concat(sel['Toppings Extra Premium']||[]);
+      if (tops.length) xml += fontTag(ccGet('comanda_font_mods','normal'), '  + ' + tops.join(', ').substring(0,35) + '&#10;');
+      var shots = sel['Shots Extra']||[];
+      if (shots.length) xml += fontTag(ccGet('comanda_font_mods','normal'), '  Shot: ' + shots.join(', ') + '&#10;');
+      if (item.note) xml += fontTag(ccGet('comanda_font_notas','normal'), '  ** ' + item.note.substring(0,30) + '&#10;');
+      for (var sp=0; sp<itemSpace; sp++) xml += '<text>&#10;</text>';
     });
     xml += divider();
     if (saleData.client) xml += center(saleData.client);
+    for (var mb=0; mb<marginBot; mb++) xml += '<text>&#10;</text>';
+
   } else {
-    xml += center('Lady Fresa', true);
-    xml += center('El sabor que te enamora');
+    // Ticket header from config
+    var header = tcGet('ticket_encabezado','LADY FRESA');
+    var footer = tcGet('ticket_pie_pagina','');
+    var ig = tcGet('ticket_instagram','');
+    var wa = tcGet('ticket_whatsapp','');
+    var web = tcGet('ticket_web','ladyfresa.mx');
+    var qrUrl = tcGet('ticket_qr_url','');
+    var qrTxt = tcGet('ticket_qr_texto','');
+    var rfc = tcGet('ticket_rfc','');
+    var mostrarIva = tcGet('ticket_mostrar_iva','true') !== 'false';
+    var mostrarCajero = tcGet('ticket_mostrar_cajero','true') !== 'false';
+    var mostrarMods = tcGet('ticket_mostrar_mods','true') !== 'false';
+    var mostrarNotas = tcGet('ticket_mostrar_notas','true') !== 'false';
+
+    // Print header lines
+    header.split('\n').forEach(function(ln){ if(ln.trim()) xml += center(ln.trim(), true); });
     xml += divider();
-    xml += center(`Orden #${String(saleData.id).padStart(3,'0')}`);
+    xml += center('Orden #' + String(saleData.id).padStart(3,'0'));
     xml += center(new Date(saleData.date).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}));
-    if (currentUser) xml += center(`Atendió: ${currentUser.name}`);
+    if (mostrarCajero && currentUser) xml += center('Atendio: ' + currentUser.name);
     xml += divider();
-    saleData.items.forEach(item => {
-      xml += line(`${item.qty}x ${item.name.substring(0,26)}`, fmtD(item.unitPrice*item.qty));
-      if (item.sel?.['Tamaño']) xml += `<text>  ${item.sel['Tamaño']}&#10;</text>`;
-      const tops = [...(item.sel?.['Toppings Incluidos']||[]),...(item.sel?.['Toppings Extra Básicos']||[]),...(item.sel?.['Toppings Extra Premium']||[])];
-      if (tops.length) xml += `<text>  + ${tops.join(', ').substring(0,36)}&#10;</text>`;
-      if (item.note) xml += `<text>  * ${item.note.substring(0,32)}&#10;</text>`;
+
+    saleData.items.forEach(function(item) {
+      xml += line(item.qty + 'x ' + item.name.substring(0,26), fmtD(item.unitPrice*item.qty));
+      if (mostrarMods) {
+        var sel = item.sel || {};
+        if (sel['Tamano'] || sel['Tamaño']) xml += '<text>  ' + (sel['Tamano']||sel['Tamaño']) + '&#10;</text>';
+        var tops = (sel['Toppings Incluidos']||[]).concat(sel['Toppings Extra Basicos']||[]).concat(sel['Toppings Extra Básicos']||[]).concat(sel['Toppings Extra Premium']||[]);
+        if (tops.length) xml += '<text>  + ' + tops.join(', ').substring(0,36) + '&#10;</text>';
+      }
+      if (mostrarNotas && item.note) xml += '<text>  * ' + item.note.substring(0,32) + '&#10;</text>';
     });
+
     xml += divider();
     xml += line('Subtotal', fmtD(saleData.sub));
-    if (saleData.desc > 0) xml += line(`Descuento (${saleData.discount}%)`, '-'+fmtD(saleData.desc));
-    xml += line('IVA (16%)', fmtD(saleData.iva));
+    if (saleData.desc > 0) xml += line('Descuento (' + saleData.discount + '%)', '-' + fmtD(saleData.desc));
+    if (mostrarIva) xml += line('IVA (16%)', fmtD(saleData.iva));
     xml += divider();
     xml += line('TOTAL', fmtD(saleData.total), true);
     xml += divider();
-    const payLabel = saleData.payMethod==='efectivo'?'Efectivo':saleData.payMethod==='tarjeta'?'Tarjeta':'Transferencia';
+    var payLabel = saleData.payMethod==='efectivo'?'Efectivo':saleData.payMethod==='tarjeta'?'Tarjeta':'Transferencia';
     xml += line('Pago', payLabel);
     if (saleData.payMethod==='efectivo' && saleData.cambio > 0) {
       xml += line('Con', fmtD(saleData.cashReceived||saleData.total));
       xml += line('Cambio', fmtD(saleData.cambio), true);
     }
+    if (rfc) { xml += divider(); xml += center('RFC: ' + rfc); }
     xml += divider();
-    xml += center('¡Gracias por tu visita!');
-    xml += center('ladyfresa.mx');
+    if (ig) xml += center(ig);
+    if (wa) xml += center('WhatsApp: ' + wa);
+    if (web) xml += center(web);
+    if (qrUrl) { xml += divider(); if (qrTxt) xml += center(qrTxt); }
+    if (footer) { xml += divider(); footer.split('\n').forEach(function(ln){ if(ln.trim()) xml += center(ln.trim()); }); }
   }
   xml += `<cut type="feed"/></epos-print></s:Body></s:Envelope>`;
   return xml;

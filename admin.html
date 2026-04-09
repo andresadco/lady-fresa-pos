@@ -577,6 +577,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
       <div style="display:flex;gap:6px;margin-bottom:20px;">
         <button class="btn btn-ghost btn-sm" id="cfg-tab-general" onclick="setCfgTab('general',this)" style="background:var(--pink-light);color:var(--pink);">⚙️ General</button>
         <button class="btn btn-ghost btn-sm" id="cfg-tab-ticket" onclick="setCfgTab('ticket',this)">🧾 Ticket</button>
+        <button class="btn btn-ghost btn-sm" id="cfg-tab-comanda" onclick="setCfgTab('comanda',this)">🍳 Comanda</button>
         <button class="btn btn-ghost btn-sm" id="cfg-tab-sucursales-cfg" onclick="setCfgTab('sucursales-cfg',this)">🏪 Sucursales</button>
       </div>
 
@@ -594,17 +595,141 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
       <!-- Ticket -->
       <div id="cfg-section-ticket" style="display:none;">
         <div class="card">
-          <div class="card-title">🧾 Configuración del ticket de venta</div>
-          <div id="ticket-config-rows">Cargando...</div>
+          <div class="card-title">🧾 Ticket de venta</div>
+          <div class="config-row" style="align-items:flex-start;">
+            <div class="config-info"><div class="config-key">Encabezado</div><div class="config-desc">Texto que aparece al inicio del ticket</div></div>
+            <textarea class="config-val-input" id="cfg-ticket-header" style="height:80px;width:240px;resize:vertical;" placeholder="Lady Fresa&#10;No somos Tinder pero aquí hubo match 🍓"></textarea>
+          </div>
+          <div class="config-row" style="align-items:flex-start;">
+            <div class="config-info"><div class="config-key">Pie de página</div><div class="config-desc">Texto al final del ticket</div></div>
+            <textarea class="config-val-input" id="cfg-ticket-footer" style="height:80px;width:240px;resize:vertical;" placeholder="El antojo no se niega, se saborea.&#10;#MásBuenasQueTuCrush"></textarea>
+          </div>
+          <div class="config-row">
+            <div class="config-info"><div class="config-key">Instagram</div></div>
+            <input class="config-val-input" id="cfg-ticket-ig" placeholder="@ladyfresamx">
+          </div>
+          <div class="config-row">
+            <div class="config-info"><div class="config-key">WhatsApp</div><div class="config-desc">Solo número: 5512345678</div></div>
+            <input class="config-val-input" id="cfg-ticket-wa" placeholder="5512345678">
+          </div>
+          <div class="config-row">
+            <div class="config-info"><div class="config-key">Sitio web</div></div>
+            <input class="config-val-input" id="cfg-ticket-web" placeholder="ladyfresa.mx">
+          </div>
+          <div class="config-row">
+            <div class="config-info"><div class="config-key">Link del QR</div><div class="config-desc">URL que aparece como QR al pie</div></div>
+            <input class="config-val-input" id="cfg-ticket-qr" placeholder="https://lady-fresa.kivly.store/">
+          </div>
+          <div class="config-row">
+            <div class="config-info"><div class="config-key">Texto del QR</div></div>
+            <input class="config-val-input" id="cfg-ticket-qrtxt" placeholder="Escanea para reseña">
+          </div>
+          <div class="config-row">
+            <div class="config-info"><div class="config-key">RFC</div><div class="config-desc">Dejar vacío si no aplica</div></div>
+            <input class="config-val-input" id="cfg-ticket-rfc" placeholder="">
+          </div>
+          <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Secciones visibles</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <div class="toggle-wrap"><button class="toggle on" id="cfg-t-modificadores" onclick="toggleCfgBtn(this)"></button><span class="toggle-label">Modificadores</span></div>
+              <div class="toggle-wrap"><button class="toggle on" id="cfg-t-notas" onclick="toggleCfgBtn(this)"></button><span class="toggle-label">Notas</span></div>
+              <div class="toggle-wrap"><button class="toggle on" id="cfg-t-iva" onclick="toggleCfgBtn(this)"></button><span class="toggle-label">Impuestos</span></div>
+              <div class="toggle-wrap"><button class="toggle on" id="cfg-t-cajero" onclick="toggleCfgBtn(this)"></button><span class="toggle-label">Cajero</span></div>
+            </div>
+          </div>
           <div style="margin-top:20px;text-align:right;">
             <button class="btn btn-primary" onclick="saveTicketConfig()">Guardar ticket</button>
           </div>
         </div>
         <!-- Preview -->
         <div class="card">
-          <div class="card-title">Vista previa del ticket</div>
-          <div id="ticket-preview" style="font-family:monospace;font-size:12px;background:var(--bg);padding:16px;border-radius:8px;max-width:300px;line-height:1.8;white-space:pre-wrap;"></div>
+          <div class="card-title">Vista previa</div>
+          <div id="ticket-preview" style="font-family:monospace;font-size:11px;background:var(--bg);padding:16px;border-radius:8px;max-width:300px;line-height:1.7;white-space:pre-wrap;border:1px dashed var(--border-2);"></div>
           <button class="btn btn-secondary btn-sm" style="margin-top:12px;" onclick="renderTicketPreview()">↻ Actualizar vista previa</button>
+        </div>
+      </div>
+
+      <!-- Comanda -->
+      <div id="cfg-section-comanda" style="display:none;">
+        <div class="card">
+          <div class="card-title">🍳 Comanda de cocina</div>
+          <div class="config-row">
+            <div class="config-info"><div class="config-key">Margen superior</div><div class="config-desc">Líneas en blanco antes del contenido</div></div>
+            <input class="config-val-input" id="cfg-cmd-margin-top" type="number" min="0" max="10" placeholder="0" style="width:80px;">
+          </div>
+          <div class="config-row">
+            <div class="config-info"><div class="config-key">Margen inferior</div><div class="config-desc">Líneas en blanco después del contenido</div></div>
+            <input class="config-val-input" id="cfg-cmd-margin-bot" type="number" min="0" max="10" placeholder="0" style="width:80px;">
+          </div>
+          <div class="config-row">
+            <div class="config-info"><div class="config-key">Espacio entre artículos</div><div class="config-desc">Líneas en blanco entre cada producto</div></div>
+            <input class="config-val-input" id="cfg-cmd-item-space" type="number" min="0" max="5" placeholder="1" style="width:80px;">
+          </div>
+          <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Tipo de fuente por sección</div>
+            <div style="display:grid;gap:8px;">
+              <div class="config-row" style="padding:0;">
+                <div class="config-info"><div class="config-key">Marca / Nombre</div></div>
+                <select class="form-select" id="cfg-cmd-font-marca" style="width:160px;">
+                  <option value="normal">Normal</option>
+                  <option value="bold">Negrita</option>
+                  <option value="double">Doble tamaño</option>
+                  <option value="double-bold">Doble + Negrita</option>
+                </select>
+              </div>
+              <div class="config-row" style="padding:0;">
+                <div class="config-info"><div class="config-key">Número de orden</div></div>
+                <select class="form-select" id="cfg-cmd-font-orden" style="width:160px;">
+                  <option value="normal">Normal</option>
+                  <option value="bold">Negrita</option>
+                  <option value="double" selected>Doble tamaño</option>
+                  <option value="double-bold">Doble + Negrita</option>
+                </select>
+              </div>
+              <div class="config-row" style="padding:0;">
+                <div class="config-info"><div class="config-key">Tipo de orden</div></div>
+                <select class="form-select" id="cfg-cmd-font-tipo" style="width:160px;">
+                  <option value="normal">Normal</option>
+                  <option value="bold" selected>Negrita</option>
+                  <option value="double">Doble tamaño</option>
+                  <option value="double-bold">Doble + Negrita</option>
+                </select>
+              </div>
+              <div class="config-row" style="padding:0;">
+                <div class="config-info"><div class="config-key">Artículos</div></div>
+                <select class="form-select" id="cfg-cmd-font-items" style="width:160px;">
+                  <option value="normal">Normal</option>
+                  <option value="bold" selected>Negrita</option>
+                  <option value="double">Doble tamaño</option>
+                  <option value="double-bold">Doble + Negrita</option>
+                </select>
+              </div>
+              <div class="config-row" style="padding:0;">
+                <div class="config-info"><div class="config-key">Modificadores</div></div>
+                <select class="form-select" id="cfg-cmd-font-mods" style="width:160px;">
+                  <option value="normal" selected>Normal</option>
+                  <option value="bold">Negrita</option>
+                  <option value="double">Doble tamaño</option>
+                  <option value="double-bold">Doble + Negrita</option>
+                </select>
+              </div>
+              <div class="config-row" style="padding:0;">
+                <div class="config-info"><div class="config-key">Notas</div></div>
+                <select class="form-select" id="cfg-cmd-font-notas" style="width:160px;">
+                  <option value="normal" selected>Normal</option>
+                  <option value="bold">Negrita</option>
+                  <option value="double">Doble tamaño</option>
+                  <option value="double-bold">Doble + Negrita</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
+            <div class="toggle-wrap"><button class="toggle on" id="cfg-cmd-titulos-grupos" onclick="toggleCfgBtn(this)"></button><span class="toggle-label">Mostrar títulos de grupos modificadores</span></div>
+          </div>
+          <div style="margin-top:20px;text-align:right;">
+            <button class="btn btn-primary" onclick="saveComandaConfig()">Guardar comanda</button>
+          </div>
         </div>
       </div>
 
@@ -817,8 +942,6 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 <div id="toast"></div>
 
 <script>
-function toggleCfgBtn(b){b.classList.toggle("on");}
-
 const SB_URL = 'https://ngpumyxxxlafuzcsaepy.supabase.co';
 
 const CAT_EMOJI = {
@@ -1246,14 +1369,14 @@ async function loadUsuarios() {
 async function openModalUsuario(user=null) {
   editingUserId = user ? user.id : null;
   document.getElementById('modal-usuario-title').textContent = user ? 'Editar usuario' : 'Nuevo usuario';
-  document.getElementById('u-name').value = (user&&user.name) || '';
-  document.getElementById('u-pin').value = (user&&user.pin) || '';
-  document.getElementById('u-email').value = (user&&user.email) || '';
-  document.getElementById('u-role').value = (user&&user.role) || 'cajero';
+  document.getElementById('u-name').value = user?.name || '';
+  document.getElementById('u-pin').value = user?.pin || '';
+  document.getElementById('u-email').value = user?.email || '';
+  document.getElementById('u-role').value = user?.role || 'cajero';
 
   // Cargar sucursales en select
   const suc = await sbGet('sucursales','active=eq.true&select=name');
-  document.getElementById('u-sucursal').innerHTML = suc.map(s=>`<option value="${s.name}" ${(user&&user.sucursal)===s.name?'selected':''}>${s.name}</option>`).join('');
+  document.getElementById('u-sucursal').innerHTML = suc.map(s=>`<option value="${s.name}" ${user?.sucursal===s.name?'selected':''}>${s.name}</option>`).join('');
 
   document.getElementById('modal-usuario').classList.add('open');
 }
@@ -1306,9 +1429,9 @@ async function loadSucursales() {
 function openModalSucursal(suc=null) {
   editingSucId = suc ? suc.id : null;
   document.getElementById('modal-suc-title').textContent = suc ? 'Editar sucursal' : 'Nueva sucursal';
-  document.getElementById('s-name').value = (suc&&suc.name) || '';
-  document.getElementById('s-dir').value = (suc&&suc.direccion) || '';
-  document.getElementById('s-tel').value = (suc&&suc.telefono) || '';
+  document.getElementById('s-name').value = suc?.name || '';
+  document.getElementById('s-dir').value = suc?.direccion || '';
+  document.getElementById('s-tel').value = suc?.telefono || '';
   document.getElementById('modal-sucursal').classList.add('open');
 }
 
@@ -1369,15 +1492,15 @@ async function openModalProducto(id=null) {
   editingProdId = id;
 
   document.getElementById('modal-prod-title').textContent = p ? 'Editar producto' : 'Nuevo producto';
-  document.getElementById('p-id').value = (p&&p.id) || '';
-  document.getElementById('p-name').value = (p&&p.name) || '';
-  document.getElementById('p-price').value = (p&&p.price) || '';
-  document.getElementById('p-cat').value = (p&&p.cat) || 'Frutas';
-  document.getElementById('p-emoji').value = (p&&p.emoji) || '';
-  document.getElementById('p-desc').value = (p&&p.desc) || '';
+  document.getElementById('p-id').value = p?.id || '';
+  document.getElementById('p-name').value = p?.name || '';
+  document.getElementById('p-price').value = p?.price || '';
+  document.getElementById('p-cat').value = p?.cat || 'Frutas';
+  document.getElementById('p-emoji').value = p?.emoji || '';
+  document.getElementById('p-desc').value = p?.desc || '';
   const tog = document.getElementById('p-active-toggle');
-  tog.className = 'toggle ' + ((p&&p.active) !== false ? 'on' : '');
-  document.getElementById('p-active-label').textContent = (p&&p.active) !== false ? 'Producto activo' : 'Producto oculto';
+  tog.className = 'toggle ' + (p?.active !== false ? 'on' : '');
+  document.getElementById('p-active-label').textContent = p?.active !== false ? 'Producto activo' : 'Producto oculto';
 
   // Cargar grupos disponibles y cuáles ya tiene este producto
   try {
@@ -3003,18 +3126,18 @@ function openModalPromo(id=null) {
   const p = id ? allPromos.find(x=>x.id===id) : null;
   editingPromoId = id || null;
   document.getElementById('modal-promo-title').textContent = p ? 'Editar promoción' : 'Nueva promoción';
-  document.getElementById('promo-nombre').value = (p&&p.nombre) || '';
-  document.getElementById('promo-tipo').value = (p&&p.tipo) || 'porcentaje';
-  document.getElementById('promo-valor').value = (p&&p.valor) || '';
-  document.getElementById('promo-codigo').value = (p&&p.codigo) || '';
-  document.getElementById('promo-hora-ini').value = (p&&p.hora_inicio) || '';
-  document.getElementById('promo-hora-fin').value = (p&&p.hora_fin) || '';
-  document.getElementById('promo-fecha-ini').value = (p&&p.fecha_inicio) || '';
-  document.getElementById('promo-fecha-fin').value = (p&&p.fecha_fin) || '';
-  document.getElementById('promo-usos').value = (p&&p.usos_max) || '';
-  document.getElementById('promo-aplica').value = (p&&p.aplica_a) || 'todo';
-  document.getElementById('promo-desc').value = (p&&p.descripcion) || '';
-  document.getElementById('promo-activo-toggle').className = 'toggle ' + ((p&&p.activo) !== false ? 'on' : '');
+  document.getElementById('promo-nombre').value = p?.nombre || '';
+  document.getElementById('promo-tipo').value = p?.tipo || 'porcentaje';
+  document.getElementById('promo-valor').value = p?.valor || '';
+  document.getElementById('promo-codigo').value = p?.codigo || '';
+  document.getElementById('promo-hora-ini').value = p?.hora_inicio || '';
+  document.getElementById('promo-hora-fin').value = p?.hora_fin || '';
+  document.getElementById('promo-fecha-ini').value = p?.fecha_inicio || '';
+  document.getElementById('promo-fecha-fin').value = p?.fecha_fin || '';
+  document.getElementById('promo-usos').value = p?.usos_max || '';
+  document.getElementById('promo-aplica').value = p?.aplica_a || 'todo';
+  document.getElementById('promo-desc').value = p?.descripcion || '';
+  document.getElementById('promo-activo-toggle').className = 'toggle ' + (p?.activo !== false ? 'on' : '');
   onPromoTipoChange();
   document.getElementById('modal-promo').classList.add('open');
 }
@@ -3070,75 +3193,144 @@ async function deletePromo(id) {
 let allConfig = {};
 
 function setCfgTab(tab, btn) {
-  document.querySelectorAll('[id^="cfg-tab-"]').forEach(b => b.style.cssText = '');
+  document.querySelectorAll('[id^="cfg-tab-"]').forEach(function(b){ b.style.cssText = ''; });
   btn.style.background = 'var(--pink-light)'; btn.style.color = 'var(--pink)';
-  ['general','ticket','sucursales-cfg'].forEach(t => {
-    const el = document.getElementById('cfg-section-' + t);
+  ['general','ticket','comanda','sucursales-cfg'].forEach(function(t) {
+    var el = document.getElementById('cfg-section-' + t);
     if (el) el.style.display = t === tab ? '' : 'none';
   });
   if (tab === 'ticket') loadTicketConfig();
+  if (tab === 'comanda') loadComandaConfig();
   if (tab === 'sucursales-cfg') loadSucursalesConfig();
 }
 
 async function loadTicketConfig() {
-  const res = await fetch(SB_URL + '/rest/v1/config?key=like.ticket_*&order=key.asc', {
+  var res = await fetch(SB_URL + '/rest/v1/config?key=like.ticket_*&order=key.asc', {
     headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY }
   });
-  const cfg = await res.json();
+  var cfg = await res.json();
   allConfig = {};
-  cfg.forEach(c => allConfig[c.key] = c.value);
+  cfg.forEach(function(c){ allConfig[c.key] = c.value; });
 
-  const TICKET_FIELDS = [
-    { key:'ticket_logo_texto',    label:'Nombre en ticket',        type:'text',     hint:'Aparece como título del ticket' },
-    { key:'ticket_slogan',        label:'Slogan',                  type:'text',     hint:'Línea bajo el nombre' },
-    { key:'ticket_instagram',     label:'Instagram',               type:'text',     hint:'@ladyfresa.mx' },
-    { key:'ticket_whatsapp',      label:'WhatsApp',                type:'text',     hint:'Solo número: 5512345678' },
-    { key:'ticket_web',           label:'Sitio web',               type:'text',     hint:'ladyfresa.mx' },
-    { key:'ticket_mensaje_cierre',label:'Mensaje de cierre',       type:'textarea', hint:'Al pie del ticket' },
-    { key:'ticket_rfc',           label:'RFC',                     type:'text',     hint:'Dejar vacío si no aplica' },
-    { key:'ticket_qr_url',        label:'URL del QR',              type:'text',     hint:'Google Maps, Instagram, reseña...' },
-    { key:'ticket_qr_texto',      label:'Texto bajo el QR',        type:'text',     hint:'Ej: ¡Déjanos una reseña!' },
-    { key:'ticket_mostrar_iva',   label:'Mostrar desglose IVA',    type:'toggle',   hint:'' },
-    { key:'ticket_mostrar_cajero',label:'Mostrar nombre cajero',   type:'toggle',   hint:'' },
-  ];
+  var g = function(k){ return allConfig[k] || ''; };
+  var el = function(id){ return document.getElementById(id); };
 
-  document.getElementById('ticket-config-rows').innerHTML = TICKET_FIELDS.map(function(f) {
-    var val = allConfig[f.key] || '';
-    var hintHtml = f.hint ? '<div class="config-desc">' + f.hint + '</div>' : '';
-    if (f.type === 'toggle') {
-      var isOn = val === 'true';
-      return '<div class="config-row">'
-        + '<div class="config-info"><div class="config-key">' + f.label + '</div>' + hintHtml + '</div>'
-        + '<button class="toggle ' + (isOn?'on':'') + '" data-key="' + f.key + '" onclick="toggleCfgBtn(this)"></button>'
-        + '</div>';
-    }
-    if (f.type === 'textarea') {
-      return '<div class="config-row" style="align-items:flex-start;">'
-        + '<div class="config-info"><div class="config-key">' + f.label + '</div>' + hintHtml + '</div>'
-        + '<textarea class="config-val-input" data-key="' + f.key + '" style="height:60px;width:240px;resize:vertical;padding:6px 10px;">' + val + '</textarea>'
-        + '</div>';
-    }
-    return '<div class="config-row">'
-      + '<div class="config-info"><div class="config-key">' + f.label + '</div>' + hintHtml + '</div>'
-      + '<input class="config-val-input" data-key="' + f.key + '" value="' + val + '" placeholder="' + f.hint + '">'
-      + '</div>';
-  }).join('');
+  if (el('cfg-ticket-header'))  el('cfg-ticket-header').value  = g('ticket_encabezado');
+  if (el('cfg-ticket-footer'))  el('cfg-ticket-footer').value  = g('ticket_pie_pagina');
+  if (el('cfg-ticket-ig'))      el('cfg-ticket-ig').value      = g('ticket_instagram');
+  if (el('cfg-ticket-wa'))      el('cfg-ticket-wa').value      = g('ticket_whatsapp');
+  if (el('cfg-ticket-web'))     el('cfg-ticket-web').value     = g('ticket_web');
+  if (el('cfg-ticket-qr'))      el('cfg-ticket-qr').value      = g('ticket_qr_url');
+  if (el('cfg-ticket-qrtxt'))   el('cfg-ticket-qrtxt').value   = g('ticket_qr_texto');
+  if (el('cfg-ticket-rfc'))     el('cfg-ticket-rfc').value     = g('ticket_rfc');
+
+  var setToggle = function(id, key, def) {
+    var btn = el(id);
+    if (!btn) return;
+    var val = allConfig[key] !== undefined ? allConfig[key] : (def || 'true');
+    if (val === 'false') btn.classList.remove('on'); else btn.classList.add('on');
+  };
+  setToggle('cfg-t-modificadores', 'ticket_mostrar_mods', 'true');
+  setToggle('cfg-t-notas',         'ticket_mostrar_notas', 'true');
+  setToggle('cfg-t-iva',           'ticket_mostrar_iva', 'true');
+  setToggle('cfg-t-cajero',        'ticket_mostrar_cajero', 'true');
 
   renderTicketPreview();
 }
 
 async function saveTicketConfig() {
-  const inputs = document.querySelectorAll('#ticket-config-rows [data-key]');
-  let ok = true;
-  for (const inp of inputs) {
-    const val = inp.tagName === 'BUTTON' ? (inp.classList.contains('on') ? 'true' : 'false') : inp.value;
-    const res = await fetch(SB_URL + '/rest/v1/config?key=eq.' + inp.dataset.key, {
-      method:'PATCH', headers:SB_H, body:JSON.stringify({ value: val })
+  var el = function(id){ return document.getElementById(id); };
+  var tog = function(id){ var b=el(id); return b ? (b.classList.contains('on')?'true':'false') : 'true'; };
+  var fields = [
+    { key:'ticket_encabezado',     val: el('cfg-ticket-header') ? el('cfg-ticket-header').value : '' },
+    { key:'ticket_pie_pagina',     val: el('cfg-ticket-footer') ? el('cfg-ticket-footer').value : '' },
+    { key:'ticket_instagram',      val: el('cfg-ticket-ig') ? el('cfg-ticket-ig').value : '' },
+    { key:'ticket_whatsapp',       val: el('cfg-ticket-wa') ? el('cfg-ticket-wa').value : '' },
+    { key:'ticket_web',            val: el('cfg-ticket-web') ? el('cfg-ticket-web').value : '' },
+    { key:'ticket_qr_url',         val: el('cfg-ticket-qr') ? el('cfg-ticket-qr').value : '' },
+    { key:'ticket_qr_texto',       val: el('cfg-ticket-qrtxt') ? el('cfg-ticket-qrtxt').value : '' },
+    { key:'ticket_rfc',            val: el('cfg-ticket-rfc') ? el('cfg-ticket-rfc').value : '' },
+    { key:'ticket_mostrar_mods',   val: tog('cfg-t-modificadores') },
+    { key:'ticket_mostrar_notas',  val: tog('cfg-t-notas') },
+    { key:'ticket_mostrar_iva',    val: tog('cfg-t-iva') },
+    { key:'ticket_mostrar_cajero', val: tog('cfg-t-cajero') },
+  ];
+  var ok = true;
+  for (var i=0; i<fields.length; i++) {
+    var f = fields[i];
+    // Upsert: try patch first, then post if not exists
+    var r = await fetch(SB_URL + '/rest/v1/config?key=eq.' + f.key, {
+      method:'PATCH', headers:SB_H, body:JSON.stringify({ value: f.val })
     });
-    if (!res.ok) ok = false;
+    if (!r.ok) ok = false;
   }
-  toast(ok ? '✓ Ticket configurado' : '⚠ Error al guardar');
+  toast(ok ? '✓ Ticket guardado' : '⚠ Error al guardar');
   renderTicketPreview();
+}
+
+async function loadComandaConfig() {
+  var res = await fetch(SB_URL + '/rest/v1/config?key=like.comanda_*&order=key.asc', {
+    headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY }
+  });
+  var cfg = await res.json();
+  var cfgMap = {};
+  cfg.forEach(function(c){ cfgMap[c.key] = c.value; });
+
+  var el = function(id){ return document.getElementById(id); };
+  var g = function(k,def){ return cfgMap[k] !== undefined ? cfgMap[k] : (def||''); };
+
+  if (el('cfg-cmd-margin-top'))   el('cfg-cmd-margin-top').value   = g('comanda_margin_top','0');
+  if (el('cfg-cmd-margin-bot'))   el('cfg-cmd-margin-bot').value   = g('comanda_margin_bot','0');
+  if (el('cfg-cmd-item-space'))   el('cfg-cmd-item-space').value   = g('comanda_item_space','1');
+  if (el('cfg-cmd-font-marca'))   el('cfg-cmd-font-marca').value   = g('comanda_font_marca','bold');
+  if (el('cfg-cmd-font-orden'))   el('cfg-cmd-font-orden').value   = g('comanda_font_orden','double');
+  if (el('cfg-cmd-font-tipo'))    el('cfg-cmd-font-tipo').value    = g('comanda_font_tipo','bold');
+  if (el('cfg-cmd-font-items'))   el('cfg-cmd-font-items').value   = g('comanda_font_items','bold');
+  if (el('cfg-cmd-font-mods'))    el('cfg-cmd-font-mods').value    = g('comanda_font_mods','normal');
+  if (el('cfg-cmd-font-notas'))   el('cfg-cmd-font-notas').value   = g('comanda_font_notas','normal');
+
+  var titulos = el('cfg-cmd-titulos-grupos');
+  if (titulos) {
+    if (g('comanda_titulos_grupos','true') === 'false') titulos.classList.remove('on');
+    else titulos.classList.add('on');
+  }
+}
+
+async function saveComandaConfig() {
+  var el = function(id){ return document.getElementById(id); };
+  var v = function(id){ return el(id) ? el(id).value : ''; };
+  var tog = function(id){ var b=el(id); return b ? (b.classList.contains('on')?'true':'false') : 'true'; };
+
+  var fields = [
+    { key:'comanda_margin_top',      val: v('cfg-cmd-margin-top') },
+    { key:'comanda_margin_bot',      val: v('cfg-cmd-margin-bot') },
+    { key:'comanda_item_space',      val: v('cfg-cmd-item-space') },
+    { key:'comanda_font_marca',      val: v('cfg-cmd-font-marca') },
+    { key:'comanda_font_orden',      val: v('cfg-cmd-font-orden') },
+    { key:'comanda_font_tipo',       val: v('cfg-cmd-font-tipo') },
+    { key:'comanda_font_items',      val: v('cfg-cmd-font-items') },
+    { key:'comanda_font_mods',       val: v('cfg-cmd-font-mods') },
+    { key:'comanda_font_notas',      val: v('cfg-cmd-font-notas') },
+    { key:'comanda_titulos_grupos',  val: tog('cfg-cmd-titulos-grupos') },
+  ];
+
+  var ok = true;
+  for (var i=0; i<fields.length; i++) {
+    var f = fields[i];
+    // Try PATCH first
+    var r = await fetch(SB_URL + '/rest/v1/config?key=eq.' + f.key, {
+      method:'PATCH', headers:SB_H, body:JSON.stringify({ value: f.val })
+    });
+    // If 0 rows updated, POST (insert)
+    var body = await r.clone().json().catch(function(){ return []; });
+    if (Array.isArray(body) && body.length === 0) {
+      r = await fetch(SB_URL + '/rest/v1/config', {
+        method:'POST', headers:SB_H, body:JSON.stringify({ key: f.key, value: f.val })
+      });
+    }
+    if (!r.ok) ok = false;
+  }
+  toast(ok ? '✓ Comanda guardada' : '⚠ Error al guardar');
 }
 
 async function loadSucursalesConfig() {
@@ -3177,48 +3369,73 @@ async function saveSucursalesConfig() {
 }
 
 function renderTicketPreview() {
-  var get = function(k) { return allConfig[k] || ''; };
-  var logo = get('ticket_logo_texto') || 'LADY FRESA';
-  var slogan = get('ticket_slogan') || 'El sabor que te enamora';
-  var ig = get('ticket_instagram');
-  var web = get('ticket_web');
-  var wa = get('ticket_whatsapp');
-  var cierre = get('ticket_mensaje_cierre');
-  var rfc = get('ticket_rfc');
-  var qr = get('ticket_qr_texto');
-  var NL = '\n';
-  var divider = '--------------------------------';
-  var pad = function(str, len) { str = String(str); while(str.length < len) str = ' '+str; return str.substring(0,len); };
-  var center = function(str) { str = str.substring(0,32); var sp = Math.floor((32-str.length)/2); var s=''; for(var i=0;i<sp;i++) s+=' '; return (s+str).substring(0,32); };
+  const get = k => allConfig[k] || '';
+  const logo = get('ticket_logo_texto') || 'LADY FRESA';
+  const slogan = get('ticket_slogan') || 'El sabor que te enamora';
+  const ig = get('ticket_instagram');
+  const web = get('ticket_web');
+  const wa = get('ticket_whatsapp');
+  const cierre = get('ticket_mensaje_cierre');
+  const rfc = get('ticket_rfc');
+  const qr = get('ticket_qr_texto');
 
-  var preview = '';
-  preview += center(logo) + NL;
-  if (slogan) preview += center(slogan) + NL;
-  preview += divider + NL;
-  preview += 'Orden #001' + NL;
-  preview += '07 abr 14:22 - Andres' + NL;
-  preview += divider + NL;
-  preview += '1x Fresas                   $135' + NL;
-  preview += '  Mediano - Crema' + NL;
-  preview += '  + Oreo, Choco Chips' + NL;
-  preview += '1x La Pistachona            $189' + NL;
-  preview += divider + NL;
-  preview += 'Subtotal                    $324' + NL;
-  preview += 'IVA 16%                      $52' + NL;
-  preview += divider + NL;
-  preview += 'TOTAL                       $376' + NL;
-  preview += divider + NL;
-  preview += 'Pago: Efectivo' + NL;
-  preview += 'Con: $400 - Cambio: $24' + NL;
-  if (rfc) preview += 'RFC: ' + rfc + NL;
-  preview += divider + NL;
-  if (ig) preview += ig + NL;
-  if (wa) preview += 'WhatsApp: ' + wa + NL;
-  if (web) preview += web + NL;
-  if (qr) preview += '[QR] ' + qr + NL;
-  if (cierre) preview += NL + cierre + NL;
+  const divider = '─'.repeat(32);
+  let preview = '';
+  preview += logo.padStart(Math.floor((32+logo.length)/2)).padEnd(32) + '
+';
+  if (slogan) preview += slogan.substring(0,32).padStart(Math.floor((32+Math.min(slogan.length,32))/2)).padEnd(32) + '
+';
+  preview += divider + '
+';
+  preview += 'Orden #001
+';
+  preview += '07 abr · 14:22 · Andres
+';
+  preview += divider + '
+';
+  preview += '1x Fresas                   $135
+';
+  preview += '  Mediano · Crema
+';
+  preview += '  + Oreo, Choco Chips
+';
+  preview += '1x La Pistachona            $189
+';
+  preview += divider + '
+';
+  preview += 'Subtotal                    $324
+';
+  preview += 'IVA 16%                      $52
+';
+  preview += divider + '
+';
+  preview += 'TOTAL                       $376
+';
+  preview += divider + '
+';
+  preview += 'Pago: Efectivo
+';
+  preview += 'Con: $400 · Cambio: $24
+';
+  if (rfc) preview += '
+RFC: ' + rfc + '
+';
+  preview += divider + '
+';
+  if (ig) preview += ig + '
+';
+  if (wa) preview += 'WhatsApp: ' + wa + '
+';
+  if (web) preview += web + '
+';
+  if (qr) preview += '
+[QR] ' + qr + '
+';
+  if (cierre) preview += '
+' + cierre + '
+';
 
-  var el = document.getElementById('ticket-preview');
+  const el = document.getElementById('ticket-preview');
   if (el) el.textContent = preview;
 }
 
@@ -3388,7 +3605,7 @@ async function deleteGastoOperativo(id) {
 
 // ── REGISTRAR DESDE ENTRADAS PENDIENTES COMO GASTO ──
 function epSetMode(entradaId, mode) {
-  var invFields = document.querySelector('#page-entradas [id^="ep-ins-' + entradaId + '"]').closest('div[style*="grid"]');
+  var invFields = document.querySelector('#page-entradas [id^="ep-ins-' + entradaId + '"]')?.closest('div[style*="grid"]');
   var gastoFields = document.getElementById('ep-gasto-fields-' + entradaId);
   var infoBox = document.getElementById('ep-info-' + entradaId);
   var btnConfirm = document.getElementById('ep-btn-confirm-' + entradaId);
