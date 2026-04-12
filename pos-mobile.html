@@ -1005,11 +1005,11 @@ function closeCustom() { closeSheet('custom'); }
 // ORDER
 // ═══════════════════════════════
 function calcTotals() {
-  const sub = order.reduce((s,i)=>s+i.unitPrice*i.qty,0);
-  const desc = Math.round(sub*discount/100);
-  const after = sub - desc;
-  const iva = Math.round(after*0.16);
-  return { sub, desc, iva, total: after+iva };
+  var sub = order.reduce(function(s,i){return s+i.unitPrice*i.qty;},0);
+  var desc = Math.round(sub*discount/100);
+  var total = sub - desc;
+  var iva = Math.round(total - total/1.16); // IVA implícito (ya incluido)
+  return { sub: sub, desc: desc, iva: iva, total: total };
 }
 
 function renderOrderBar() {
@@ -1076,11 +1076,10 @@ function renderOrderItems() {
 
   // Totals
   const totEl = document.getElementById('order-totals');
-  totEl.innerHTML = `
-    <div class="ot-row"><span>Subtotal</span><span>$${sub}</span></div>
-    ${desc>0?`<div class="ot-row" style="color:var(--green)"><span>Descuento (${discount}%)</span><span>-$${desc}</span></div>`:''}
-    <div class="ot-row"><span>IVA 16%</span><span>$${iva}</span></div>
-    <div class="ot-row"><span>Total</span><span style="color:var(--red)">$${total.toLocaleString('es-MX',{minimumFractionDigits:2})}</span></div>`;
+  var descRow = desc>0 ? '<div class="ot-row" style="color:var(--green)"><span>Descuento ('+discount+'%)</span><span>-$'+desc+'</span></div>' : '';
+  totEl.innerHTML = descRow
+    + '<div class="ot-row" style="font-size:11px;color:var(--text-3);"><span>IVA incluido</span><span>$'+iva+'</span></div>'
+    + '<div class="ot-row"><span>Total</span><span style="color:var(--red)">$'+total.toLocaleString('es-MX',{minimumFractionDigits:2})+'</span></div>';
 
   document.getElementById('cobrar-btn').disabled = order.length === 0;
 }
