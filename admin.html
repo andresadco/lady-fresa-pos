@@ -1373,14 +1373,14 @@ async function loadUsuarios() {
 async function openModalUsuario(user=null) {
   editingUserId = user ? user.id : null;
   document.getElementById('modal-usuario-title').textContent = user ? 'Editar usuario' : 'Nuevo usuario';
-  document.getElementById('u-name').value = user?.name || '';
-  document.getElementById('u-pin').value = user?.pin || '';
-  document.getElementById('u-email').value = user?.email || '';
-  document.getElementById('u-role').value = user?.role || 'cajero';
+  document.getElementById('u-name').value = (user&&user.name) || '';
+  document.getElementById('u-pin').value = (user&&user.pin) || '';
+  document.getElementById('u-email').value = (user&&user.email) || '';
+  document.getElementById('u-role').value = (user&&user.role) || 'cajero';
 
   // Cargar sucursales en select
   const suc = await sbGet('sucursales','active=eq.true&select=name');
-  document.getElementById('u-sucursal').innerHTML = suc.map(s=>`<option value="${s.name}" ${user?.sucursal===s.name?'selected':''}>${s.name}</option>`).join('');
+  document.getElementById('u-sucursal').innerHTML = suc.map(s=>`<option value="${s.name}" ${(user&&user.sucursal)===s.name?'selected':''}>${s.name}</option>`).join('');
 
   document.getElementById('modal-usuario').classList.add('open');
 }
@@ -1434,9 +1434,9 @@ async function loadSucursales() {
 function openModalSucursal(suc=null) {
   editingSucId = suc ? suc.id : null;
   document.getElementById('modal-suc-title').textContent = suc ? 'Editar sucursal' : 'Nueva sucursal';
-  document.getElementById('s-name').value = suc?.name || '';
-  document.getElementById('s-dir').value = suc?.direccion || '';
-  document.getElementById('s-tel').value = suc?.telefono || '';
+  document.getElementById('s-name').value = (suc&&suc.name) || '';
+  document.getElementById('s-dir').value = (suc&&suc.direccion) || '';
+  document.getElementById('s-tel').value = (suc&&suc.telefono) || '';
   document.getElementById('modal-sucursal').classList.add('open');
 }
 
@@ -1497,15 +1497,15 @@ async function openModalProducto(id=null) {
   editingProdId = id;
 
   document.getElementById('modal-prod-title').textContent = p ? 'Editar producto' : 'Nuevo producto';
-  document.getElementById('p-id').value = p?.id || '';
-  document.getElementById('p-name').value = p?.name || '';
-  document.getElementById('p-price').value = p?.price || '';
-  document.getElementById('p-cat').value = p?.cat || 'Frutas';
-  document.getElementById('p-emoji').value = p?.emoji || '';
-  document.getElementById('p-desc').value = p?.desc || '';
+  document.getElementById('p-id').value = (p&&p.id) || '';
+  document.getElementById('p-name').value = (p&&p.name) || '';
+  document.getElementById('p-price').value = (p&&p.price) || '';
+  document.getElementById('p-cat').value = (p&&p.cat) || 'Frutas';
+  document.getElementById('p-emoji').value = (p&&p.emoji) || '';
+  document.getElementById('p-desc').value = (p&&p.desc) || '';
   const tog = document.getElementById('p-active-toggle');
-  tog.className = 'toggle ' + (p?.active !== false ? 'on' : '');
-  document.getElementById('p-active-label').textContent = p?.active !== false ? 'Producto activo' : 'Producto oculto';
+  tog.className = 'toggle ' + ((p&&p.active) !== false ? 'on' : '');
+  document.getElementById('p-active-label').textContent = (p&&p.active) !== false ? 'Producto activo' : 'Producto oculto';
 
   // Cargar grupos disponibles y cuáles ya tiene este producto
   try {
@@ -3131,18 +3131,18 @@ function openModalPromo(id=null) {
   const p = id ? allPromos.find(x=>x.id===id) : null;
   editingPromoId = id || null;
   document.getElementById('modal-promo-title').textContent = p ? 'Editar promoción' : 'Nueva promoción';
-  document.getElementById('promo-nombre').value = p?.nombre || '';
-  document.getElementById('promo-tipo').value = p?.tipo || 'porcentaje';
-  document.getElementById('promo-valor').value = p?.valor || '';
-  document.getElementById('promo-codigo').value = p?.codigo || '';
-  document.getElementById('promo-hora-ini').value = p?.hora_inicio || '';
-  document.getElementById('promo-hora-fin').value = p?.hora_fin || '';
-  document.getElementById('promo-fecha-ini').value = p?.fecha_inicio || '';
-  document.getElementById('promo-fecha-fin').value = p?.fecha_fin || '';
-  document.getElementById('promo-usos').value = p?.usos_max || '';
-  document.getElementById('promo-aplica').value = p?.aplica_a || 'todo';
-  document.getElementById('promo-desc').value = p?.descripcion || '';
-  document.getElementById('promo-activo-toggle').className = 'toggle ' + (p?.activo !== false ? 'on' : '');
+  document.getElementById('promo-nombre').value = (p&&p.nombre) || '';
+  document.getElementById('promo-tipo').value = (p&&p.tipo) || 'porcentaje';
+  document.getElementById('promo-valor').value = (p&&p.valor) || '';
+  document.getElementById('promo-codigo').value = (p&&p.codigo) || '';
+  document.getElementById('promo-hora-ini').value = (p&&p.hora_inicio) || '';
+  document.getElementById('promo-hora-fin').value = (p&&p.hora_fin) || '';
+  document.getElementById('promo-fecha-ini').value = (p&&p.fecha_inicio) || '';
+  document.getElementById('promo-fecha-fin').value = (p&&p.fecha_fin) || '';
+  document.getElementById('promo-usos').value = (p&&p.usos_max) || '';
+  document.getElementById('promo-aplica').value = (p&&p.aplica_a) || 'todo';
+  document.getElementById('promo-desc').value = (p&&p.descripcion) || '';
+  document.getElementById('promo-activo-toggle').className = 'toggle ' + ((p&&p.activo) !== false ? 'on' : '');
   onPromoTipoChange();
   document.getElementById('modal-promo').classList.add('open');
 }
@@ -3374,74 +3374,46 @@ async function saveSucursalesConfig() {
 }
 
 function renderTicketPreview() {
-  const get = k => allConfig[k] || '';
-  const logo = get('ticket_logo_texto') || 'LADY FRESA';
-  const slogan = get('ticket_slogan') || 'El sabor que te enamora';
-  const ig = get('ticket_instagram');
-  const web = get('ticket_web');
-  const wa = get('ticket_whatsapp');
-  const cierre = get('ticket_mensaje_cierre');
-  const rfc = get('ticket_rfc');
-  const qr = get('ticket_qr_texto');
+  var get = function(k) { return allConfig[k] || ''; };
+  var header = get('ticket_encabezado') || 'LADY FRESA';
+  var footer = get('ticket_pie_pagina') || '';
+  var ig = get('ticket_instagram');
+  var web = get('ticket_web');
+  var wa = get('ticket_whatsapp');
+  var rfc = get('ticket_rfc');
+  var qr = get('ticket_qr_texto');
+  var NL = '\n';
+  var D = '--------------------------------';
+  var pad = function(s,n){ s=String(s); while(s.length<n) s=' '+s; return s.substring(0,n); };
+  var ctr = function(s){ s=s.substring(0,32); var sp=Math.floor((32-s.length)/2); var r=''; for(var i=0;i<sp;i++) r+=' '; return (r+s).substring(0,32); };
 
-  const divider = '─'.repeat(32);
-  let preview = '';
-  preview += logo.padStart(Math.floor((32+logo.length)/2)).padEnd(32) + '
-';
-  if (slogan) preview += slogan.substring(0,32).padStart(Math.floor((32+Math.min(slogan.length,32))/2)).padEnd(32) + '
-';
-  preview += divider + '
-';
-  preview += 'Orden #001
-';
-  preview += '07 abr · 14:22 · Andres
-';
-  preview += divider + '
-';
-  preview += '1x Fresas                   $135
-';
-  preview += '  Mediano · Crema
-';
-  preview += '  + Oreo, Choco Chips
-';
-  preview += '1x La Pistachona            $189
-';
-  preview += divider + '
-';
-  preview += 'Subtotal                    $324
-';
-  preview += 'IVA 16%                      $52
-';
-  preview += divider + '
-';
-  preview += 'TOTAL                       $376
-';
-  preview += divider + '
-';
-  preview += 'Pago: Efectivo
-';
-  preview += 'Con: $400 · Cambio: $24
-';
-  if (rfc) preview += '
-RFC: ' + rfc + '
-';
-  preview += divider + '
-';
-  if (ig) preview += ig + '
-';
-  if (wa) preview += 'WhatsApp: ' + wa + '
-';
-  if (web) preview += web + '
-';
-  if (qr) preview += '
-[QR] ' + qr + '
-';
-  if (cierre) preview += '
-' + cierre + '
-';
+  var p = '';
+  header.split('\n').forEach(function(ln){ if(ln.trim()) p += ctr(ln) + NL; });
+  p += D + NL;
+  p += 'Orden #001' + NL;
+  p += '07 abr 14:22 - Andres' + NL;
+  p += D + NL;
+  p += '1x Fresas                   $135' + NL;
+  p += '  Mediano - Crema' + NL;
+  p += '  + Oreo, Choco Chips' + NL;
+  p += '1x La Pistachona            $189' + NL;
+  p += D + NL;
+  p += 'Subtotal                    $324' + NL;
+  p += 'IVA incluido                 $52' + NL;
+  p += D + NL;
+  p += 'TOTAL                       $324' + NL;
+  p += D + NL;
+  p += 'Pago: Efectivo' + NL;
+  if (rfc) p += 'RFC: ' + rfc + NL;
+  p += D + NL;
+  if (ig) p += ig + NL;
+  if (wa) p += 'WhatsApp: ' + wa + NL;
+  if (web) p += web + NL;
+  if (qr) p += '[QR] ' + qr + NL;
+  if (footer) { p += D + NL; footer.split('\n').forEach(function(ln){ if(ln.trim()) p += ctr(ln) + NL; }); }
 
-  const el = document.getElementById('ticket-preview');
-  if (el) el.textContent = preview;
+  var el = document.getElementById('ticket-preview');
+  if (el) el.textContent = p;
 }
 
 // ── HOOK loadPage para nuevas páginas ──
@@ -3610,7 +3582,7 @@ async function deleteGastoOperativo(id) {
 
 // ── REGISTRAR DESDE ENTRADAS PENDIENTES COMO GASTO ──
 function epSetMode(entradaId, mode) {
-  var invFields = document.querySelector('#page-entradas [id^="ep-ins-' + entradaId + '"]')?.closest('div[style*="grid"]');
+  var invFields = document.querySelector('#page-entradas [id^="ep-ins-' + entradaId + '"]').closest('div[style*="grid"]');
   var gastoFields = document.getElementById('ep-gasto-fields-' + entradaId);
   var infoBox = document.getElementById('ep-info-' + entradaId);
   var btnConfirm = document.getElementById('ep-btn-confirm-' + entradaId);
