@@ -944,11 +944,22 @@ function renderCustomBody() {
 function selSingle(modKey, val) { CS.sel[modKey] = val; renderCustomBody(); updateCustomPrice(); }
 
 function toggleTop(modKey, name) {
-  const mod = MODS[modKey]; if (!mod) return;
-  let arr = CS.sel[modKey] || [];
-  const cnt = arr.filter(x=>x===name).length;
-  if (cnt > 0) { const idx = arr.lastIndexOf(name); arr.splice(idx,1); }
-  else { if (arr.length >= mod.max) return; arr.push(name); }
+  var mod = MODS[modKey]; if (!mod) return;
+  var arr = CS.sel[modKey] || [];
+  var cnt = arr.filter(function(x){return x===name;}).length;
+  // If already selected: add one more (up to max), or if at max remove one
+  if (cnt > 0 && arr.length < mod.max) {
+    // Add another instance of same topping
+    arr.push(name);
+  } else if (cnt > 0) {
+    // At max — remove one instance
+    var idx = arr.lastIndexOf(name);
+    arr.splice(idx, 1);
+  } else {
+    // Not selected — add if space available
+    if (arr.length >= mod.max) return;
+    arr.push(name);
+  }
   CS.sel[modKey] = arr;
   renderCustomBody(); updateCustomPrice();
 }
