@@ -352,39 +352,24 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 
     <!-- MENÚ -->
     <div class="page" id="page-menu">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px;">
-        <div>
-          <div class="page-title">Menú</div>
-          <div class="page-sub">Productos y categorías</div>
+      <div class="page-title">Menú</div>
+      <div class="page-sub">Administra productos, precios y disponibilidad</div>
+      <div class="card">
+        <div class="card-title">
+          <span>Productos</span>
+          <button class="btn btn-primary btn-sm" onclick="openModalProducto()">+ Nuevo producto</button>
         </div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn btn-secondary btn-sm" onclick="setMenuTab('categorias')">🗂 Categorías</button>
-          <button class="btn btn-primary btn-sm" onclick="openModalProducto()">+ Producto</button>
-        </div>
-      </div>
-
-      <!-- Tabs -->
-      <div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:12px;">
-        <button class="btn btn-ghost btn-sm" id="menu-tab-productos" onclick="setMenuTab('productos',this)" style="background:var(--pink-light);color:var(--pink);">🍓 Productos</button>
-        <button class="btn btn-ghost btn-sm" id="menu-tab-categorias" onclick="setMenuTab('categorias',this)">🗂 Categorías</button>
-      </div>
-
-      <!-- Productos -->
-      <div id="menu-section-productos">
         <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;" id="menu-cat-filter">
           <button class="btn btn-secondary btn-sm active-cat" onclick="filterMenuCat('all',this)">Todos</button>
+          <button class="btn btn-secondary btn-sm" onclick="filterMenuCat('Frutas',this)">🍓 Frutas</button>
+          <button class="btn btn-secondary btn-sm" onclick="filterMenuCat('Especiales LFM',this)">⭐ Especiales</button>
+          <button class="btn btn-secondary btn-sm" onclick="filterMenuCat('Bebidas',this)">🥤 Bebidas</button>
         </div>
-        <div id="menu-grid" style="display:grid;gap:10px;"></div>
+        <div class="prod-grid" id="menu-grid"></div>
       </div>
+    </div>
 
-      <!-- Categorías -->
-      <div id="menu-section-categorias" style="display:none;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-          <div style="font-size:13px;color:var(--text-2);">Arrastra para reordenar</div>
-          <button class="btn btn-primary btn-sm" onclick="openModalCategoria()">+ Nueva categoría</button>
-        </div>
-        <div id="categorias-list" style="display:grid;gap:8px;"></div>
-      </div>
+
     <!-- INVENTARIO - INSUMOS -->
     <div class="page" id="page-inventario">
       <div class="page-title">Insumos</div>
@@ -892,41 +877,6 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
   </div>
 </div>
 
-<!-- MODAL CATEGORIA -->
-<div class="modal-overlay" id="modal-categoria">
-  <div class="modal-box" style="max-width:420px;">
-    <div class="modal-title" id="modal-cat-title">Nueva categoría</div>
-    <div class="form-grid">
-      <div class="form-group full">
-        <label class="form-label">Nombre</label>
-        <input class="form-input" id="cat-nombre" placeholder="Ej: Especiales, Bebidas...">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Emoji / Icono</label>
-        <input class="form-input" id="cat-emoji" placeholder="🍓" maxlength="4" style="font-size:22px;text-align:center;">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Color</label>
-        <input type="color" class="form-input" id="cat-color" value="#A6182E" style="height:42px;padding:4px;">
-      </div>
-      <div class="form-group full">
-        <label class="form-label">Descripción (opcional)</label>
-        <input class="form-input" id="cat-desc" placeholder="Descripción breve...">
-      </div>
-      <div class="form-group full">
-        <div class="toggle-wrap">
-          <button class="toggle on" id="cat-activo-toggle" onclick="this.classList.toggle('on')"></button>
-          <span class="toggle-label">Categoría activa</span>
-        </div>
-      </div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeModal('modal-categoria')">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveCategoria()">Guardar</button>
-    </div>
-  </div>
-</div>
-
 <!-- MODAL PROMOCION -->
 <div class="modal-overlay" id="modal-promo">
   <div class="modal-box" style="max-width:520px;">
@@ -1089,9 +1039,9 @@ function logout() {
 
 // ── NAV ──
 function goPage(page, btn) {
-  document.querySelectorAll('.nav-item').forEach(function(b){ b.classList.remove('active'); });
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   loadPage(page);
 }
@@ -1112,7 +1062,7 @@ async function loadPage(page) {
 }
 
 // ── SUPABASE HELPERS ──
-async function sbGet(table, query) { query = query || '';
+async function sbGet(table, query='') {
   const res = await fetch(`${SB_URL}/rest/v1/${table}?${query}`, { headers: { apikey:SB_KEY, Authorization:'Bearer '+SB_KEY } });
   return res.json();
 }
@@ -1127,7 +1077,7 @@ async function sbPatch(table, id, data) {
 
 function toast(msg) {
   const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show');
-  setTimeout(function(){el.classList.remove('show'), 2500);
+  setTimeout(()=>el.classList.remove('show'), 2500);
 }
 function fmt(n) { return '$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2}); }
 
@@ -1164,8 +1114,7 @@ async function loadOverview() {
     : mesLabel;
 
   // Load all data in parallel
-  var _allData = await Promise.all([
-
+  var [ordersHoy, ordensMes, turnos, insumos, movsMes, gastosMes, recetas, entradasConf] = await Promise.all([
     sbGet('orders', 'created_at=gte.' + todayISO + 'T00:00:00&select=total,sucursal'),
     sbGet('orders', 'created_at=gte.' + mesInicio + 'T00:00:00&created_at=lte.' + mesFin + 'T23:59:59&select=total,sucursal'),
     sbGet('turnos', 'order=created_at.desc&limit=5&select=*'),
@@ -1175,14 +1124,6 @@ async function loadOverview() {
     sbGet('recetas', 'select=producto_nombre,tipo_componente,insumo_id,cantidad,unidad_uso,modificador_opcion'),
     appGet('gastos', 'fecha=gte.' + mesInicio + '&fecha=lte.' + mesFin + '&select=monto,concepto,cat,fecha,quien'),
   ]);
-  var ordersHoy = _allData[0];
-  var ordensMes = _allData[1];
-  var turnos = _allData[2];
-  var insumos = _allData[3];
-  var movsMes = _allData[4];
-  var gastosMes = _allData[5];
-  var recetas = _allData[6];
-  var entradasConf = _allData[7];
 
   var insArr   = Array.isArray(insumos)      ? insumos      : [];
   var movArr   = Array.isArray(movsMes)      ? movsMes      : [];
@@ -1415,7 +1356,7 @@ async function loadUsuarios() {
   const roleClr = { cajero:'badge-cajero', encargado:'badge-encargado', gerente:'badge-gerente', admin:'badge-admin' };
   document.getElementById('tbody-usuarios').innerHTML = !users.length ?
     '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-3);">Sin usuarios</td></tr>' :
-    users.map(function(u){return `<tr>
+    users.map(u=>`<tr>
       <td><div style="display:flex;align-items:center;gap:8px;"><div class="user-av" style="width:28px;height:28px;font-size:11px;">${u.name.charAt(0)}</div><span style="font-weight:500;">${u.name}</span></div></td>
       <td style="color:var(--text-3)">${u.email||'—'}</td>
       <td><code style="background:var(--bg);padding:2px 8px;border-radius:4px;font-size:12px;">${u.pin}</code></td>
@@ -1439,7 +1380,7 @@ async function openModalUsuario(user=null) {
 
   // Cargar sucursales en select
   const suc = await sbGet('sucursales','active=eq.true&select=name');
-  document.getElementById('u-sucursal').innerHTML = suc.map(function(s){return `<option value="${s.name}" ${(user&&user.sucursal)===s.name?'selected':''}>${s.name}</option>`).join('');
+  document.getElementById('u-sucursal').innerHTML = suc.map(s=>`<option value="${s.name}" ${(user&&user.sucursal)===s.name?'selected':''}>${s.name}</option>`).join('');
 
   document.getElementById('modal-usuario').classList.add('open');
 }
@@ -1478,7 +1419,7 @@ async function loadSucursales() {
   allSucursales = Array.isArray(suc) ? suc : [];
   document.getElementById('tbody-sucursales').innerHTML = !suc.length ?
     '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text-3);">Sin sucursales</td></tr>' :
-    suc.map(function(s){return `<tr>
+    suc.map(s=>`<tr>
       <td style="font-weight:500;">🏪 ${s.name}</td>
       <td style="color:var(--text-3)">${s.direccion||'—'}</td>
       <td style="color:var(--text-3)">${s.telefono||'—'}</td>
@@ -1519,7 +1460,7 @@ let todosGrupos = [];
 
 function filterMenuCat(cat, btn) {
   menuCatFilter = cat;
-  document.querySelectorAll('#menu-cat-filter .btn').forEach(function(b){return b.classList.remove('active-cat'));
+  document.querySelectorAll('#menu-cat-filter .btn').forEach(b=>b.classList.remove('active-cat'));
   btn.classList.add('active-cat');
   renderMenu();
 }
@@ -1527,68 +1468,33 @@ function filterMenuCat(cat, btn) {
 async function renderMenu() {
   // Cargar productos desde Supabase
   try {
-    var prods = await sbGet('productos', 'order=orden.asc&select=*');
-    productsData = prods.map(function(p) {
-      return { id:p.id, name:p.nombre, cat:p.categoria, price:p.precio, emoji:p.emoji, desc:p.descripcion, active:p.activo };
-    });
+    const prods = await sbGet('productos', 'order=orden.asc&select=*');
+    productsData = prods.map(p => ({
+      id: p.id, name: p.nombre, cat: p.categoria, price: p.precio,
+      emoji: p.emoji, desc: p.descripcion, active: p.activo
+    }));
   } catch(e) { toast('Error cargando productos'); return; }
 
-  // Build cat filter from DB categories + product categories
-  var filterEl = document.getElementById('menu-cat-filter');
-  if (filterEl) {
-    var catsFromDB = todasCategorias.filter(function(c){return c.activo;}).map(function(c){return c.nombre;});
-    var catsFromProds = productsData.map(function(p){return p.cat;}).filter(function(c,i,a){return c && a.indexOf(c)===i;});
-    var allCats = catsFromDB.concat(catsFromProds.filter(function(c){return catsFromDB.indexOf(c)<0;}));
-    
-    var btns = '<button class="btn btn-secondary btn-sm active-cat" onclick="filterMenuCat('all',this)">Todos</button>';
-    allCats.forEach(function(cat) {
-      var dbCat = todasCategorias.find(function(c){return c.nombre===cat;});
-      var emoji = dbCat ? (dbCat.emoji||'') : '';
-      btns += '<button class="btn btn-secondary btn-sm" onclick="filterMenuCat('' + cat + '',this)">' + emoji + ' ' + cat + '</button>';
-    });
-    filterEl.innerHTML = btns;
-  }
-
-  var filtered = productsData.filter(function(p){ return menuCatFilter==='all' || p.cat===menuCatFilter; });
-  
-  if (!filtered.length) {
-    document.getElementById('menu-grid').innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-3);">Sin productos en esta categoría</div>';
-    return;
-  }
-
-  document.getElementById('menu-grid').innerHTML = filtered.map(function(p) {
-    return '<div class="prod-admin-card ' + (p.active?'':'inactive') + '">'
-      + '<div class="prod-admin-header">'
-      + '<div class="prod-admin-emoji">' + (p.emoji||'🍓') + '</div>'
-      + '<div><div class="prod-admin-name">' + p.name + '</div><div class="prod-admin-cat">' + p.cat + '</div></div>'
-      + '</div>'
-      + '<div class="prod-admin-price">$' + p.price + '</div>'
-      + '<div style="font-size:11px;color:var(--text-3);line-height:1.4;margin-bottom:8px;">' + (p.desc||'') + '</div>'
-      + '<div class="prod-admin-actions">'
-      + '<button class="btn btn-secondary btn-sm" style="flex:1" onclick="openModalProducto(' + p.id + ')">✏️ Editar</button>'
-      + '<button class="btn btn-sm ' + (p.active?'btn-danger':'btn-secondary') + '" onclick="toggleProducto(' + p.id + ',' + p.active + ')">' + (p.active?'Ocultar':'Mostrar') + '</button>'
-      + '<button class="btn btn-sm btn-danger" onclick="eliminarProductoById(' + p.id + ')" title="Eliminar">🗑</button>'
-      + '</div>'
-      + '</div>';
-  }).join('');
+  const filtered = productsData.filter(p => menuCatFilter==='all' || p.cat===menuCatFilter);
+  document.getElementById('menu-grid').innerHTML = filtered.map(p=>`
+    <div class="prod-admin-card ${p.active?'':'inactive'}">
+      <div class="prod-admin-header">
+        <div class="prod-admin-emoji">${p.emoji}</div>
+        <div><div class="prod-admin-name">${p.name}</div><div class="prod-admin-cat">${p.cat}</div></div>
+      </div>
+      <div class="prod-admin-price">$${p.price}</div>
+      <div style="font-size:11px;color:var(--text-3);line-height:1.4;margin-bottom:8px;">${p.desc||''}</div>
+      <div class="prod-admin-actions">
+        <button class="btn btn-secondary btn-sm" style="flex:1" onclick="openModalProducto(${p.id})">✏️ Editar</button>
+        <button class="btn btn-sm ${p.active?'btn-danger':'btn-secondary'}" onclick="toggleProducto(${p.id},${p.active})">${p.active?'Ocultar':'Mostrar'}</button>
+        <button class="btn btn-sm btn-danger" onclick="eliminarProductoById(${p.id})" title="Eliminar">🗑</button>
+      </div>
+    </div>`).join('');
 }
 
-async async function openModalProducto(id) {
-  id = id || null;
-  var p = id ? productsData.find(function(x){return x.id===id;}) : null;
+async function openModalProducto(id=null) {
+  const p = id ? productsData.find(x=>x.id===id) : null;
   editingProdId = id;
-  
-  // Populate category select from DB
-  var catSel = document.getElementById('p-cat');
-  if (catSel) {
-    var cats = todasCategorias.length ? todasCategorias.filter(function(c){return c.activo;}) : [];
-    // Also add cats from products not in DB
-    var prodCats = productsData.map(function(x){return x.cat;}).filter(function(c,i,a){return c&&a.indexOf(c)===i;});
-    var allCatNames = cats.map(function(c){return c.nombre;});
-    prodCats.forEach(function(c){ if(allCatNames.indexOf(c)<0) allCatNames.push(c); });
-    catSel.innerHTML = allCatNames.map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('');
-    if (!catSel.innerHTML) catSel.innerHTML = '<option value="Frutas">Frutas</option><option value="Especiales LFM">Especiales LFM</option><option value="Bebidas">Bebidas</option>';
-  }
 
   document.getElementById('modal-prod-title').textContent = p ? 'Editar producto' : 'Nuevo producto';
   document.getElementById('p-id').value = (p&&p.id) || '';
@@ -1609,9 +1515,9 @@ async async function openModalProducto(id) {
     let gruposDelProd = [];
     if (id) {
       const pm = await sbGet('productos_modificadores', `producto_id=eq.${id}&select=grupo_id`);
-      gruposDelProd = pm.map(function(x){return x.grupo_id);
+      gruposDelProd = pm.map(x => x.grupo_id);
     }
-    document.getElementById('p-mods-checks').innerHTML = todosGrupos.map(function(g){return `
+    document.getElementById('p-mods-checks').innerHTML = todosGrupos.map(g => `
       <label style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--border-2);border-radius:8px;cursor:pointer;font-size:12px;background:${gruposDelProd.includes(g.id)?'var(--pink-light)':'white'};">
         <input type="checkbox" value="${g.id}" ${gruposDelProd.includes(g.id)?'checked':''} 
           onchange="this.closest('label').style.background=this.checked?'var(--pink-light)':'white'"
@@ -1644,7 +1550,7 @@ async function saveProducto() {
 
   // Obtener grupos seleccionados
   const checks = document.querySelectorAll('#p-mods-checks input[type=checkbox]');
-  const gruposSeleccionados = [...checks].filter(function(c){return c.checked).map(function(c){return parseInt(c.value));
+  const gruposSeleccionados = [...checks].filter(c=>c.checked).map(c=>parseInt(c.value));
 
   try {
     let prodId = editingProdId;
@@ -1653,7 +1559,7 @@ async function saveProducto() {
       toast('✓ Producto actualizado');
     } else {
       const res = await sbPost('productos', { ...data, orden: productsData.length + 1 });
-      var _cr = await res.json(); var created = Array.isArray(_cr) ? _cr[0] : _cr;
+      const [created] = await res.json();
       prodId = created.id;
       toast('✓ Producto creado');
     }
@@ -1664,7 +1570,7 @@ async function saveProducto() {
     });
     if (gruposSeleccionados.length) {
       await sbPost('productos_modificadores',
-        gruposSeleccionados.map(function(gid,i){ return ({ producto_id: prodId, grupo_id: gid, orden: i+1 }))
+        gruposSeleccionados.map((gid, i) => ({ producto_id: prodId, grupo_id: gid, orden: i+1 }))
       );
     }
 
@@ -1701,7 +1607,7 @@ async function loadTurnos() {
   const turnos = await sbGet('turnos','order=created_at.desc&limit=50&select=*');
   document.getElementById('tbody-turnos').innerHTML = !turnos.length ?
     '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-3);">Sin turnos cerrados aún</td></tr>' :
-    turnos.map(function(t){return `<tr>
+    turnos.map(t=>`<tr>
       <td>${new Date(t.cerrado_at||t.created_at).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</td>
       <td style="font-weight:500;">${t.cajero_name||'—'}</td>
       <td>${t.sucursal||'Principal'}</td>
@@ -1716,7 +1622,7 @@ async function loadTurnos() {
 // ── CONFIG ──
 async function loadConfig() {
   const cfg = await sbGet('config','order=id.asc&select=*');
-  document.getElementById('config-rows').innerHTML = cfg.map(function(c){return `
+  document.getElementById('config-rows').innerHTML = cfg.map(c=>`
     <div class="config-row">
       <div class="config-info">
         <div class="config-key">${c.key.split('_').join(' ')}</div>
@@ -1740,8 +1646,8 @@ async function saveConfig() {
 
 // ── MODALS ──
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('.modal-overlay').forEach(function(ov){return {
-  ov.addEventListener('click', function(e){ if(e.target===ov) ov.classList.remove('open'); });
+document.querySelectorAll('.modal-overlay').forEach(ov => {
+  ov.addEventListener('click', e => { if(e.target===ov) ov.classList.remove('open'); });
 });
 
 // ═══════════════════════════════════════════════════
@@ -1758,9 +1664,9 @@ async function loadModificadores() {
     const oRes = await fetch(SB_URL + '/rest/v1/modificadores_opciones?order=orden.asc&select=*', { headers: SB_H });
     const opciones = oRes.ok ? await oRes.json() : [];
     // Agrupar
-    gruposData = grupos.map(function(g){return ({
+    gruposData = grupos.map(g => ({
       ...g,
-      opciones: opciones.filter(function(o){return o.grupo_id === g.id)
+      opciones: opciones.filter(o => o.grupo_id === g.id)
     }));
     renderGrupos();
   } catch(e) {
@@ -1775,7 +1681,7 @@ function renderGrupos() {
     return;
   }
 
-  container.innerHTML = gruposData.map(function(g){return `
+  container.innerHTML = gruposData.map(g => `
     <div class="card" style="margin-bottom:16px;">
       <div class="card-title" style="margin-bottom:12px;">
         <div style="display:flex;align-items:center;gap:10px;">
@@ -1798,7 +1704,7 @@ function renderGrupos() {
         </div>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;">
-        ${g.opciones.length ? g.opciones.map(function(o){return `
+        ${g.opciones.length ? g.opciones.map(o => `
           <div style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--border-2);border-radius:8px;background:${o.activo?'white':'var(--bg)'};opacity:${o.activo?1:0.5};">
             <span style="font-size:13px;font-weight:500;color:var(--text);">${o.nombre}</span>
             ${o.precio_extra > 0 ? `<span style="font-size:11px;color:var(--green);font-weight:600;">+$${o.precio_extra}</span>` : '<span style="font-size:11px;color:var(--text-3);">gratis</span>'}
@@ -1823,7 +1729,7 @@ function openModalGrupo() {
 }
 
 function openModalGrupoEdit(id) {
-  const g = gruposData.find(function(x){return x.id === id);
+  const g = gruposData.find(x => x.id === id);
   if (!g) return;
   document.getElementById('modal-grupo-title').textContent = 'Editar grupo';
   document.getElementById('g-id').value = g.id;
@@ -1889,7 +1795,7 @@ function openModalOpcionEdit(id, grupoId, nombre, precio) {
 async function saveOpcion() {
   const id = document.getElementById('op-id').value;
   const grupoId = document.getElementById('op-grupo-id').value;
-  const grupo = gruposData.find(function(g){return g.id == grupoId);
+  const grupo = gruposData.find(g => g.id == grupoId);
   const payload = {
     grupo_id: parseInt(grupoId),
     nombre: document.getElementById('op-nombre').value.trim(),
@@ -1939,7 +1845,7 @@ async function eliminarOpcion(id, nombre, grupoId) {
 }
 
 // Cargar modificadores cuando se va a esa página — hook sin recursión
-document.querySelectorAll('.nav-item').forEach(function(btn){return {
+document.querySelectorAll('.nav-item').forEach(btn => {
   const orig = btn.getAttribute('onclick');
   if (orig && orig.includes("'modificadores'")) {
     btn.setAttribute('onclick', "goPage('modificadores',this);loadModificadores()");
@@ -2091,19 +1997,6 @@ function getConvFactor(from,to){var g={kg:1000,g:1,gr:1},m={l:1000,ml:1};return(
 
     <!-- Info costo -->
     <div id="rec-equiv-info" style="font-size:12px;padding:10px;background:var(--bg);border-radius:8px;color:var(--text-3);line-height:1.8;margin-bottom:16px;">
-      Selecciona insumo y cantidad
-    </div>
-
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeModal('modal-receta')">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveReceta()">Guardar</button>
-    </div>
-  </div>
-</div>
-
-</div>
-
-<script>
       Selecciona insumo y cantidad
     </div>
 
@@ -3235,7 +3128,7 @@ function onPromoTipoChange() {
 }
 
 function openModalPromo(id) { id = id || null;
-  var p = id ? allPromos.find(function(x){return x.id===id;}) : null;
+  const p = id ? allPromos.find(x=>x.id===id) : null;
   editingPromoId = id || null;
   document.getElementById('modal-promo-title').textContent = p ? 'Editar promoción' : 'Nueva promoción';
   document.getElementById('promo-nombre').value = (p&&p.nombre) || '';
@@ -3451,7 +3344,7 @@ async function loadSucursalesConfig() {
   });
   const cfg = await res.json();
   const cfgMap = {};
-  cfg.forEach(function(c){return cfgMap[c.key] = c.value);
+  cfg.forEach(c => cfgMap[c.key] = c.value);
 
   const SUC_FIELDS = [
     { key:'suc_balbuena_direccion', label:'Balbuena — Dirección', type:'text', hint:'Calle, número, colonia' },
