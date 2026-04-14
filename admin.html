@@ -352,24 +352,39 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 
     <!-- MENÚ -->
     <div class="page" id="page-menu">
-      <div class="page-title">Menú</div>
-      <div class="page-sub">Administra productos, precios y disponibilidad</div>
-      <div class="card">
-        <div class="card-title">
-          <span>Productos</span>
-          <button class="btn btn-primary btn-sm" onclick="openModalProducto()">+ Nuevo producto</button>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px;">
+        <div>
+          <div class="page-title">Menú</div>
+          <div class="page-sub">Productos y categorías</div>
         </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-secondary btn-sm" onclick="setMenuTab('categorias')">🗂 Categorías</button>
+          <button class="btn btn-primary btn-sm" onclick="openModalProducto()">+ Producto</button>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:12px;">
+        <button class="btn btn-ghost btn-sm" id="menu-tab-productos" onclick="setMenuTab('productos',this)" style="background:var(--pink-light);color:var(--pink);">🍓 Productos</button>
+        <button class="btn btn-ghost btn-sm" id="menu-tab-categorias" onclick="setMenuTab('categorias',this)">🗂 Categorías</button>
+      </div>
+
+      <!-- Productos -->
+      <div id="menu-section-productos">
         <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;" id="menu-cat-filter">
           <button class="btn btn-secondary btn-sm active-cat" onclick="filterMenuCat('all',this)">Todos</button>
-          <button class="btn btn-secondary btn-sm" onclick="filterMenuCat('Frutas',this)">🍓 Frutas</button>
-          <button class="btn btn-secondary btn-sm" onclick="filterMenuCat('Especiales LFM',this)">⭐ Especiales</button>
-          <button class="btn btn-secondary btn-sm" onclick="filterMenuCat('Bebidas',this)">🥤 Bebidas</button>
         </div>
-        <div class="prod-grid" id="menu-grid"></div>
+        <div id="menu-grid" style="display:grid;gap:10px;"></div>
       </div>
-    </div>
 
-
+      <!-- Categorías -->
+      <div id="menu-section-categorias" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <div style="font-size:13px;color:var(--text-2);">Arrastra para reordenar</div>
+          <button class="btn btn-primary btn-sm" onclick="openModalCategoria()">+ Nueva categoría</button>
+        </div>
+        <div id="categorias-list" style="display:grid;gap:8px;"></div>
+      </div>
     <!-- INVENTARIO - INSUMOS -->
     <div class="page" id="page-inventario">
       <div class="page-title">Insumos</div>
@@ -873,6 +888,41 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('modal-opcion')">Cancelar</button>
       <button class="btn btn-primary" onclick="saveOpcion()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CATEGORIA -->
+<div class="modal-overlay" id="modal-categoria">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-title" id="modal-cat-title">Nueva categoría</div>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label class="form-label">Nombre</label>
+        <input class="form-input" id="cat-nombre" placeholder="Ej: Especiales, Bebidas...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Emoji / Icono</label>
+        <input class="form-input" id="cat-emoji" placeholder="🍓" maxlength="4" style="font-size:22px;text-align:center;">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Color</label>
+        <input type="color" class="form-input" id="cat-color" value="#A6182E" style="height:42px;padding:4px;">
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Descripción (opcional)</label>
+        <input class="form-input" id="cat-desc" placeholder="Descripción breve...">
+      </div>
+      <div class="form-group full">
+        <div class="toggle-wrap">
+          <button class="toggle on" id="cat-activo-toggle" onclick="this.classList.toggle('on')"></button>
+          <span class="toggle-label">Categoría activa</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-categoria')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCategoria()">Guardar</button>
     </div>
   </div>
 </div>
@@ -1468,33 +1518,68 @@ function filterMenuCat(cat, btn) {
 async function renderMenu() {
   // Cargar productos desde Supabase
   try {
-    const prods = await sbGet('productos', 'order=orden.asc&select=*');
-    productsData = prods.map(p => ({
-      id: p.id, name: p.nombre, cat: p.categoria, price: p.precio,
-      emoji: p.emoji, desc: p.descripcion, active: p.activo
-    }));
+    var prods = await sbGet('productos', 'order=orden.asc&select=*');
+    productsData = prods.map(function(p) {
+      return { id:p.id, name:p.nombre, cat:p.categoria, price:p.precio, emoji:p.emoji, desc:p.descripcion, active:p.activo };
+    });
   } catch(e) { toast('Error cargando productos'); return; }
 
-  const filtered = productsData.filter(p => menuCatFilter==='all' || p.cat===menuCatFilter);
-  document.getElementById('menu-grid').innerHTML = filtered.map(p=>`
-    <div class="prod-admin-card ${p.active?'':'inactive'}">
-      <div class="prod-admin-header">
-        <div class="prod-admin-emoji">${p.emoji}</div>
-        <div><div class="prod-admin-name">${p.name}</div><div class="prod-admin-cat">${p.cat}</div></div>
-      </div>
-      <div class="prod-admin-price">$${p.price}</div>
-      <div style="font-size:11px;color:var(--text-3);line-height:1.4;margin-bottom:8px;">${p.desc||''}</div>
-      <div class="prod-admin-actions">
-        <button class="btn btn-secondary btn-sm" style="flex:1" onclick="openModalProducto(${p.id})">✏️ Editar</button>
-        <button class="btn btn-sm ${p.active?'btn-danger':'btn-secondary'}" onclick="toggleProducto(${p.id},${p.active})">${p.active?'Ocultar':'Mostrar'}</button>
-        <button class="btn btn-sm btn-danger" onclick="eliminarProductoById(${p.id})" title="Eliminar">🗑</button>
-      </div>
-    </div>`).join('');
+  // Build cat filter from DB categories + product categories
+  var filterEl = document.getElementById('menu-cat-filter');
+  if (filterEl) {
+    var catsFromDB = todasCategorias.filter(function(c){return c.activo;}).map(function(c){return c.nombre;});
+    var catsFromProds = productsData.map(function(p){return p.cat;}).filter(function(c,i,a){return c && a.indexOf(c)===i;});
+    var allCats = catsFromDB.concat(catsFromProds.filter(function(c){return catsFromDB.indexOf(c)<0;}));
+    
+    var btns = '<button class="btn btn-secondary btn-sm active-cat" onclick="filterMenuCat('all',this)">Todos</button>';
+    allCats.forEach(function(cat) {
+      var dbCat = todasCategorias.find(function(c){return c.nombre===cat;});
+      var emoji = dbCat ? (dbCat.emoji||'') : '';
+      btns += '<button class="btn btn-secondary btn-sm" onclick="filterMenuCat('' + cat + '',this)">' + emoji + ' ' + cat + '</button>';
+    });
+    filterEl.innerHTML = btns;
+  }
+
+  var filtered = productsData.filter(function(p){ return menuCatFilter==='all' || p.cat===menuCatFilter; });
+  
+  if (!filtered.length) {
+    document.getElementById('menu-grid').innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-3);">Sin productos en esta categoría</div>';
+    return;
+  }
+
+  document.getElementById('menu-grid').innerHTML = filtered.map(function(p) {
+    return '<div class="prod-admin-card ' + (p.active?'':'inactive') + '">'
+      + '<div class="prod-admin-header">'
+      + '<div class="prod-admin-emoji">' + (p.emoji||'🍓') + '</div>'
+      + '<div><div class="prod-admin-name">' + p.name + '</div><div class="prod-admin-cat">' + p.cat + '</div></div>'
+      + '</div>'
+      + '<div class="prod-admin-price">$' + p.price + '</div>'
+      + '<div style="font-size:11px;color:var(--text-3);line-height:1.4;margin-bottom:8px;">' + (p.desc||'') + '</div>'
+      + '<div class="prod-admin-actions">'
+      + '<button class="btn btn-secondary btn-sm" style="flex:1" onclick="openModalProducto(' + p.id + ')">✏️ Editar</button>'
+      + '<button class="btn btn-sm ' + (p.active?'btn-danger':'btn-secondary') + '" onclick="toggleProducto(' + p.id + ',' + p.active + ')">' + (p.active?'Ocultar':'Mostrar') + '</button>'
+      + '<button class="btn btn-sm btn-danger" onclick="eliminarProductoById(' + p.id + ')" title="Eliminar">🗑</button>'
+      + '</div>'
+      + '</div>';
+  }).join('');
 }
 
-async function openModalProducto(id=null) {
-  const p = id ? productsData.find(x=>x.id===id) : null;
+async async function openModalProducto(id) {
+  id = id || null;
+  var p = id ? productsData.find(function(x){return x.id===id;}) : null;
   editingProdId = id;
+  
+  // Populate category select from DB
+  var catSel = document.getElementById('p-cat');
+  if (catSel) {
+    var cats = todasCategorias.length ? todasCategorias.filter(function(c){return c.activo;}) : [];
+    // Also add cats from products not in DB
+    var prodCats = productsData.map(function(x){return x.cat;}).filter(function(c,i,a){return c&&a.indexOf(c)===i;});
+    var allCatNames = cats.map(function(c){return c.nombre;});
+    prodCats.forEach(function(c){ if(allCatNames.indexOf(c)<0) allCatNames.push(c); });
+    catSel.innerHTML = allCatNames.map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('');
+    if (!catSel.innerHTML) catSel.innerHTML = '<option value="Frutas">Frutas</option><option value="Especiales LFM">Especiales LFM</option><option value="Bebidas">Bebidas</option>';
+  }
 
   document.getElementById('modal-prod-title').textContent = p ? 'Editar producto' : 'Nuevo producto';
   document.getElementById('p-id').value = (p&&p.id) || '';
