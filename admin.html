@@ -1089,9 +1089,9 @@ function logout() {
 
 // ── NAV ──
 function goPage(page, btn) {
-  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(function(b){return b.classList.remove('active'));
   btn.classList.add('active');
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(function(p){return p.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   loadPage(page);
 }
@@ -1127,7 +1127,7 @@ async function sbPatch(table, id, data) {
 
 function toast(msg) {
   const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show');
-  setTimeout(()=>el.classList.remove('show'), 2500);
+  setTimeout(function(){el.classList.remove('show'), 2500);
 }
 function fmt(n) { return '$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2}); }
 
@@ -1415,7 +1415,7 @@ async function loadUsuarios() {
   const roleClr = { cajero:'badge-cajero', encargado:'badge-encargado', gerente:'badge-gerente', admin:'badge-admin' };
   document.getElementById('tbody-usuarios').innerHTML = !users.length ?
     '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-3);">Sin usuarios</td></tr>' :
-    users.map(u=>`<tr>
+    users.map(function(u){return `<tr>
       <td><div style="display:flex;align-items:center;gap:8px;"><div class="user-av" style="width:28px;height:28px;font-size:11px;">${u.name.charAt(0)}</div><span style="font-weight:500;">${u.name}</span></div></td>
       <td style="color:var(--text-3)">${u.email||'—'}</td>
       <td><code style="background:var(--bg);padding:2px 8px;border-radius:4px;font-size:12px;">${u.pin}</code></td>
@@ -1439,7 +1439,7 @@ async function openModalUsuario(user=null) {
 
   // Cargar sucursales en select
   const suc = await sbGet('sucursales','active=eq.true&select=name');
-  document.getElementById('u-sucursal').innerHTML = suc.map(s=>`<option value="${s.name}" ${(user&&user.sucursal)===s.name?'selected':''}>${s.name}</option>`).join('');
+  document.getElementById('u-sucursal').innerHTML = suc.map(function(s){return `<option value="${s.name}" ${(user&&user.sucursal)===s.name?'selected':''}>${s.name}</option>`).join('');
 
   document.getElementById('modal-usuario').classList.add('open');
 }
@@ -1478,7 +1478,7 @@ async function loadSucursales() {
   allSucursales = Array.isArray(suc) ? suc : [];
   document.getElementById('tbody-sucursales').innerHTML = !suc.length ?
     '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text-3);">Sin sucursales</td></tr>' :
-    suc.map(s=>`<tr>
+    suc.map(function(s){return `<tr>
       <td style="font-weight:500;">🏪 ${s.name}</td>
       <td style="color:var(--text-3)">${s.direccion||'—'}</td>
       <td style="color:var(--text-3)">${s.telefono||'—'}</td>
@@ -1519,7 +1519,7 @@ let todosGrupos = [];
 
 function filterMenuCat(cat, btn) {
   menuCatFilter = cat;
-  document.querySelectorAll('#menu-cat-filter .btn').forEach(b=>b.classList.remove('active-cat'));
+  document.querySelectorAll('#menu-cat-filter .btn').forEach(function(b){return b.classList.remove('active-cat'));
   btn.classList.add('active-cat');
   renderMenu();
 }
@@ -1609,9 +1609,9 @@ async async function openModalProducto(id) {
     let gruposDelProd = [];
     if (id) {
       const pm = await sbGet('productos_modificadores', `producto_id=eq.${id}&select=grupo_id`);
-      gruposDelProd = pm.map(x => x.grupo_id);
+      gruposDelProd = pm.map(function(x){return x.grupo_id);
     }
-    document.getElementById('p-mods-checks').innerHTML = todosGrupos.map(g => `
+    document.getElementById('p-mods-checks').innerHTML = todosGrupos.map(function(g){return `
       <label style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--border-2);border-radius:8px;cursor:pointer;font-size:12px;background:${gruposDelProd.includes(g.id)?'var(--pink-light)':'white'};">
         <input type="checkbox" value="${g.id}" ${gruposDelProd.includes(g.id)?'checked':''} 
           onchange="this.closest('label').style.background=this.checked?'var(--pink-light)':'white'"
@@ -1644,7 +1644,7 @@ async function saveProducto() {
 
   // Obtener grupos seleccionados
   const checks = document.querySelectorAll('#p-mods-checks input[type=checkbox]');
-  const gruposSeleccionados = [...checks].filter(c=>c.checked).map(c=>parseInt(c.value));
+  const gruposSeleccionados = [...checks].filter(function(c){return c.checked).map(function(c){return parseInt(c.value));
 
   try {
     let prodId = editingProdId;
@@ -1653,7 +1653,7 @@ async function saveProducto() {
       toast('✓ Producto actualizado');
     } else {
       const res = await sbPost('productos', { ...data, orden: productsData.length + 1 });
-      const [created] = await res.json();
+      var _cr = await res.json(); var created = Array.isArray(_cr) ? _cr[0] : _cr;
       prodId = created.id;
       toast('✓ Producto creado');
     }
@@ -1664,7 +1664,7 @@ async function saveProducto() {
     });
     if (gruposSeleccionados.length) {
       await sbPost('productos_modificadores',
-        gruposSeleccionados.map((gid, i) => ({ producto_id: prodId, grupo_id: gid, orden: i+1 }))
+        gruposSeleccionados.map(function(gid,i){ return ({ producto_id: prodId, grupo_id: gid, orden: i+1 }))
       );
     }
 
@@ -1701,7 +1701,7 @@ async function loadTurnos() {
   const turnos = await sbGet('turnos','order=created_at.desc&limit=50&select=*');
   document.getElementById('tbody-turnos').innerHTML = !turnos.length ?
     '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-3);">Sin turnos cerrados aún</td></tr>' :
-    turnos.map(t=>`<tr>
+    turnos.map(function(t){return `<tr>
       <td>${new Date(t.cerrado_at||t.created_at).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</td>
       <td style="font-weight:500;">${t.cajero_name||'—'}</td>
       <td>${t.sucursal||'Principal'}</td>
@@ -1716,7 +1716,7 @@ async function loadTurnos() {
 // ── CONFIG ──
 async function loadConfig() {
   const cfg = await sbGet('config','order=id.asc&select=*');
-  document.getElementById('config-rows').innerHTML = cfg.map(c=>`
+  document.getElementById('config-rows').innerHTML = cfg.map(function(c){return `
     <div class="config-row">
       <div class="config-info">
         <div class="config-key">${c.key.split('_').join(' ')}</div>
@@ -1740,8 +1740,8 @@ async function saveConfig() {
 
 // ── MODALS ──
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('.modal-overlay').forEach(ov => {
-  ov.addEventListener('click', e => { if(e.target===ov) ov.classList.remove('open'); });
+document.querySelectorAll('.modal-overlay').forEach(function(ov){return {
+  ov.addEventListener('click', function(e){ if(e.target===ov) ov.classList.remove('open'); });
 });
 
 // ═══════════════════════════════════════════════════
@@ -1758,9 +1758,9 @@ async function loadModificadores() {
     const oRes = await fetch(SB_URL + '/rest/v1/modificadores_opciones?order=orden.asc&select=*', { headers: SB_H });
     const opciones = oRes.ok ? await oRes.json() : [];
     // Agrupar
-    gruposData = grupos.map(g => ({
+    gruposData = grupos.map(function(g){return ({
       ...g,
-      opciones: opciones.filter(o => o.grupo_id === g.id)
+      opciones: opciones.filter(function(o){return o.grupo_id === g.id)
     }));
     renderGrupos();
   } catch(e) {
@@ -1775,7 +1775,7 @@ function renderGrupos() {
     return;
   }
 
-  container.innerHTML = gruposData.map(g => `
+  container.innerHTML = gruposData.map(function(g){return `
     <div class="card" style="margin-bottom:16px;">
       <div class="card-title" style="margin-bottom:12px;">
         <div style="display:flex;align-items:center;gap:10px;">
@@ -1798,7 +1798,7 @@ function renderGrupos() {
         </div>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;">
-        ${g.opciones.length ? g.opciones.map(o => `
+        ${g.opciones.length ? g.opciones.map(function(o){return `
           <div style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--border-2);border-radius:8px;background:${o.activo?'white':'var(--bg)'};opacity:${o.activo?1:0.5};">
             <span style="font-size:13px;font-weight:500;color:var(--text);">${o.nombre}</span>
             ${o.precio_extra > 0 ? `<span style="font-size:11px;color:var(--green);font-weight:600;">+$${o.precio_extra}</span>` : '<span style="font-size:11px;color:var(--text-3);">gratis</span>'}
@@ -1823,7 +1823,7 @@ function openModalGrupo() {
 }
 
 function openModalGrupoEdit(id) {
-  const g = gruposData.find(x => x.id === id);
+  const g = gruposData.find(function(x){return x.id === id);
   if (!g) return;
   document.getElementById('modal-grupo-title').textContent = 'Editar grupo';
   document.getElementById('g-id').value = g.id;
@@ -1889,7 +1889,7 @@ function openModalOpcionEdit(id, grupoId, nombre, precio) {
 async function saveOpcion() {
   const id = document.getElementById('op-id').value;
   const grupoId = document.getElementById('op-grupo-id').value;
-  const grupo = gruposData.find(g => g.id == grupoId);
+  const grupo = gruposData.find(function(g){return g.id == grupoId);
   const payload = {
     grupo_id: parseInt(grupoId),
     nombre: document.getElementById('op-nombre').value.trim(),
@@ -1939,7 +1939,7 @@ async function eliminarOpcion(id, nombre, grupoId) {
 }
 
 // Cargar modificadores cuando se va a esa página — hook sin recursión
-document.querySelectorAll('.nav-item').forEach(btn => {
+document.querySelectorAll('.nav-item').forEach(function(btn){return {
   const orig = btn.getAttribute('onclick');
   if (orig && orig.includes("'modificadores'")) {
     btn.setAttribute('onclick', "goPage('modificadores',this);loadModificadores()");
@@ -2091,6 +2091,17 @@ function getConvFactor(from,to){var g={kg:1000,g:1,gr:1},m={l:1000,ml:1};return(
 
     <!-- Info costo -->
     <div id="rec-equiv-info" style="font-size:12px;padding:10px;background:var(--bg);border-radius:8px;color:var(--text-3);line-height:1.8;margin-bottom:16px;">
+      Selecciona insumo y cantidad
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-receta')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveReceta()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>gin-bottom:16px;">
       Selecciona insumo y cantidad
     </div>
 
@@ -3222,7 +3233,7 @@ function onPromoTipoChange() {
 }
 
 function openModalPromo(id=null) {
-  const p = id ? allPromos.find(x=>x.id===id) : null;
+  const p = id ? allPromos.find(function(x){return x.id===id) : null;
   editingPromoId = id || null;
   document.getElementById('modal-promo-title').textContent = p ? 'Editar promoción' : 'Nueva promoción';
   document.getElementById('promo-nombre').value = (p&&p.nombre) || '';
@@ -3438,7 +3449,7 @@ async function loadSucursalesConfig() {
   });
   const cfg = await res.json();
   const cfgMap = {};
-  cfg.forEach(c => cfgMap[c.key] = c.value);
+  cfg.forEach(function(c){return cfgMap[c.key] = c.value);
 
   const SUC_FIELDS = [
     { key:'suc_balbuena_direccion', label:'Balbuena — Dirección', type:'text', hint:'Calle, número, colonia' },
