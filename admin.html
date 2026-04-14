@@ -1089,9 +1089,9 @@ function logout() {
 
 // ── NAV ──
 function goPage(page, btn) {
-  document.querySelectorAll('.nav-item').forEach(function(b){return b.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(function(b){ b.classList.remove('active'); });
   btn.classList.add('active');
-  document.querySelectorAll('.page').forEach(function(p){return p.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
   document.getElementById('page-'+page).classList.add('active');
   loadPage(page);
 }
@@ -1112,7 +1112,7 @@ async function loadPage(page) {
 }
 
 // ── SUPABASE HELPERS ──
-async function sbGet(table, query='') {
+async function sbGet(table, query) { query = query || '';
   const res = await fetch(`${SB_URL}/rest/v1/${table}?${query}`, { headers: { apikey:SB_KEY, Authorization:'Bearer '+SB_KEY } });
   return res.json();
 }
@@ -2101,7 +2101,9 @@ function getConvFactor(from,to){var g={kg:1000,g:1,gr:1},m={l:1000,ml:1};return(
   </div>
 </div>
 
-<script>gin-bottom:16px;">
+</div>
+
+<script>
       Selecciona insumo y cantidad
     </div>
 
@@ -3232,8 +3234,8 @@ function onPromoTipoChange() {
   valorLabel.textContent = tipo === 'monto_fijo' ? 'Monto ($)' : 'Descuento (%)';
 }
 
-function openModalPromo(id=null) {
-  const p = id ? allPromos.find(function(x){return x.id===id) : null;
+function openModalPromo(id) { id = id || null;
+  var p = id ? allPromos.find(function(x){return x.id===id;}) : null;
   editingPromoId = id || null;
   document.getElementById('modal-promo-title').textContent = p ? 'Editar promoción' : 'Nueva promoción';
   document.getElementById('promo-nombre').value = (p&&p.nombre) || '';
