@@ -587,6 +587,17 @@ html, body {
 // ═══════════════════════════════
 const SB_URL = 'https://ngpumyxxxlafuzcsaepy.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ncHVteXh4eGxhZnV6Y3NhZXB5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyNjkzNzYsImV4cCI6MjA4OTg0NTM3Nn0.u4WHkOXLrNn4WSKHJedXXNDYrCMdfaDNK8KlvJNfXLg';
+// Hora en Mexico City
+function nowMX() {
+  return new Date(new Date().toLocaleString('en-US', {timeZone:'America/Mexico_City'}));
+}
+function fmtMX(d) {
+  return new Date(d).toLocaleString('es-MX', {timeZone:'America/Mexico_City', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', hour12:false});
+}
+function timeMX(d) {
+  return new Date(d).toLocaleTimeString('es-MX', {timeZone:'America/Mexico_City', hour:'2-digit', minute:'2-digit', hour12:false});
+}
+
 const SB_H = { 'Content-Type':'application/json', 'apikey':SB_KEY, 'Authorization':'Bearer '+SB_KEY, 'Prefer':'return=representation' };
 
 async function sbGet(table, q='') {
@@ -712,7 +723,7 @@ async function pinEnter() {
     if (!users.length) { errEl.textContent = 'PIN incorrecto'; pinBuffer=''; updateDots(); return; }
     currentUser = users[0];
     // Restore session
-    localStorage.setItem('lf_session', JSON.stringify({ date: new Date().toDateString(), user: { id:currentUser.id, name:currentUser.name, role:currentUser.role, sucursal:currentUser.sucursal } }));
+    localStorage.setItem('lf_session', JSON.stringify({ date: nowMX().toDateString(), user: { id:currentUser.id, name:currentUser.name, role:currentUser.role, sucursal:currentUser.sucursal } }));
     showPOS();
   } catch(e) { errEl.textContent = 'Error de conexión'; pinBuffer=''; updateDots(); }
 }
@@ -762,7 +773,7 @@ function logout() {
 (function() {
   try {
     const s = JSON.parse(localStorage.getItem('lf_session') || 'null');
-    if (!s || s.date !== new Date().toDateString()) { localStorage.removeItem('lf_session'); return; }
+    if (!s || s.date !== nowMX().toDateString()) { localStorage.removeItem('lf_session'); return; }
     currentUser = s.user;
     orderN = parseInt(localStorage.getItem('lf_order_n') || '1');
     showPOS();
@@ -1184,7 +1195,7 @@ async function confirmarPago() {
   const cambio = payMethod==='efectivo' ? con-total : 0;
   const client = document.getElementById('client-input').value.trim();
 
-  const saleData = { id:orderN, date:new Date(), items:[...order], sub,desc,iva,total,payMethod,svcType,client,cambio,discount,cashReceived:con };
+  const saleData = { id:orderN, date:nowMX(), items:[...order], sub,desc,iva,total,payMethod,svcType,client,cambio,discount,cashReceived:con };
   sales.push(saleData);
   saveToSupabase(saleData);
   descontarInventario(saleData);
@@ -1347,7 +1358,7 @@ async function openHist() {
         <span class="hist-num">#${String(o.order_number||'?').padStart(3,'0')}</span>
         <span class="hist-amt">${fmtD(o.total)}</span>
       </div>
-      <div class="hist-meta">${new Date(o.created_at).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})} · ${payLbl[o.pay_method]||o.pay_method} · ${o.service_type==='para-llevar'?'Para llevar':o.service_type==='delivery'?'Delivery':'Mostrador'}${o.client_name?' · '+o.client_name:''}</div>
+      <div class="hist-meta">${timeMX(o.created_at)} · ${payLbl[o.pay_method]||o.pay_method} · ${o.service_type==='para-llevar'?'Para llevar':o.service_type==='delivery'?'Delivery':'Mostrador'}${o.client_name?' · '+o.client_name:''}</div>
     </div>`).join('');
   } catch { body.innerHTML='<div class="empty-state"><div class="e-icon">⚠️</div><p>Error cargando historial</p></div>'; }
 }
@@ -1565,7 +1576,7 @@ function buildTicketXML(saleData, type='ticket') {
     for (var mt=0; mt<marginTop; mt++) xml += '<text>&#10;</text>';
     xml += fontTag(ccGet('comanda_font_marca','bold'), '*** COMANDA ***&#10;');
     xml += fontTag(ccGet('comanda_font_orden','double'), 'Orden #' + String(saleData.id).padStart(3,'0') + '&#10;');
-    xml += center(new Date(saleData.date).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}));
+    xml += center(timeMX(saleData.date));
     if (saleData.client) xml += center(saleData.client);
     xml += fontTag(ccGet('comanda_font_tipo','bold'), (saleData.svcType==='para-llevar'?'PARA LLEVAR':saleData.svcType==='delivery'?'DELIVERY':'MOSTRADOR') + '&#10;');
     xml += divider();
@@ -1609,7 +1620,7 @@ function buildTicketXML(saleData, type='ticket') {
     header.split('\n').forEach(function(ln){ if(ln.trim()) xml += center(ln.trim(), true); });
     xml += divider();
     xml += center('Orden #' + String(saleData.id).padStart(3,'0'));
-    xml += center(new Date(saleData.date).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}));
+    xml += center(fmtMX(saleData.date));
     if (mostrarCajero && currentUser) xml += center('Atendio: ' + currentUser.name);
     xml += divider();
 
@@ -1683,7 +1694,7 @@ async function printEpson(saleData, type='ticket') {
 function buildTicketText(saleData) {
   const fmtD = n => '$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2});
   let text = `🍓 LADY FRESA\n`;
-  text += `Orden #${String(saleData.id).padStart(3,'0')} · ${new Date(saleData.date).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}\n`;
+  text += `Orden #${String(saleData.id).padStart(3,'0')} · ${fmtMX(saleData.date)}\n`;
   if (saleData.client) text += `Cliente: ${saleData.client}\n`;
   text += `─────────────────\n`;
   saleData.items.forEach(item => {
