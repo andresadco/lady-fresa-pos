@@ -1164,7 +1164,8 @@ async function loadOverview() {
     : mesLabel;
 
   // Load all data in parallel
-  var [ordersHoy, ordensMes, turnos, insumos, movsMes, gastosMes, recetas, entradasConf] = await Promise.all([
+  var _allData = await Promise.all([
+
     sbGet('orders', 'created_at=gte.' + todayISO + 'T00:00:00&select=total,sucursal'),
     sbGet('orders', 'created_at=gte.' + mesInicio + 'T00:00:00&created_at=lte.' + mesFin + 'T23:59:59&select=total,sucursal'),
     sbGet('turnos', 'order=created_at.desc&limit=5&select=*'),
@@ -1174,6 +1175,14 @@ async function loadOverview() {
     sbGet('recetas', 'select=producto_nombre,tipo_componente,insumo_id,cantidad,unidad_uso,modificador_opcion'),
     appGet('gastos', 'fecha=gte.' + mesInicio + '&fecha=lte.' + mesFin + '&select=monto,concepto,cat,fecha,quien'),
   ]);
+  var ordersHoy = _allData[0];
+  var ordensMes = _allData[1];
+  var turnos = _allData[2];
+  var insumos = _allData[3];
+  var movsMes = _allData[4];
+  var gastosMes = _allData[5];
+  var recetas = _allData[6];
+  var entradasConf = _allData[7];
 
   var insArr   = Array.isArray(insumos)      ? insumos      : [];
   var movArr   = Array.isArray(movsMes)      ? movsMes      : [];
