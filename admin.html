@@ -229,6 +229,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
       <button class="nav-item" onclick="goPage('usuarios',this)"><span class="nav-icon">👥</span>Usuarios</button>
       <button class="nav-item" onclick="goPage('sucursales',this)"><span class="nav-icon">🏪</span>Sucursales</button>
       <button class="nav-item" onclick="goPage('menu',this)"><span class="nav-icon">🍓</span>Menú</button>
+      <button class="nav-item" onclick="goPage('categorias',this)"><span class="nav-icon">🗂</span>Categorías</button>
       <button class="nav-item" onclick="goPage('modificadores',this)"><span class="nav-icon">⚙️</span>Modificadores</button>
     </div>
 
@@ -359,12 +360,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
           <span>Productos</span>
           <button class="btn btn-primary btn-sm" onclick="openModalProducto()">+ Nuevo producto</button>
         </div>
-        <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;" id="menu-cat-filter">
-          <button class="btn btn-secondary btn-sm active-cat" onclick="filterMenuCat('all',this)">Todos</button>
-          <button class="btn btn-secondary btn-sm" onclick="filterMenuCat('Frutas',this)">🍓 Frutas</button>
-          <button class="btn btn-secondary btn-sm" onclick="filterMenuCat('Especiales LFM',this)">⭐ Especiales</button>
-          <button class="btn btn-secondary btn-sm" onclick="filterMenuCat('Bebidas',this)">🥤 Bebidas</button>
-        </div>
+        <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;" id="menu-cat-filter"><button class="btn btn-secondary btn-sm active-cat" onclick="filterMenuCat('all',this)">Todos</button></div>
         <div class="prod-grid" id="menu-grid"></div>
       </div>
     </div>
@@ -566,6 +562,18 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 
       <!-- Lista de promos -->
       <div id="promos-list" style="display:grid;gap:12px;"></div>
+    </div>
+
+    <!-- CATEGORIAS -->
+    <div class="page" id="page-categorias">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px;">
+        <div>
+          <div class="page-title">Categorías</div>
+          <div class="page-sub">Organiza tu menú por categorías</div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openModalCategoria()">+ Nueva categoría</button>
+      </div>
+      <div id="categorias-list" style="display:grid;gap:10px;"></div>
     </div>
 
     <!-- CONFIG -->
@@ -939,6 +947,41 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
   </div>
 </div>
 
+<!-- MODAL CATEGORIA -->
+<div class="modal-overlay" id="modal-categoria">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-title" id="modal-cat-title">Nueva categoría</div>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label class="form-label">Nombre</label>
+        <input class="form-input" id="cat-nombre" placeholder="Ej: Especiales, Bebidas...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Emoji</label>
+        <input class="form-input" id="cat-emoji" placeholder="🍓" maxlength="4" style="font-size:22px;text-align:center;">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Color</label>
+        <input type="color" class="form-input" id="cat-color" value="#A6182E" style="height:42px;padding:4px;">
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Descripción (opcional)</label>
+        <input class="form-input" id="cat-desc" placeholder="Descripción breve...">
+      </div>
+      <div class="form-group full">
+        <div class="toggle-wrap">
+          <button class="toggle on" id="cat-activo-toggle" onclick="this.classList.toggle('on')"></button>
+          <span class="toggle-label">Categoría activa</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-categoria')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCategoria()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -1046,6 +1089,86 @@ function goPage(page, btn) {
   loadPage(page);
 }
 
+// ═══════════════════════════════════════════════════
+// CATEGORÍAS
+// ═══════════════════════════════════════════════════
+var todasCategorias = [];
+var editingCatId = null;
+
+async function loadCategorias() {
+  var res = await sbGet('categorias', 'order=orden.asc,nombre.asc&select=*');
+  todasCategorias = Array.isArray(res) ? res : [];
+  renderCategorias();
+}
+
+function renderCategorias() {
+  var el = document.getElementById('categorias-list');
+  if (!el) return;
+  if (!todasCategorias.length) {
+    el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-3);">Sin categorías — crea la primera con el botón +</div>';
+    return;
+  }
+  el.innerHTML = todasCategorias.map(function(cat) {
+    var activo = cat.activo !== false;
+    return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;opacity:' + (activo?1:0.55) + ';">'
+      + '<div style="font-size:28px;width:40px;text-align:center;">' + (cat.emoji||'📁') + '</div>'
+      + '<div style="flex:1;">'
+      + '<div style="font-size:14px;font-weight:600;">' + cat.nombre + '</div>'
+      + '<div style="font-size:11px;color:var(--text-3);margin-top:2px;">'
+      + (cat.descripcion||'') + (cat.descripcion?' · ':'')
+      + '<span style="background:' + (activo?'var(--green-light)':'var(--red-light)') + ';color:' + (activo?'var(--green)':'var(--red)') + ';padding:1px 8px;border-radius:8px;font-weight:600;">' + (activo?'Activa':'Inactiva') + '</span>'
+      + '</div></div>'
+      + '<div style="display:flex;gap:6px;">'
+      + '<button class="btn btn-secondary btn-sm" onclick="openModalCategoria(' + cat.id + ')">✏️ Editar</button>'
+      + '<button class="btn btn-sm btn-danger" onclick="eliminarCategoria(' + cat.id + ')">🗑</button>'
+      + '</div></div>';
+  }).join('');
+}
+
+function openModalCategoria(id) {
+  id = id || null;
+  var cat = id ? todasCategorias.find(function(c){return c.id===id;}) : null;
+  editingCatId = id;
+  document.getElementById('modal-cat-title').textContent = cat ? 'Editar categoría' : 'Nueva categoría';
+  document.getElementById('cat-nombre').value = cat ? cat.nombre : '';
+  document.getElementById('cat-emoji').value = cat ? (cat.emoji||'') : '';
+  document.getElementById('cat-color').value = cat ? (cat.color||'#A6182E') : '#A6182E';
+  document.getElementById('cat-desc').value = cat ? (cat.descripcion||'') : '';
+  var tog = document.getElementById('cat-activo-toggle');
+  if (tog) { if (cat && cat.activo===false) tog.classList.remove('on'); else tog.classList.add('on'); }
+  document.getElementById('modal-categoria').classList.add('open');
+}
+
+async function saveCategoria() {
+  var nombre = document.getElementById('cat-nombre').value.trim();
+  if (!nombre) { toast('⚠ Nombre requerido'); return; }
+  var data = {
+    nombre: nombre,
+    emoji: document.getElementById('cat-emoji').value.trim() || null,
+    color: document.getElementById('cat-color').value || '#A6182E',
+    descripcion: document.getElementById('cat-desc').value.trim() || null,
+    activo: document.getElementById('cat-activo-toggle').classList.contains('on')
+  };
+  var url = editingCatId ? SB_URL+'/rest/v1/categorias?id=eq.'+editingCatId : SB_URL+'/rest/v1/categorias';
+  var method = editingCatId ? 'PATCH' : 'POST';
+  var res = await fetch(url, { method:method, headers:SB_H, body:JSON.stringify(data) });
+  if (res.ok) {
+    toast(editingCatId ? '✓ Categoría actualizada' : '✓ Categoría creada');
+    closeModal('modal-categoria');
+    loadCategorias();
+  } else { toast('⚠ Error al guardar'); }
+}
+
+async function eliminarCategoria(id) {
+  var cat = todasCategorias.find(function(c){return c.id===id;});
+  if (!confirm('¿Eliminar "' + (cat?cat.nombre:'esta categoría') + '"?')) return;
+  var res = await fetch(SB_URL+'/rest/v1/categorias?id=eq.'+id, {
+    method:'DELETE', headers:{ apikey:SB_KEY, Authorization:'Bearer '+SB_KEY }
+  });
+  if (res.ok) { toast('✓ Categoría eliminada'); loadCategorias(); }
+  else { toast('⚠ Error al eliminar'); }
+}
+
 async function loadPage(page) {
   if (page==='overview') loadOverview();
   else if (page==='usuarios') loadUsuarios();
@@ -1059,10 +1182,11 @@ async function loadPage(page) {
   else if (page==='entradas') { await loadInventario(); loadEntradasPendientes(); }
   else if (page==='gastos') loadGastosOperativos();
   else if (page==='promociones') loadPromociones();
+  else if (page==='categorias') loadCategorias();
 }
 
 // ── SUPABASE HELPERS ──
-async function sbGet(table, query='') {
+async function sbGet(table, query) { if(query===undefined) query='';
   const res = await fetch(`${SB_URL}/rest/v1/${table}?${query}`, { headers: { apikey:SB_KEY, Authorization:'Bearer '+SB_KEY } });
   return res.json();
 }
@@ -1370,7 +1494,7 @@ async function loadUsuarios() {
     </tr>`).join('');
 }
 
-async function openModalUsuario(user=null) {
+async function openModalUsuario(user) { if(user===undefined) user=null;
   editingUserId = user ? user.id : null;
   document.getElementById('modal-usuario-title').textContent = user ? 'Editar usuario' : 'Nuevo usuario';
   document.getElementById('u-name').value = (user&&user.name) || '';
@@ -1431,7 +1555,7 @@ async function loadSucursales() {
     </tr>`).join('');
 }
 
-function openModalSucursal(suc=null) {
+function openModalSucursal(suc) { if(suc===undefined) suc=null;
   editingSucId = suc ? suc.id : null;
   document.getElementById('modal-suc-title').textContent = suc ? 'Editar sucursal' : 'Nueva sucursal';
   document.getElementById('s-name').value = (suc&&suc.name) || '';
@@ -1492,7 +1616,7 @@ async function renderMenu() {
     </div>`).join('');
 }
 
-async function openModalProducto(id=null) {
+async function openModalProducto(id) { if(id===undefined) id=null;
   const p = id ? productsData.find(x=>x.id===id) : null;
   editingProdId = id;
 
