@@ -406,9 +406,6 @@ html, body {
   <!-- Category tabs -->
   <div id="cat-tabs">
     <button class="cat-tab active" onclick="filterCat('all',this)">Todos</button>
-    <button class="cat-tab" onclick="filterCat('Frutas',this)">🍓 Frutas</button>
-    <button class="cat-tab" onclick="filterCat('Especiales LFM',this)">⭐ Especiales</button>
-    <button class="cat-tab" onclick="filterCat('Bebidas',this)">🥤 Bebidas</button>
   </div>
 
   <!-- Products -->
@@ -737,6 +734,7 @@ function showPOS() {
   // Show discount if has permission
   const p = PERMS[currentUser.role] || PERMS.cajero;
   window._hasDiscount = p.discount; // store permission for when order sheet opens
+  loadCategoriasPos();
   loadCatalog();
   cargarPromos();
   loadTicketComandaConfig();
@@ -797,6 +795,30 @@ async function loadTicketComandaConfig() {
       headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY }
     });
     if (r2.ok) { var rows2 = await r2.json(); rows2.forEach(function(c){ comandaCfg[c.key]=c.value; }); }
+  } catch(e) {}
+}
+
+async function loadCategoriasPos() {
+  try {
+    var res = await fetch(SB_URL + '/rest/v1/categorias?activo=eq.true&order=orden.asc,nombre.asc&select=*', {
+      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY }
+    });
+    if (!res.ok) return;
+    var cats = await res.json();
+    if (!Array.isArray(cats) || !cats.length) return;
+    var tabsEl = document.getElementById('cat-tabs');
+    if (!tabsEl) return;
+    // Keep Todos button, add the rest
+    var todosBtn = tabsEl.querySelector('.cat-tab');
+    tabsEl.innerHTML = '';
+    tabsEl.appendChild(todosBtn);
+    cats.forEach(function(cat) {
+      var btn = document.createElement('button');
+      btn.className = 'cat-tab';
+      btn.textContent = (cat.emoji ? cat.emoji + ' ' : '') + cat.nombre;
+      btn.onclick = function() { filterCat(cat.nombre, btn); };
+      tabsEl.appendChild(btn);
+    });
   } catch(e) {}
 }
 
