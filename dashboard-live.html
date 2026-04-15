@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lady Fresa — Dashboard en Vivo</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --rojo: #A6182E; --rojo-vivo: #FF1728; --rosa: #FD9CB3;
+  --verde: #053A0A; --arena: #672626;
+  --bg: #fafaf8; --card: #ffffff; --texto: #1a1a1a;
+  --muted: #6b6b6b; --border: #e8e2dc; --accent-light: #fff5f7;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--texto); font-size: 15px; }
+
+/* HEADER */
+.site-header { background: linear-gradient(135deg, var(--arena) 0%, var(--rojo) 100%); color: white; padding: 40px 48px 32px; }
+.site-header .eyebrow { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; opacity: 0.7; margin-bottom: 8px; }
+.site-header h1 { font-family: 'Bebas Neue', serif; font-size: 48px; letter-spacing: 2px; line-height: 1; }
+.site-header .sub { font-size: 14px; opacity: 0.8; margin-top: 6px; }
+.header-controls { display: flex; align-items: center; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+.mes-select { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+.mes-select option { background: var(--arena); }
+.refresh-btn { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+.refresh-btn:hover { background: rgba(255,255,255,0.3); }
+
+/* LOADING */
+.loading { text-align: center; padding: 80px; color: var(--muted); font-size: 18px; }
+
+/* CONTAINER */
+.container { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+
+/* SECTION */
+.section { margin-bottom: 48px; }
+.section-title { font-family: 'Bebas Neue', serif; font-size: 22px; color: var(--rojo); letter-spacing: 1px; margin-bottom: 6px; }
+.section-desc { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+
+/* KPI GRID */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+.kpi-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px 22px; }
+.kpi-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+.kpi-val { font-family: 'Bebas Neue', serif; font-size: 36px; color: var(--rojo); letter-spacing: 0.5px; line-height: 1; }
+.kpi-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.kpi-card.verde .kpi-val { color: var(--verde); }
+.kpi-card.amber .kpi-val { color: #B5860D; }
+
+/* CHART CARD */
+.chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 24px; }
+.chart-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; color: var(--texto); }
+.chart-wrap { position: relative; }
+
+/* 2 COL GRID */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+/* TABLE */
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table th { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); padding: 8px 12px; border-bottom: 2px solid var(--border); text-align: left; }
+.data-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: var(--accent-light); }
+.badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.badge-green { background: #e6f0e7; color: var(--verde); }
+.badge-red { background: #fdeef1; color: var(--rojo); }
+.badge-amber { background: #fdf3dc; color: #B5860D; }
+
+/* BAR CHART ROW */
+.bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.bar-label { font-size: 12px; min-width: 140px; color: var(--texto); }
+.bar-track { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 4px; background: var(--rojo); transition: width 0.6s ease; }
+.bar-fill.verde { background: var(--verde); }
+.bar-fill.amber { background: #B5860D; }
+.bar-fill.rosa { background: var(--rosa); }
+.bar-val { font-size: 12px; font-weight: 600; min-width: 60px; text-align: right; color: var(--muted); }
+
+/* HEATMAP */
+.heatmap-grid { display: grid; grid-template-columns: 60px repeat(7, 1fr); gap: 3px; font-size: 11px; }
+.hm-label { color: var(--muted); text-align: right; padding-right: 6px; display: flex; align-items: center; justify-content: flex-end; height: 28px; }
+.hm-cell { height: 28px; border-radius: 4px; background: var(--border); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: white; }
+
+/* COMBO CHIPS */
+.combo-list { display: flex; flex-direction: column; gap: 8px; }
+.combo-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--accent-light); border-radius: 10px; font-size: 13px; }
+.combo-name { font-weight: 500; }
+.combo-count { font-family: 'Bebas Neue', serif; font-size: 18px; color: var(--rojo); }
+
+/* INSIGHT BOX */
+.insight-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.insight-card { background: var(--card); border-left: 4px solid var(--rojo); border-radius: 0 12px 12px 0; padding: 16px 18px; border-top: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.insight-card h4 { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+.insight-card p { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.insight-card.verde { border-left-color: var(--verde); }
+.insight-card.amber { border-left-color: #B5860D; }
+
+@media (max-width: 768px) {
+  .two-col, .three-col { grid-template-columns: 1fr; }
+  .site-header { padding: 24px; }
+  .site-header h1 { font-size: 36px; }
+  .container { padding: 20px 16px; }
+}
+</style>
+</head>
+<body>
+
+<div class="site-header">
+  <p class="eyebrow">Lady Fresa · Reporte en Vivo</p>
+  <h1>Dashboard de Ventas</h1>
+  <p class="sub" id="header-periodo">Cargando...</p>
+  <div class="header-controls">
+    <select class="mes-select" id="mes-sel" onchange="loadDashboard()"></select>
+    <button class="refresh-btn" onclick="loadDashboard()">↻ Actualizar</button>
+    <span id="last-update" style="font-size:11px;opacity:0.6;"></span>
+  </div>
+</div>
+
+<div id="main-content">
+  <div class="loading">🍓 Cargando datos...</div>
+</div>
+
+<script>
+// ── CONFIG ──
+const SB_URL = 'https://ngpumyxxxlafuzcsaepy.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ncHVteXh4eGxhZnV6Y3NhZXB5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyNjkzNzYsImV4cCI6MjA4OTg0NTM3Nn0.u4WHkOXLrNn4WSKHJedXXNDYrCMdfaDNK8KlvJNfXLg';
+const H = { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY };
+
+function nowMX() {
+  return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
+}
+
+async function sbGet(table, q) {
+  var r = await fetch(SB_URL + '/rest/v1/' + table + '?' + (q||''), { headers: H });
+  return r.ok ? r.json() : [];
+}
+
+// ── MONTH SELECTOR ──
+(function buildSelector() {
+  var sel = document.getElementById('mes-sel');
+  var hoy = nowMX();
+  for (var i = 0; i < 12; i++) {
+    var d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+    var key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    var label = d.toLocaleDateString('es-MX', { month:'long', year:'numeric' });
+    label = label.charAt(0).toUpperCase() + label.slice(1);
+    var opt = document.createElement('option');
+    opt.value = key; opt.textContent = label;
+    if (i === 0) opt.selected = true;
+    sel.appendChild(opt);
+  }
+})();
+
+// ── MAIN LOAD ──
+async function loadDashboard() {
+  document.getElementById('main-content').innerHTML = '<div class="loading">🍓 Cargando datos...</div>';
+
+  var mesISO = document.getElementById('mes-sel').value;
+  var mp = mesISO.split('-').map(Number);
+  var inicio = mesISO + '-01';
+  var fin = new Date(mp[0], mp[1], 1);
+  var finISO = fin.getFullYear() + '-' + String(fin.getMonth()+1).padStart(2,'0') + '-01';
+  var mesLabel = new Date(mp[0], mp[1]-1, 1).toLocaleDateString('es-MX', { month:'long', year:'numeric' });
+  mesLabel = mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1);
+
+  document.getElementById('header-periodo').textContent = mesLabel;
+
+  // Load all data in parallel
+  var [orders, items, insumos, recetas, gastos] = await Promise.all([
+    sbGet('orders', 'created_at=gte.' + inicio + 'T06:00:00&created_at=lt.' + finISO + 'T06:00:00&select=*&order=created_at.asc'),
+    sbGet('order_items', 'select=*&order=id.asc'),
+    sbGet('insumos', 'select=id,nombre,costo_unitario,unidad,stock_actual,stock_minimo&activo=eq.true'),
+    sbGet('recetas', 'select=*'),
+    sbGet('gastos_operativos', 'fecha=gte.' + inicio + '&fecha=lt.' + finISO + '&select=monto,concepto,cat'),
+  ]);
+
+  // Filter items to this month's orders
+  var orderIds = new Set((orders||[]).map(function(o){return o.id;}));
+  var mesItems = (items||[]).filter(function(i){return orderIds.has(i.order_id);});
+
+  var html = buildDashboard(orders||[], mesItems, insumos||[], recetas||[], gastos||[], mesLabel, mesISO);
+  document.getElementById('main-content').innerHTML = html;
+  document.getElementById('last-update').textContent = 'Actualizado: ' + nowMX().toLocaleTimeString('es-MX', {hour:'2-digit',minute:'2-digit'});
+
+  renderCharts(orders||[], mesItems, mesISO);
+}
+
+function fmt(n) { return '$' + Number(n||0).toLocaleString('es-MX', {minimumFractionDigits:0, maximumFractionDigits:0}); }
+function pct(a,b) { return b ? Math.round(a/b*100) : 0; }
+
+function buildDashboard(orders, items, insumos, recetas, gastos, mesLabel, mesISO) {
+  var totalVentas = orders.reduce(function(s,o){return s+Number(o.total||0);},0);
+  var totalOrdenes = orders.length;
+  var ticketProm = totalOrdenes ? totalVentas/totalOrdenes : 0;
+  var totalGastos = gastos.reduce(function(s,g){return s+Number(g.monto||0);},0);
+  var margen = totalVentas ? Math.round((totalVentas-totalGastos)/totalVentas*100) : 0;
+
+  // Products mix
+  var prodCount = {};
+  var prodRevenue = {};
+  items.forEach(function(it) {
+    var n = it.product_name||'?';
+    prodCount[n] = (prodCount[n]||0) + (it.qty||1);
+    prodRevenue[n] = (prodRevenue[n]||0) + Number(it.subtotal||0);
+  });
+  var totalItems = Object.values(prodCount).reduce(function(s,v){return s+v;},0);
+  var prodSorted = Object.keys(prodCount).sort(function(a,b){return prodCount[b]-prodCount[a];});
+
+  // Sizes
+  var sizeCount = {};
+  items.forEach(function(it) {
+    var s = it.size||'N/A';
+    sizeCount[s] = (sizeCount[s]||0) + (it.qty||1);
+  });
+
+  // Bases
+  var baseCount = {};
+  items.forEach(function(it) {
+    var b = it.base||'N/A';
+    if (b !== 'null' && b !== 'N/A') baseCount[b] = (baseCount[b]||0) + (it.qty||1);
+  });
+
+  // Toppings
+  var topCount = {};
+  items.forEach(function(it) {
+    try {
+      var tops = typeof it.toppings === 'string' ? JSON.parse(it.toppings) : (it.toppings||{});
+      var all = (tops.incluidos||[]).concat(tops.basicos||[]).concat(tops.premium||[]);
+      all.forEach(function(t){ topCount[t] = (topCount[t]||0)+1; });
+    } catch(e){}
+  });
+
+  // Combos (size + base)
+  var comboCount = {};
+  items.forEach(function(it) {
+    if (it.size && it.base && it.base !== 'null') {
+      var k = it.size + ' + ' + it.base;
+      comboCount[k] = (comboCount[k]||0) + (it.qty||1);
+    }
+  });
+
+  // Pay methods
+  var payCount = { efectivo:0, tarjeta:0, transferencia:0 };
+  orders.forEach(function(o){ payCount[o.pay_method] = (payCount[o.pay_method]||0)+1; });
+
+  // Days of week
+  var dowCount = [0,0,0,0,0,0,0];
+  var dowRevenue = [0,0,0,0,0,0,0];
+  orders.forEach(function(o) {
+    var d = new Date(new Date(o.created_at).toLocaleString('en-US',{timeZone:'America/Mexico_City'}));
+    dowCount[d.getDay()] += 1;
+    dowRevenue[d.getDay()] += Number(o.total||0);
+  });
+
+  // Hours heatmap
+  var hourCount = {};
+  orders.forEach(function(o) {
+    var d = new Date(new Date(o.created_at).toLocaleString('en-US',{timeZone:'America/Mexico_City'}));
+    var h = d.getHours();
+    hourCount[h] = (hourCount[h]||0)+1;
+  });
+
+  // Stock alerts
+  var stockBajo = insumos.filter(function(i){ return (i.stock_actual||0) <= (i.stock_minimo||0); });
+
+  // Cost analysis using real sales data
+  var insMap = {};
+  insumos.forEach(function(i){insMap[i.id]=i;});
+  var recPorProd = {};
+  recetas.forEach(function(r){ if(!recPorProd[r.producto_nombre]) recPorProd[r.producto_nombre]=[]; recPorProd[r.producto_nombre].push(r); });
+
+  var costosPorProd = {};
+  items.forEach(function(it) {
+    var n = it.product_name;
+    if (!recPorProd[n] || !recPorProd[n].length) return;
+    var size = it.size||'Chico';
+    var base = it.base||'Crema';
+    var tops = [];
+    try { var t=typeof it.toppings==='string'?JSON.parse(it.toppings):(it.toppings||{}); tops=(t.incluidos||[]).concat(t.basicos||[]).concat(t.premium||[]); } catch(e){}
+    
+    var costo = calcCostoItem(recPorProd[n], insMap, size, base, tops);
+    if (!costosPorProd[n]) costosPorProd[n] = [];
+    costosPorProd[n].push(costo);
+  });
+
+  var html = '<div class="container">';
+
+  // ── KPIs ──
+  html += '<div class="section">';
+  html += '<div class="section-title">Números clave — ' + mesLabel + '</div>';
+  html += '<div class="kpi-grid">';
+  html += kpiCard('Ventas totales', fmt(totalVentas), totalOrdenes + ' órdenes');
+  html += kpiCard('Ticket promedio', fmt(ticketProm), 'por orden', 'amber');
+  html += kpiCard('Total egresos', fmt(totalGastos), gastos.length + ' movimientos');
+  html += kpiCard('Margen estimado', margen + '%', 'ventas - egresos', margen >= 40 ? 'verde' : margen >= 20 ? 'amber' : '');
+  html += kpiCard('Productos vendidos', totalItems, Object.keys(prodCount).length + ' productos distintos', 'verde');
+  html += kpiCard('Órden más alta', fmt(Math.max.apply(null, orders.map(function(o){return Number(o.total||0);}))), 'del mes');
+  html += '</div></div>';
+
+  // ── VENTAS POR DÍA ──
+  html += '<div class="section">';
+  html += '<div class="section-title">Ventas día a día</div>';
+  html += '<div class="section-desc">Comportamiento de ingresos durante el mes</div>';
+  html += '<div class="chart-card"><div class="chart-wrap" style="height:200px;"><canvas id="chart-dias"></canvas></div></div>';
+  html += '</div>';
+
+  // ── MIX DE PRODUCTOS ──
+  html += '<div class="section">';
+  html += '<div class="section-title">Qué se vende y en qué %</div>';
+  html += '<div class="two-col">';
+  
+  html += '<div class="chart-card"><h3>Productos más vendidos</h3>';
+  var maxProd = prodCount[prodSorted[0]]||1;
+  prodSorted.slice(0,10).forEach(function(p) {
+    var cnt = prodCount[p]||0;
+    var rev = prodRevenue[p]||0;
+    html += '<div class="bar-row">';
+    html += '<span class="bar-label">' + p + '</span>';
+    html += '<div class="bar-track"><div class="bar-fill" style="width:' + pct(cnt,maxProd) + '%"></div></div>';
+    html += '<span class="bar-val">' + cnt + ' (' + pct(cnt,totalItems) + '%)</span>';
+    html += '</div>';
+  });
+  html += '</div>';
+
+  html += '<div class="chart-card"><h3>Ingresos por producto</h3>';
+  var maxRev = Math.max.apply(null, prodSorted.map(function(p){return prodRevenue[p]||0;}));
+  prodSorted.slice(0,10).forEach(function(p) {
+    var rev = prodRevenue[p]||0;
+    html += '<div class="bar-row">';
+    html += '<span class="bar-label">' + p + '</span>';
+    html += '<div class="bar-track"><div class="bar-fill verde" style="width:' + pct(rev,maxRev) + '%"></div></div>';
+    html += '<span class="bar-val">' + fmt(rev) + '</span>';
+    html += '</div>';
+  });
+  html += '</div></div></div>';
+
+  // ── TAMAÑOS Y BASES ──
+  html += '<div class="section">';
+  html += '<div class="section-title">Tamaños y bases preferidas</div>';
+  html += '<div class="two-col">';
+
+  var sizeSorted = Object.keys(sizeCount).sort(function(a,b){return sizeCount[b]-sizeCount[a];});
+  var totalSizes = Object.values(sizeCount).reduce(function(s,v){return s+v;},0);
+  html += '<div class="chart-card"><h3>Distribución de tamaños</h3>';
+  sizeSorted.forEach(function(s) {
+    var c = sizeCount[s];
+    html += '<div class="bar-row">';
+    html += '<span class="bar-label">' + s + '</span>';
+    html += '<div class="bar-track"><div class="bar-fill amber" style="width:' + pct(c,totalSizes) + '%"></div></div>';
+    html += '<span class="bar-val">' + c + ' (' + pct(c,totalSizes) + '%)</span>';
+    html += '</div>';
+  });
+  html += '</div>';
+
+  var baseSorted = Object.keys(baseCount).sort(function(a,b){return baseCount[b]-baseCount[a];});
+  var totalBases = Object.values(baseCount).reduce(function(s,v){return s+v;},0);
+  html += '<div class="chart-card"><h3>Bases más pedidas</h3>';
+  baseSorted.slice(0,8).forEach(function(b) {
+    var c = baseCount[b];
+    html += '<div class="bar-row">';
+    html += '<span class="bar-label">' + b + '</span>';
+    html += '<div class="bar-track"><div class="bar-fill rosa" style="width:' + pct(c,totalBases) + '%"></div></div>';
+    html += '<span class="bar-val">' + c + ' (' + pct(c,totalBases) + '%)</span>';
+    html += '</div>';
+  });
+  html += '</div></div></div>';
+
+  // ── TOPPINGS ──
+  var topSorted = Object.keys(topCount).sort(function(a,b){return topCount[b]-topCount[a];});
+  if (topSorted.length) {
+    html += '<div class="section">';
+    html += '<div class="section-title">Toppings más populares</div>';
+    html += '<div class="section-desc">Frecuencia de aparición en órdenes del mes</div>';
+    html += '<div class="chart-card"><h3>Top toppings</h3>';
+    var maxTop = topCount[topSorted[0]]||1;
+    topSorted.slice(0,12).forEach(function(t) {
+      var c = topCount[t];
+      html += '<div class="bar-row">';
+      html += '<span class="bar-label">' + t + '</span>';
+      html += '<div class="bar-track"><div class="bar-fill" style="width:' + pct(c,maxTop) + '%"></div></div>';
+      html += '<span class="bar-val">' + c + ' veces</span>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+  }
+
+  // ── COMBOS ──
+  var comboSorted = Object.keys(comboCount).sort(function(a,b){return comboCount[b]-comboCount[a];});
+  if (comboSorted.length) {
+    html += '<div class="section">';
+    html += '<div class="section-title">Combinaciones más pedidas</div>';
+    html += '<div class="section-desc">Tamaño + Base más frecuentes</div>';
+    html += '<div class="chart-card"><div class="combo-list">';
+    comboSorted.slice(0,8).forEach(function(c, i) {
+      html += '<div class="combo-item">';
+      html += '<span class="combo-name">' + (i+1) + '. ' + c + '</span>';
+      html += '<span class="combo-count">' + comboCount[c] + ' órdenes</span>';
+      html += '</div>';
+    });
+    html += '</div></div></div>';
+  }
+
+  // ── MARGENES REALES ──
+  html += '<div class="section">';
+  html += '<div class="section-title">Margen real por producto</div>';
+  html += '<div class="section-desc">Costo calculado con las combinaciones reales vendidas este mes</div>';
+  html += '<div class="chart-card"><table class="data-table">';
+  html += '<thead><tr><th>Producto</th><th>Vendidos</th><th>Costo promedio</th><th>Precio prom.</th><th>Margen</th><th>Ganancia total</th></tr></thead><tbody>';
+  
+  prodSorted.slice(0,12).forEach(function(p) {
+    var costos = costosPorProd[p];
+    if (!costos || !costos.length) return;
+    var costoAvg = costos.reduce(function(s,c){return s+c;},0) / costos.length;
+    var precioAvg = (prodRevenue[p]||0) / (prodCount[p]||1);
+    var margenProd = precioAvg > 0 ? Math.round((precioAvg-costoAvg)/precioAvg*100) : 0;
+    var gananciaTotal = (precioAvg - costoAvg) * (prodCount[p]||0);
+    var cls = margenProd >= 60 ? 'badge-green' : margenProd >= 30 ? 'badge-amber' : 'badge-red';
+    html += '<tr>';
+    html += '<td><strong>' + p + '</strong></td>';
+    html += '<td>' + (prodCount[p]||0) + '</td>';
+    html += '<td>$' + costoAvg.toFixed(2) + '</td>';
+    html += '<td>$' + precioAvg.toFixed(0) + '</td>';
+    html += '<td><span class="badge ' + cls + '">' + margenProd + '%</span></td>';
+    html += '<td>' + fmt(gananciaTotal) + '</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  html += '<p style="font-size:11px;color:var(--muted);margin-top:12px;">* Costo calculado con las combinaciones reales de cada venta</p>';
+  html += '</div></div>';
+
+  // ── DÍAS DE SEMANA ──
+  html += '<div class="section">';
+  html += '<div class="section-title">Comportamiento semanal</div>';
+  html += '<div class="two-col">';
+  var dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  var maxDow = Math.max.apply(null, dowCount);
+  html += '<div class="chart-card"><h3>Órdenes por día de semana</h3>';
+  dias.forEach(function(d,i) {
+    html += '<div class="bar-row">';
+    html += '<span class="bar-label">' + d + '</span>';
+    html += '<div class="bar-track"><div class="bar-fill" style="width:' + pct(dowCount[i],maxDow) + '%"></div></div>';
+    html += '<span class="bar-val">' + dowCount[i] + '</span>';
+    html += '</div>';
+  });
+  html += '</div>';
+
+  // Pay methods
+  html += '<div class="chart-card"><h3>Métodos de pago</h3>';
+  var totalPays = orders.length || 1;
+  [['💵 Efectivo','efectivo'],['💳 Tarjeta','tarjeta'],['📲 Transferencia','transferencia']].forEach(function(pm) {
+    var c = payCount[pm[1]]||0;
+    html += '<div class="bar-row">';
+    html += '<span class="bar-label">' + pm[0] + '</span>';
+    html += '<div class="bar-track"><div class="bar-fill amber" style="width:' + pct(c,totalPays) + '%"></div></div>';
+    html += '<span class="bar-val">' + c + ' (' + pct(c,totalPays) + '%)</span>';
+    html += '</div>';
+  });
+  html += '</div></div></div>';
+
+  // ── STOCK ──
+  if (stockBajo.length) {
+    html += '<div class="section">';
+    html += '<div class="section-title">⚠️ Stock bajo</div>';
+    html += '<div class="chart-card"><table class="data-table">';
+    html += '<thead><tr><th>Insumo</th><th>Stock actual</th><th>Mínimo</th><th>Estado</th></tr></thead><tbody>';
+    stockBajo.forEach(function(ins) {
+      html += '<tr><td><strong>' + ins.nombre + '</strong></td>';
+      html += '<td>' + (ins.stock_actual||0) + ' ' + ins.unidad + '</td>';
+      html += '<td>' + (ins.stock_minimo||0) + ' ' + ins.unidad + '</td>';
+      html += '<td><span class="badge ' + ((ins.stock_actual||0)===0?'badge-red':'badge-amber') + '">' + ((ins.stock_actual||0)===0?'Agotado':'Bajo') + '</span></td></tr>';
+    });
+    html += '</tbody></table></div></div>';
+  }
+
+  // ── GASTOS ──
+  if (gastos.length) {
+    var gastosCat = {};
+    gastos.forEach(function(g){ gastosCat[g.cat||'Otros'] = (gastosCat[g.cat||'Otros']||0) + Number(g.monto||0); });
+    var gastosSorted = Object.keys(gastosCat).sort(function(a,b){return gastosCat[b]-gastosCat[a];});
+    var maxGasto = gastosCat[gastosSorted[0]]||1;
+
+    html += '<div class="section">';
+    html += '<div class="section-title">Egresos del mes</div>';
+    html += '<div class="chart-card"><h3>Por categoría</h3>';
+    gastosSorted.forEach(function(cat) {
+      var v = gastosCat[cat];
+      html += '<div class="bar-row">';
+      html += '<span class="bar-label">' + cat + '</span>';
+      html += '<div class="bar-track"><div class="bar-fill amber" style="width:' + pct(v,maxGasto) + '%"></div></div>';
+      html += '<span class="bar-val">' + fmt(v) + '</span>';
+      html += '</div>';
+    });
+    html += '<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-weight:600;">';
+    html += '<span>Total egresos</span><span style="color:var(--rojo);">' + fmt(totalGastos) + '</span></div>';
+    html += '</div></div>';
+  }
+
+  html += '</div>'; // container
+  return html;
+}
+
+function kpiCard(label, val, sub, type) {
+  return '<div class="kpi-card ' + (type||'') + '"><div class="kpi-label">' + label + '</div><div class="kpi-val">' + val + '</div><div class="kpi-sub">' + (sub||'') + '</div></div>';
+}
+
+function calcCostoItem(recLines, insMap, size, base, toppings) {
+  var costo = 0;
+  recLines.forEach(function(r) {
+    var mod = r.modificador_opcion || '';
+    var tipo = r.tipo_componente || 'ingrediente';
+    var ins = insMap[r.insumo_id];
+    if (!ins) return;
+    var f = (function(from, to) {
+      var g={kg:1000,g:1,gr:1}, m={l:1000,ml:1};
+      if(g[from]&&g[to]) return g[from]/g[to];
+      if(m[from]&&m[to]) return m[from]/m[to];
+      return 1;
+    })(r.unidad_uso||ins.unidad, ins.unidad);
+    var cant = r.cantidad * f;
+
+    if (tipo === 'fruta') {
+      if (!mod || mod === size) costo += ins.costo_unitario * cant;
+    } else if (tipo === 'base') {
+      if (mod === size + ' · ' + base || mod === size + ' · ' + base.split(' ')[0]) costo += ins.costo_unitario * cant;
+    } else if (tipo === 'topping') {
+      if (toppings && toppings.indexOf(mod) >= 0) costo += ins.costo_unitario * cant;
+    } else if (tipo === 'ingrediente' && !mod) {
+      costo += ins.costo_unitario * cant;
+    }
+  });
+  return costo;
+}
+
+function renderCharts(orders, items, mesISO) {
+  // Chart por días
+  var mp = mesISO.split('-').map(Number);
+  var diasEnMes = new Date(mp[0], mp[1], 0).getDate();
+  var ventasPorDia = {};
+  for (var d = 1; d <= diasEnMes; d++) ventasPorDia[d] = 0;
+  
+  orders.forEach(function(o) {
+    var d = new Date(new Date(o.created_at).toLocaleString('en-US',{timeZone:'America/Mexico_City'}));
+    if (d.getMonth()+1 === mp[1] && d.getFullYear() === mp[0]) {
+      ventasPorDia[d.getDate()] = (ventasPorDia[d.getDate()]||0) + Number(o.total||0);
+    }
+  });
+
+  var canvas = document.getElementById('chart-dias');
+  if (!canvas) return;
+  new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: Object.keys(ventasPorDia).map(function(d){return d;}),
+      datasets: [{
+        label: 'Ventas',
+        data: Object.values(ventasPorDia),
+        backgroundColor: 'rgba(166,24,46,0.7)',
+        borderColor: '#A6182E',
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { ticks: { callback: function(v){ return '$'+v.toLocaleString('es-MX'); }, font:{size:10} }, grid:{color:'rgba(0,0,0,0.05)'} },
+        x: { ticks: { font:{size:10} }, grid:{display:false} }
+      }
+    }
+  });
+}
+
+// Load on start
+loadDashboard();
+</script>
+</body>
+</html>
