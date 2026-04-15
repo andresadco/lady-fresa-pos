@@ -1280,15 +1280,15 @@ function fmt(n) { return '$'+Number(n||0).toLocaleString('es-MX',{minimumFractio
 
 // ── OVERVIEW ──
 async function loadOverview() {
-  var hoy = new Date();
-  var todayISO = hoy.toISOString().slice(0,10);
+  var hoy = new Date(new Date().toLocaleString('en-US', {timeZone:'America/Mexico_City'}));
+  var todayISO = hoy.getFullYear() + '-' + String(hoy.getMonth()+1).padStart(2,'0') + '-' + String(hoy.getDate()).padStart(2,'0');
 
   // Build month selector if empty
   var mesSel = document.getElementById('dash-mes-sel');
   if (!mesSel.options.length) {
     for (var i = 0; i < 12; i++) {
       var d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
-      var key = d.toISOString().slice(0,7);
+      var key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
       var label = d.toLocaleDateString('es-MX', {month:'long', year:'numeric'});
       var opt = document.createElement('option');
       opt.value = key;
@@ -1306,14 +1306,13 @@ async function loadOverview() {
 
   var mesLabel = new Date(_mp[0], _mp[1] - 1, 1).toLocaleDateString('es-MX', {month:'long', year:'numeric'});
   mesLabel = mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1);
-  document.getElementById('dash-fecha').textContent = esHoy
-    ? hoy.toLocaleDateString('es-MX', {weekday:'long', day:'numeric', month:'long', year:'numeric'})
-    : mesLabel;
+  // Always show the selected month as subtitle
+  document.getElementById('dash-fecha').textContent = mesLabel;
 
   // Load all data in parallel
   var [ordersHoy, ordensMes, turnos, insumos, movsMes, gastosMes, recetas, entradasConf] = await Promise.all([
-    sbGet('orders', 'created_at=gte.' + todayISO + 'T00:00:00&select=total,sucursal'),
-    sbGet('orders', 'created_at=gte.' + mesInicio + 'T00:00:00&created_at=lte.' + mesFin + 'T23:59:59&select=total,sucursal'),
+    sbGet('orders', 'created_at=gte.' + todayISO + 'T06:00:00&select=total,sucursal'),
+    sbGet('orders', 'created_at=gte.' + mesInicio + 'T06:00:00&created_at=lt.' + (function(){ var p=mesISO.split('-'); var nx=new Date(parseInt(p[0]),parseInt(p[1]),1); return nx.getFullYear()+'-'+String(nx.getMonth()+1).padStart(2,'0')+'-01'; })() + 'T06:00:00&select=total,sucursal'),
     sbGet('turnos', 'order=created_at.desc&limit=5&select=*'),
     sbGet('insumos', 'activo=eq.true&select=*'),
     sbGet('inv_movimientos', 'tipo=eq.salida&fecha=gte.' + mesInicio + '&fecha=lte.' + mesFin + '&select=insumo_id,cantidad,fecha'),
@@ -1495,8 +1494,20 @@ async function loadOverview() {
   var productos = productsData.filter(function(p){ return p.active && recPorProd[p.name]; });
 
   function calcCostoBase(nombre) {
-    var lines = (recPorProd[nombre]||[]).filter(function(r){ return r.tipo_componente !== 'topping'; });
-    // Use first tamaño found or flat recipe
+    var allLines = recPorProd[nombre] || [];
+    // Filter to base ingredients only (no toppings, no premium extras)
+    // For products with tamaño variants, use Chico as base
+    var hasTamano = allLines.some(function(r){ return r.modificador_opcion && (r.modificador_opcion.indexOf('Chico')>=0 || r.modificador_opcion.indexOf('Mediano')>=0 || r.modificador_opcion.indexOf('Grande')>=0); });
+    var lines = allLines.filter(function(r){
+      var tipo = r.tipo_componente || 'ingrediente';
+      if (tipo === 'topping') return false;
+      // If has tamaño variants, only use Chico or lines without tamaño
+      if (hasTamano && r.modificador_opcion) {
+        return r.modificador_opcion.indexOf('Chico') >= 0;
+      }
+      return true;
+    });
+    if (!lines.length) lines = allLines.filter(function(r){ return (r.tipo_componente||'ingrediente') === 'ingrediente'; });
     var costoTotal = 0;
     lines.forEach(function(l){
       var ins = insMapLocal[l.insumo_id];
@@ -3879,7 +3890,7 @@ function openSincronizarGastos() {
     var hoy = new Date();
     for (var i = 0; i < 12; i++) {
       var d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
-      var key = d.toISOString().slice(0,7);
+      var key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
       var label = d.toLocaleDateString('es-MX', {month:'long', year:'numeric'});
       label = label.charAt(0).toUpperCase() + label.slice(1);
       var opt = document.createElement('option');
