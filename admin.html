@@ -1095,6 +1095,7 @@ async function loadCategorias() {
   var res = await sbGet('categorias', 'order=orden.asc,nombre.asc&select=*');
   todasCategorias = Array.isArray(res) ? res : [];
   renderCategorias();
+  return todasCategorias;
 }
 
 function renderCategorias() {
@@ -1169,7 +1170,7 @@ async function loadPage(page) {
   if (page==='overview') loadOverview();
   else if (page==='usuarios') loadUsuarios();
   else if (page==='sucursales') loadSucursales();
-  else if (page==='menu') { todosGrupos=[]; renderMenu(); }
+  else if (page==='menu') { todosGrupos=[]; loadCategorias().then(function(){ renderMenu(); }); }
   else if (page==='turnos') loadTurnos();
   else if (page==='config') loadConfig();
   else if (page==='inventario') loadInventario();
