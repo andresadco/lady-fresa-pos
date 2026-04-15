@@ -1670,13 +1670,14 @@ function toggleActive() {
 async function saveProducto() {
   const data = {
     nombre: document.getElementById('p-name').value.trim(),
-    precio: parseFloat(document.getElementById('p-price').value),
+    precio: parseFloat(document.getElementById('p-price').value) || 0,
     categoria: document.getElementById('p-cat').value,
     emoji: document.getElementById('p-emoji').value.trim() || '🍓',
     descripcion: document.getElementById('p-desc').value.trim(),
     activo: document.getElementById('p-active-toggle').classList.contains('on'),
   };
-  if (!data.nombre || !data.precio) { toast('⚠ Nombre y precio requeridos'); return; }
+  if (!data.nombre) { toast('⚠ Nombre requerido'); return; }
+  if (isNaN(data.precio) || document.getElementById('p-price').value === '') { toast('⚠ Precio requerido'); return; }
 
   // Obtener grupos seleccionados
   const checks = document.querySelectorAll('#p-mods-checks input[type=checkbox]');
