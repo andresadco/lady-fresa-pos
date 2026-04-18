@@ -481,6 +481,7 @@ html, body {
     <div class="tb-actions">
       <button class="tb-btn" onclick="openHist()" title="Historial">📋</button>
       <button class="tb-btn" onclick="openCierreSheet()" title="Cierre de turno" id="btn-cierre" style="display:none;">🔐</button>
+      <button class="tb-btn" onclick="abrirRetiro()" title="Registrar retiro" id="btn-retiro" style="display:none;">💸</button>
       <button class="tb-btn" onclick="openPrinterCfg()" title="Impresora">🖨️</button>
       <button onclick="openOrderSheet()" id="tb-order-btn" title="Ver orden"
         style="display:none;height:38px;padding:0 14px;border-radius:20px;border:2px solid var(--red);background:var(--red);color:#fff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;align-items:center;gap:5px;white-space:nowrap;">
@@ -899,6 +900,7 @@ function showPOS() {
   const p = PERMS[currentUser.role] || PERMS.cajero;
   window._hasDiscount = p.discount;
   document.getElementById('btn-cierre').style.display = p.cierre ? 'flex' : 'none';
+  document.getElementById('btn-retiro').style.display = p.discount ? 'flex' : 'none';
   loadCategoriasPos();
   loadCatalog();
   cargarPromos();
@@ -1108,7 +1110,7 @@ function renderCustomBody() {
       html+=`<div class="sizes-row">`;
       mod.options.forEach(o=>{
         const sel=CS.sel['Tamaño']===o.name;
-        html+=`<div class="size-card${sel?' sel':''}" onclick="selSingle('Tamaño','${o.name}');refreshAcc('${modKey.replace(/\s/g,'_')}');">
+        html+=`<div class="size-card${sel?' sel':''}" onclick="selSingle('Tamaño','${o.name}')">
           <div class="size-icon">${icons[o.name]||'🥤'}</div>
           <div class="size-name">${sanitize(o.name)}</div>
           <div class="size-extra">${o.extra===0?'Base':'+$'+o.extra}</div>
@@ -1119,7 +1121,7 @@ function renderCustomBody() {
       html+=`<div class="bases-grid">`;
       mod.options.forEach(o=>{
         const sel=CS.sel[modKey]===o.name;
-        html+=`<div class="base-chip${sel?' sel':''}" onclick="selSingle('${modKey}','${o.name}');refreshAcc('${modKey.replace(/\s/g,'_')}');">
+        html+=`<div class="base-chip${sel?' sel':''}" onclick="selSingle('${modKey}','${o.name}')">
           <span style="font-size:18px;">${tEmoji(o.name)}</span>
           <div class="base-name">${sanitize(o.name)}</div>
           <div class="base-extra">${o.extra===0?'incl.':'+$'+o.extra}</div>
@@ -1142,7 +1144,7 @@ function renderCustomBody() {
         const isSel=cnt>0;
         const cls=isSel?(isPrem?'sel-prem':isShot?'sel-shot':'sel'):'';
         const priceLabel=isSel?(o.extra===0?'gratis ✓':`+$${o.extra*cnt}${cnt>1?` ×${cnt}`:''}`):(o.extra===0?'gratis':'+$'+o.extra);
-        html+=`<div class="top-chip${cls?' '+cls:''}" onclick="toggleTop('${modKey}','${sanitize(o.name)}');refreshAcc('${modKey.replace(/\s/g,'_')}');">
+        html+=`<div class="top-chip${cls?' '+cls:''}" onclick="toggleTop('${modKey}','${sanitize(o.name)}')">
           <span class="top-emoji">${tEmoji(o.name)}</span>
           <span class="top-name">${sanitize(o.name)}</span>
           <span class="top-price">${priceLabel}</span>
@@ -1206,16 +1208,86 @@ function refreshAcc(id){
   }
 }
 
-function selSingle(modKey,val){CS.sel[modKey]=val;renderCustomBody();}
+function selSingle(modKey, val) {
+  CS.sel[modKey] = val;
+  // Actualizar clases de los chips en el DOM sin re-renderizar todo
+  const accId = 'acc-' + modKey.replace(/\s/g,'_');
+  const sec = document.getElementById(accId); if(!sec) return;
+  if(modKey === 'Tamaño') {
+    sec.querySelectorAll('.size-card').forEach(el => {
+      const name = el.querySelector('.size-name')?.textContent;
+      el.classList.toggle('sel', name === val);
+    });
+  } else {
+    sec.querySelectorAll('.base-chip').forEach(el => {
+      const name = el.querySelector('.base-name')?.textContent;
+      el.classList.toggle('sel', name === val);
+      const check = el.querySelector('.base-check');
+      if(check) check.textContent = name === val ? '✓' : '';
+    });
+  }
+  updateBadge(accId, modKey);
+  updateCustomPrice();
+}
 
-function toggleTop(modKey,name){
-  const mod=MODS[modKey]; if(!mod) return;
-  const arr=CS.sel[modKey]||[];
-  const cnt=arr.filter(x=>x===name).length;
-  if(cnt>0&&arr.length<mod.max) arr.push(name);
-  else if(cnt>0){const idx=arr.lastIndexOf(name);arr.splice(idx,1);}
-  else{if(arr.length>=mod.max){showToast('Máximo '+mod.max+' selecciones');return;} arr.push(name);}
-  CS.sel[modKey]=arr; renderCustomBody();
+function toggleTop(modKey, name) {
+  const mod = MODS[modKey]; if(!mod) return;
+  const arr = CS.sel[modKey] || [];
+  const cnt = arr.filter(x => x === name).length;
+  if(cnt > 0 && arr.length < mod.max) arr.push(name);
+  else if(cnt > 0) { const idx = arr.lastIndexOf(name); arr.splice(idx,1); }
+  else { if(arr.length >= mod.max) { showToast('Máximo '+mod.max+' selecciones'); return; } arr.push(name); }
+  CS.sel[modKey] = arr;
+
+  const isPrem = modKey === 'Toppings Extra Premium';
+  const isShot = modKey === 'Shots Extra';
+  const accId = 'acc-' + modKey.replace(/\s/g,'_');
+  const sec = document.getElementById(accId); if(!sec) return;
+
+  // Actualizar cada chip en el DOM
+  sec.querySelectorAll('.top-chip').forEach(el => {
+    const chipName = el.querySelector('.top-name')?.textContent;
+    const chipArr = CS.sel[modKey] || [];
+    const chipCnt = chipArr.filter(x => x === chipName).length;
+    const isSel = chipCnt > 0;
+    const opt = mod.options.find(o => o.name === chipName);
+    // Clases
+    el.className = 'top-chip' + (isSel ? (' ' + (isPrem?'sel-prem':isShot?'sel-shot':'sel')) : '');
+    // Precio
+    const priceEl = el.querySelector('.top-price');
+    if(priceEl && opt) {
+      priceEl.textContent = isSel
+        ? (opt.extra===0 ? 'gratis ✓' : `+$${opt.extra*chipCnt}${chipCnt>1?` ×${chipCnt}`:''}`)
+        : (opt.extra===0 ? 'gratis' : '+$'+opt.extra);
+    }
+  });
+
+  // Actualizar free-pill si aplica
+  if(modKey === 'Toppings Incluidos') {
+    const cnt2 = (CS.sel[modKey]||[]).length;
+    const fp = sec.querySelector('.free-pill');
+    if(fp) { fp.textContent = cnt2+'/2 gratis'; fp.classList.toggle('full', cnt2>=2); }
+  }
+
+  updateBadge(accId, modKey);
+  updateCustomPrice();
+}
+
+// Actualiza solo el badge del header de una sección
+function updateBadge(accId, modKey) {
+  const sec = document.getElementById(accId); if(!sec) return;
+  const mod = MODS[modKey]; if(!mod) return;
+  const isSingle = mod.max === 1;
+  const selCount = isSingle ? (CS.sel[modKey]?1:0) : (CS.sel[modKey]||[]).length;
+  let pill;
+  if(mod.required) pill = `<span class="acc-pill acc-pill-req">Req.</span>`;
+  else if(selCount > 0) pill = `<span class="acc-pill acc-pill-ok">+${selCount} ✓</span>`;
+  else pill = `<span class="acc-pill acc-pill-opt">Opcional</span>`;
+  const meta = sec.querySelector('.acc-meta');
+  if(meta) {
+    const arrow = meta.querySelector('.acc-arrow');
+    meta.innerHTML = pill + (arrow ? arrow.outerHTML : '<span class="acc-arrow">▼</span>');
+  }
 }
 
 function calcItemPrice(){
@@ -1623,13 +1695,61 @@ function closeHist(){closeSheet('hist');}
 // ═══════════════════════════════
 // CIERRE DE TURNO (sin cambios funcionales)
 // ═══════════════════════════════
+// ═══════════════════════════════
+// RETIROS EN TURNO
+// ═══════════════════════════════
+// retiros = [{monto, motivo, hora, nombre}]
+let retiros = [];
+
+function abrirRetiro(){
+  // Solo encargado/gerente/admin
+  const p=PERMS[currentUser?.role]||PERMS.cajero;
+  if(!p.discount){ showToast('No tienes permiso para registrar retiros'); return; }
+  const div=document.createElement('div');
+  div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;display:flex;align-items:flex-end;';
+  div.innerHTML=`<div style="background:#fff;border-radius:24px 24px 0 0;padding:20px;width:100%;padding-bottom:max(20px,env(safe-area-inset-bottom))">
+    <div style="width:44px;height:5px;background:#ddd;border-radius:3px;margin:0 auto 16px;"></div>
+    <div style="font-family:'Bebas Neue',serif;font-size:22px;color:#A6182E;letter-spacing:1px;margin-bottom:16px;">💸 Registrar Retiro</div>
+    <div style="font-size:12px;color:#9a7075;margin-bottom:6px;">Monto retirado</div>
+    <input id="retiro-monto" type="number" placeholder="0.00" min="0" step="1"
+      style="width:100%;height:52px;border:1.5px solid #e0c0c8;border-radius:12px;padding:0 16px;font-size:22px;font-weight:700;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:12px;text-align:right;">
+    <div style="font-size:12px;color:#9a7075;margin-bottom:6px;">Motivo</div>
+    <input id="retiro-motivo" type="text" placeholder="Ej. Compra de insumos, pago proveedor..."
+      style="width:100%;height:44px;border:1.5px solid #e0c0c8;border-radius:12px;padding:0 14px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:16px;">
+    <div style="display:flex;gap:8px;">
+      <button onclick="guardarRetiro()" style="flex:2;height:52px;background:#A6182E;color:#fff;border:none;border-radius:14px;font-family:'Bebas Neue',serif;font-size:18px;letter-spacing:2px;cursor:pointer;">REGISTRAR</button>
+      <button onclick="this.closest('div[style*=fixed]').remove()" style="flex:1;height:52px;background:#FDF6F7;border:none;border-radius:14px;color:#9a7075;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;">Cancelar</button>
+    </div>
+  </div>`;
+  div.onclick=e=>{if(e.target===div) div.remove();};
+  document.body.appendChild(div);
+  setTimeout(()=>document.getElementById('retiro-monto')?.focus(),100);
+}
+
+function guardarRetiro(){
+  const monto=parseFloat(document.getElementById('retiro-monto')?.value)||0;
+  const motivo=(document.getElementById('retiro-motivo')?.value||'').trim();
+  if(monto<=0){ showToast('Ingresa un monto válido'); return; }
+  if(!motivo){ showToast('Escribe el motivo del retiro'); return; }
+  retiros.push({ monto, motivo, hora:new Date().toISOString(), nombre:currentUser?.name||'—' });
+  document.querySelector('div[style*="position:fixed"][style*="flex-end"]')?.remove();
+  showToast('✅ Retiro de $'+monto.toLocaleString('es-MX')+' registrado');
+  // Si el cierre estaba abierto, actualizar el cálculo
+  if(document.getElementById('sheet-cierre').classList.contains('open')){
+    buildCierreData(); renderCierreModal();
+  }
+}
+
+// ═══════════════════════════════
+// CIERRE DE TURNO
+// ═══════════════════════════════
 function openCierreSheet(){
-  if(!currentUser){return;}
+  if(!currentUser) return;
   buildCierreData();
   renderCierreModal();
   openSheet('cierre');
 }
-function closeCierreSheet(){closeSheet('cierre');}
+function closeCierreSheet(){ closeSheet('cierre'); }
 
 function buildCierreData(){
   const totalVentas=sales.reduce((s,v)=>s+v.total,0);
@@ -1637,7 +1757,7 @@ function buildCierreData(){
   const ticketProm=totalOrdenes>0?totalVentas/totalOrdenes:0;
   const totalIva=sales.reduce((s,v)=>s+v.iva,0);
   const byPay={efectivo:0,tarjeta:0,transferencia:0};
-  sales.forEach(s=>{byPay[s.payMethod]=(byPay[s.payMethod]||0)+s.total;});
+  sales.forEach(s=>{ byPay[s.payMethod]=(byPay[s.payMethod]||0)+s.total; });
   const byProd={};
   sales.forEach(sale=>{
     sale.items.forEach(item=>{
@@ -1647,6 +1767,7 @@ function buildCierreData(){
     });
   });
   const topProds=Object.entries(byProd).sort((a,b)=>b[1].qty-a[1].qty);
+  const totalRetiros=retiros.reduce((s,r)=>s+r.monto,0);
   cierreData={
     sucursal:currentUser.sucursal||'Principal',
     cajero_id:currentUser.id, cajero_name:currentUser.name,
@@ -1655,8 +1776,31 @@ function buildCierreData(){
     efectivo:byPay.efectivo||0, tarjeta:byPay.tarjeta||0, transferencia:byPay.transferencia||0,
     total_iva:totalIva,
     productos:topProds.map(([name,d])=>({name,qty:d.qty,rev:d.rev,emoji:d.emoji})),
+    retiros:[...retiros],
+    total_retiros:totalRetiros,
     inicio:turnoStartTime.toISOString(), fin:new Date().toISOString(),
   };
+}
+
+function calcCuadre(){
+  const fondo=parseFloat(document.getElementById('cierre-fondo')?.value)||0;
+  const conteo=parseFloat(document.getElementById('cierre-conteo')?.value)||0;
+  const esperado=fondo + (cierreData?.efectivo||0) - (cierreData?.total_retiros||0);
+  const diferencia=conteo - esperado;
+  const el=document.getElementById('cierre-cuadre-result');
+  if(!el) return;
+  if(conteo===0 && document.getElementById('cierre-conteo')?.value===''){
+    el.innerHTML='';
+    return;
+  }
+  const color=diferencia===0?'var(--green)':diferencia>0?'var(--blue)':'var(--red)';
+  const label=diferencia===0?'✅ Cuadre exacto':diferencia>0?`🔵 Sobran $${Math.abs(diferencia).toLocaleString('es-MX',{minimumFractionDigits:2})}`:`🔴 Faltan $${Math.abs(diferencia).toLocaleString('es-MX',{minimumFractionDigits:2})}`;
+  el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--bg);border-radius:12px;border:2px solid ${color};">
+    <span style="font-size:14px;font-weight:600;color:${color};">${label}</span>
+    <span style="font-size:11px;color:var(--text-3);">Esperado: $${esperado.toLocaleString('es-MX',{minimumFractionDigits:2})}</span>
+  </div>`;
+  // Guardar en cierreData para el payload
+  if(cierreData){ cierreData.fondo_inicial=fondo; cierreData.conteo_fisico=conteo; cierreData.diferencia_caja=diferencia; }
 }
 
 function renderCierreModal(){
@@ -1666,35 +1810,116 @@ function renderCierreModal(){
   const durMin=Math.round((new Date(d.fin)-new Date(d.inicio))/60000);
   const durStr=durMin>=60?Math.floor(durMin/60)+'h '+(durMin%60)+'min':durMin+'min';
   document.getElementById('cierre-sub').textContent=`${d.cajero_name} · ${new Date(d.inicio).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})} – ${new Date(d.fin).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})} · ${durStr}`;
+
   const payRows=[
     {label:'💵 Efectivo',amt:d.efectivo,color:'var(--green)'},
     {label:'💳 Tarjeta',amt:d.tarjeta,color:'var(--blue)'},
     {label:'📲 Transferencia',amt:d.transferencia,color:'var(--purple)'},
   ].filter(r=>r.amt>0);
+
+  // Fondo guardado del turno anterior (si existe)
+  const fondoGuardado=parseFloat(localStorage.getItem('lf_fondo_caja')||'0');
+
   document.getElementById('cierre-body').innerHTML=`
+
     <div class="cierre-kpi-grid">
       <div class="cierre-kpi"><div class="cierre-kpi-label">Total vendido</div><div class="cierre-kpi-val" style="color:var(--red)">${fmtD(d.total_ventas)}</div></div>
       <div class="cierre-kpi"><div class="cierre-kpi-label">Órdenes</div><div class="cierre-kpi-val">${d.total_ordenes}</div></div>
       <div class="cierre-kpi"><div class="cierre-kpi-label">Ticket promedio</div><div class="cierre-kpi-val">${fmt(d.ticket_promedio)}</div></div>
       <div class="cierre-kpi"><div class="cierre-kpi-label">IVA generado</div><div class="cierre-kpi-val">${fmt(d.total_iva)}</div></div>
     </div>
+
     <div class="cierre-section-title">Desglose de cobros</div>
     ${payRows.map(r=>`<div class="cierre-pay-row"><div class="cierre-pay-label">${r.label}</div><div class="cierre-pay-amt" style="color:${r.color}">${fmtD(r.amt)}</div></div>`).join('')}
-    <div class="cierre-pay-row" style="font-weight:600;"><div class="cierre-pay-label" style="font-weight:700;">Total</div><div class="cierre-pay-amt" style="color:var(--red)">${fmtD(d.total_ventas)}</div></div>
+    <div class="cierre-pay-row" style="font-weight:600;border-top:1px solid var(--border-2);margin-top:4px;padding-top:8px;">
+      <div class="cierre-pay-label" style="font-weight:700;">Total cobrado</div>
+      <div class="cierre-pay-amt" style="color:var(--red)">${fmtD(d.total_ventas)}</div>
+    </div>
+
+    ${d.retiros.length>0?`
+    <div class="cierre-section-title">Retiros del turno</div>
+    ${d.retiros.map(r=>`
+      <div class="cierre-pay-row">
+        <div style="flex:1;">
+          <div class="cierre-pay-label">💸 ${sanitize(r.motivo)}</div>
+          <div style="font-size:10px;color:var(--text-3);">${timeMX(r.hora)} · ${sanitize(r.nombre)}</div>
+        </div>
+        <div class="cierre-pay-amt" style="color:var(--red);">-${fmtD(r.monto)}</div>
+      </div>`).join('')}
+    <div class="cierre-pay-row" style="font-weight:600;">
+      <div class="cierre-pay-label">Total retiros</div>
+      <div class="cierre-pay-amt" style="color:var(--red);">-${fmtD(d.total_retiros)}</div>
+    </div>`:''}
+
+    <div class="cierre-section-title">Corte de caja</div>
+    <div style="background:var(--bg);border-radius:14px;padding:14px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span style="font-size:13px;color:var(--text-2);">Ventas en efectivo</span>
+        <span style="font-size:14px;font-weight:600;color:var(--green);">${fmtD(d.efectivo)}</span>
+      </div>
+      ${d.total_retiros>0?`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span style="font-size:13px;color:var(--text-2);">− Retiros</span>
+        <span style="font-size:14px;font-weight:600;color:var(--red);">-${fmtD(d.total_retiros)}</span>
+      </div>`:''}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid var(--border-2);">
+        <span style="font-size:13px;font-weight:600;color:var(--text);">Efectivo neto del turno</span>
+        <span style="font-size:15px;font-weight:700;color:var(--text);">${fmtD(d.efectivo - d.total_retiros)}</span>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div>
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:5px;">Fondo inicial en caja</div>
+        <input id="cierre-fondo" type="number" placeholder="500" min="0" step="1"
+          value="${fondoGuardado||''}"
+          oninput="localStorage.setItem('lf_fondo_caja',this.value);calcCuadre();"
+          style="width:100%;height:46px;border:1.5px solid var(--border-2);border-radius:10px;padding:0 12px;font-size:18px;font-weight:700;font-family:'DM Sans',sans-serif;outline:none;text-align:right;color:var(--text);">
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:5px;">Dinero contado en caja</div>
+        <input id="cierre-conteo" type="number" placeholder="0" min="0" step="1"
+          oninput="calcCuadre();"
+          style="width:100%;height:46px;border:1.5px solid var(--border-2);border-radius:10px;padding:0 12px;font-size:18px;font-weight:700;font-family:'DM Sans',sans-serif;outline:none;text-align:right;color:var(--text);">
+      </div>
+    </div>
+    <div id="cierre-cuadre-result"></div>
+
     ${d.productos.length?`
     <div class="cierre-section-title">Productos vendidos</div>
-    ${d.productos.map(p=>`<div class="cierre-prod-row"><span style="font-size:16px">${sanitize(p.emoji)}</span><div class="cierre-prod-name">${sanitize(p.name)}</div><div class="cierre-prod-qty">${p.qty} uds</div><div class="cierre-prod-rev">$${Math.round(p.rev).toLocaleString('es-MX')}</div></div>`).join('')}`:''}
+    ${d.productos.map(p=>`<div class="cierre-prod-row">
+      <span style="font-size:16px">${sanitize(p.emoji)}</span>
+      <div class="cierre-prod-name">${sanitize(p.name)}</div>
+      <div class="cierre-prod-qty">${p.qty} uds</div>
+      <div class="cierre-prod-rev">$${Math.round(p.rev).toLocaleString('es-MX')}</div>
+    </div>`).join('')}`:''}
+
     <div class="cierre-section-title">Notas del turno</div>
-    <textarea class="cierre-notas" id="cierre-notas" placeholder="Incidencias, observaciones, faltante de caja..."></textarea>
+    <textarea class="cierre-notas" id="cierre-notas" placeholder="Incidencias, faltante, observaciones..."></textarea>
   `;
+
+  // Calcular cuadre si ya hay fondo guardado
+  if(fondoGuardado) setTimeout(()=>calcCuadre(),50);
+
   const btn=document.getElementById('btn-cierre-ok');
   btn.disabled=false; btn.textContent='✓ CONFIRMAR CIERRE';
 }
 
 async function confirmarCierre(){
+  // Capturar fondo y conteo antes de validar
+  const fondo=parseFloat(document.getElementById('cierre-fondo')?.value)||0;
+  const conteo=parseFloat(document.getElementById('cierre-conteo')?.value)||0;
   const notas=document.getElementById('cierre-notas')?.value.trim()||'';
+
+  if(conteo===0 && !document.getElementById('cierre-conteo')?.value){
+    if(!confirm('No ingresaste el conteo físico de caja. ¿Confirmar cierre de todas formas?')) return;
+  }
+
   cierreData.notas=notas;
+  cierreData.fondo_inicial=fondo;
+  cierreData.conteo_fisico=conteo;
+  cierreData.diferencia_caja=conteo-(fondo+cierreData.efectivo-cierreData.total_retiros);
   cierreData.cerrado_at=new Date().toISOString();
+
   const btn=document.getElementById('btn-cierre-ok');
   btn.disabled=true; btn.textContent='Guardando...';
   try {
@@ -1705,6 +1930,10 @@ async function confirmarCierre(){
       ticket_promedio:cierreData.ticket_promedio,
       efectivo:cierreData.efectivo, tarjeta:cierreData.tarjeta, transferencia:cierreData.transferencia,
       total_iva:cierreData.total_iva, productos:cierreData.productos, notas:cierreData.notas,
+      retiros:cierreData.retiros, total_retiros:cierreData.total_retiros,
+      fondo_inicial:cierreData.fondo_inicial,
+      conteo_fisico:cierreData.conteo_fisico,
+      diferencia_caja:cierreData.diferencia_caja,
     };
     let res;
     if(turnoId){
@@ -1718,11 +1947,29 @@ async function confirmarCierre(){
       localStorage.removeItem('lf_turno_'+hoyISO+'_'+currentUser.id);
     }
     turnoId=null;
+
+    const dif=cierreData.diferencia_caja;
+    const difTxt=dif===0?'Cuadre exacto ✅':dif>0?`Sobran $${Math.abs(dif).toLocaleString('es-MX')} 🔵`:`Faltan $${Math.abs(dif).toLocaleString('es-MX')} 🔴`;
+
     document.getElementById('cierre-body').innerHTML=`
-      <div style="text-align:center;padding:40px 20px;">
-        <div style="font-size:56px;margin-bottom:16px;">✅</div>
+      <div style="text-align:center;padding:30px 20px 20px;">
+        <div style="font-size:56px;margin-bottom:12px;">${dif===0?'✅':dif>0?'🔵':'⚠️'}</div>
         <div style="font-family:'Bebas Neue',serif;font-size:28px;color:var(--green);letter-spacing:1px;">Turno cerrado</div>
-        <div style="font-size:14px;color:var(--text-3);margin-top:8px;line-height:1.6;">Guardado correctamente.<br>El resumen está en el dashboard.</div>
+        <div style="font-size:14px;color:var(--text-3);margin-top:8px;">${difTxt}</div>
+      </div>
+      <div style="background:var(--bg);border-radius:14px;padding:14px;">
+        <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;color:var(--text-2);border-bottom:1px solid var(--border);">
+          <span>Ventas totales</span><span style="font-weight:600;">$${cierreData.total_ventas.toLocaleString('es-MX',{minimumFractionDigits:2})}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;color:var(--text-2);border-bottom:1px solid var(--border);">
+          <span>Efectivo del turno</span><span style="font-weight:600;">$${(cierreData.efectivo-cierreData.total_retiros).toLocaleString('es-MX',{minimumFractionDigits:2})}</span>
+        </div>
+        ${cierreData.total_retiros>0?`<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;color:var(--text-2);border-bottom:1px solid var(--border);">
+          <span>Retiros</span><span style="font-weight:600;color:var(--red);">-$${cierreData.total_retiros.toLocaleString('es-MX',{minimumFractionDigits:2})}</span>
+        </div>`:''}
+        <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;color:var(--text-2);">
+          <span>Diferencia</span><span style="font-weight:700;color:${dif===0?'var(--green)':dif>0?'var(--blue)':'var(--red)'};">${dif>=0?'+':''}$${dif.toLocaleString('es-MX',{minimumFractionDigits:2})}</span>
+        </div>
       </div>`;
     document.getElementById('cierre-footer-btns').innerHTML=
       '<button onclick="finalizarCierre()" style="flex:1;height:50px;background:var(--red);color:#fff;border:none;border-radius:14px;font-family:\'Bebas Neue\',serif;font-size:18px;letter-spacing:2px;cursor:pointer;">CERRAR SESIÓN</button>';
@@ -1734,6 +1981,7 @@ async function confirmarCierre(){
 
 function finalizarCierre(){
   closeCierreSheet();
+  retiros=[];
   sales=[]; turnoStartTime=new Date(); turnoId=null; orderN=1;
   document.getElementById('order-num').textContent='001';
   document.getElementById('order-num-2').textContent='001';
