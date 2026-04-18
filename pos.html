@@ -99,31 +99,30 @@ html, body {
 }
 .tb-logo { font-family: 'Bebas Neue', serif; font-size: 22px; color: var(--red); letter-spacing: 2.5px; line-height: 1; flex-shrink: 0; }
 .tb-order-info { flex: 1; min-width: 0; }
-.tb-order-num { font-size: 12px; font-weight: 600; color: var(--text); }
+.tb-order-num { font-size: 14px; font-weight: 700; color: var(--text); }
 .tb-order-svc { font-size: 10px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tb-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; flex-shrink: 0; }
-.tb-btn { width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border-2); background: transparent; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; color: var(--text-2); flex-shrink: 0; }
+.tb-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.tb-btn { width: 38px; height: 38px; border-radius: 12px; border: 1.5px solid var(--border-2); background: var(--bg); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .tb-btn:active { background: var(--red-light); }
-.tb-badge { font-size: 10px; font-weight: 600; padding: 4px 10px; border-radius: 10px; background: var(--green-light); color: var(--green); white-space: nowrap; }
-.tb-badge.offline { background: #FDF3DC; color: var(--amber); }
+.tb-badge { font-size: 9px; font-weight: 600; color: var(--green); letter-spacing: 0.5px; display: flex; align-items: center; gap: 3px; white-space: nowrap; }
 
 /* ══════════════════════════════════════════
-   CATEGORY TABS
+   CAT TABS
 ══════════════════════════════════════════ */
 #cat-tabs {
-  background: var(--surface);
+  display: flex; align-items: center;
+  padding: 0 12px;
   border-bottom: 1px solid var(--border);
-  display: flex; gap: 0;
   overflow-x: auto; flex-shrink: 0;
   scrollbar-width: none; -ms-overflow-style: none;
-  padding: 0 12px;
+  background: var(--surface);
 }
 #cat-tabs::-webkit-scrollbar { display: none; }
 .cat-tab { padding: 11px 16px; font-size: 13px; font-weight: 500; color: var(--text-3); border: none; background: none; border-bottom: 2.5px solid transparent; white-space: nowrap; cursor: pointer; font-family: 'DM Sans', sans-serif; flex-shrink: 0; transition: color 0.15s; }
 .cat-tab.active { color: var(--red); border-bottom-color: var(--red); font-weight: 600; }
 
 /* ══════════════════════════════════════════
-   PRODUCTS GRID — tablet adaptive
+   PRODUCTS
 ══════════════════════════════════════════ */
 #products-area { flex: 1; overflow-y: auto; padding: 12px; -webkit-overflow-scrolling: touch; }
 #products-grid {
@@ -131,102 +130,110 @@ html, body {
   grid-template-columns: repeat(2, 1fr);
   gap: 10px;
 }
-/* Tablet: 3 columns from 600px */
-@media (min-width: 600px) {
+@media (min-width: 480px) {
   #products-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; }
 }
-/* Desktop/large tablet: 4 columns */
-@media (min-width: 900px) {
+@media (min-width: 768px) {
   #products-grid { grid-template-columns: repeat(4, 1fr); gap: 14px; }
   #topbar { padding: 0 24px; padding-top: var(--safe-top); }
   #cat-tabs { padding: 0 24px; }
-  #products-area { padding: 16px 24px; }
 }
 
 .prod-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 16px 12px;
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--radius); padding: 14px 12px; text-align: center;
   cursor: pointer; position: relative; overflow: hidden;
-  transition: all 0.15s; user-select: none;
-  min-height: 130px; justify-content: center;
-  text-align: center;
+  transition: all 0.15s; -webkit-tap-highlight-color: transparent;
+  /* MEJORA: min-height para consistencia visual */
+  min-height: 110px; display: flex; flex-direction: column; align-items: center; justify-content: center;
 }
 .prod-card:active { transform: scale(0.97); background: var(--red-light); }
-.prod-card.in-order { border-color: var(--red-mid); background: #fff9fa; }
-.prod-emoji { font-size: 30px; line-height: 1; }
-.prod-name { font-size: 12px; font-weight: 600; line-height: 1.3; color: var(--text); }
-.prod-price { font-size: 14px; font-weight: 700; color: var(--red); margin-top: 2px; }
+.prod-card.in-order { border-color: var(--red-mid); background: #FFF5F7; }
+.prod-qty-badge {
+  position: absolute; top: 8px; right: 8px;
+  background: var(--red); color: #fff; font-size: 11px; font-weight: 700;
+  width: 20px; height: 20px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+.prod-cat-badge {
+  position: absolute; top: 8px; left: 8px;
+  background: var(--amber-light); color: var(--amber);
+  font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 6px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.prod-emoji { font-size: 28px; margin-bottom: 6px; line-height: 1; }
+.prod-name { font-size: 12px; font-weight: 600; color: var(--text); line-height: 1.2; margin-bottom: 3px; }
 .prod-desc { font-size: 10px; color: var(--text-3); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.prod-qty-badge { position: absolute; top: 8px; left: 8px; background: var(--red); color: #fff; font-size: 10px; font-weight: 700; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-.prod-cat-badge { position: absolute; top: 8px; right: 8px; font-size: 9px; font-weight: 600; padding: 2px 6px; border-radius: 6px; background: var(--amber-light); color: var(--amber); }
+.prod-price { font-size: 13px; font-weight: 700; color: var(--red); margin-top: 5px; }
 
 /* ══════════════════════════════════════════
-   BOTTOM ORDER BAR
+   ORDER BAR
 ══════════════════════════════════════════ */
 #order-bar {
-  background: var(--red);
-  padding: 12px 16px;
-  padding-bottom: calc(12px + var(--safe-bottom));
-  display: none; flex-direction: column; gap: 0;
-  flex-shrink: 0;
+  display: none; flex-direction: column; flex-shrink: 0;
+  padding: 10px 12px; padding-bottom: calc(12px + var(--safe-bottom));
+  background: var(--surface); border-top: 1px solid var(--border);
 }
 #order-bar.visible { display: flex; }
-.ob-main { display: flex; align-items: center; justify-content: space-between; }
-.ob-info { color: #fff; }
-.ob-count { font-size: 12px; opacity: 0.8; margin-bottom: 2px; }
-.ob-total { font-family: 'Bebas Neue', serif; font-size: 28px; letter-spacing: 1px; }
-.ob-btn { background: #fff; color: var(--red); font-family: 'Bebas Neue', serif; font-size: 18px; letter-spacing: 2px; padding: 13px 30px; border-radius: 14px; border: none; cursor: pointer; }
-.ob-btn:active { background: rgba(255,255,255,0.9); }
+.ob-main { display: flex; align-items: center; gap: 10px; }
+.ob-info { flex: 1; }
+.ob-count { font-size: 11px; color: var(--text-3); }
+.ob-total { font-family: 'Bebas Neue', serif; font-size: 22px; color: var(--text); letter-spacing: 0.5px; }
+.ob-btn { height: 48px; padding: 0 22px; background: var(--red); color: #fff; border: none; border-radius: 14px; font-family: 'Bebas Neue', serif; font-size: 16px; letter-spacing: 2px; cursor: pointer; flex-shrink: 0; }
+.ob-btn:active { background: var(--red-dark); }
 
 /* ══════════════════════════════════════════
-   SHEETS (bottom sheet modals)
+   SHEETS
 ══════════════════════════════════════════ */
 .sheet-overlay { display: none; position: fixed; inset: 0; background: rgba(26,5,8,0.6); z-index: 100; }
 .sheet-overlay.open { display: block; }
 .sheet {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 101;
-  background: var(--surface); border-radius: 24px 24px 0 0;
+  background: var(--surface); border-radius: 28px 28px 0 0;
+  transform: translateY(100%); transition: transform 0.32s cubic-bezier(0.25,0.8,0.25,1);
+  max-height: 92dvh; display: flex; flex-direction: column;
   padding-bottom: var(--safe-bottom);
-  max-height: 93vh; display: flex; flex-direction: column;
-  transform: translateY(100%); transition: transform 0.32s cubic-bezier(0.34,1.2,0.64,1);
 }
 .sheet.open { transform: translateY(0); }
-
-/* Tablet: sheets become centered modals */
-@media (min-width: 640px) {
+@media (min-width: 600px) {
   .sheet {
-    left: 50%; right: auto;
-    transform: translateX(-50%) translateY(100%);
-    width: 560px; border-radius: 24px; bottom: 32px;
-    max-height: calc(100vh - 64px);
+    left: 50%; transform: translateX(-50%) translateY(100%);
+    width: 480px; border-radius: 28px 28px 0 0;
   }
   .sheet.open { transform: translateX(-50%) translateY(0); }
   .sheet-overlay { backdrop-filter: blur(4px); }
 }
-
 .sheet-drag { padding: 12px 0 4px; display: flex; justify-content: center; flex-shrink: 0; cursor: grab; }
 .sheet-drag div { width: 44px; height: 5px; background: var(--border-2); border-radius: 3px; }
 .sheet-header { padding: 4px 20px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .sheet-title { font-family: 'Bebas Neue', serif; font-size: 24px; color: var(--red); letter-spacing: 1px; }
 .sheet-sub { font-size: 12px; color: var(--text-3); margin-top: 2px; }
 .sheet-body { flex: 1; overflow-y: auto; padding: 16px 20px; -webkit-overflow-scrolling: touch; }
-.sheet-footer { padding: 12px 20px; border-top: 1px solid var(--border); flex-shrink: 0; padding-bottom: max(12px, var(--safe-bottom)); }
+.sheet-footer { padding: 12px 20px 8px; border-top: 1px solid var(--border); flex-shrink: 0; }
 
 /* ══════════════════════════════════════════
-   CUSTOMIZER
+   CUSTOMIZER — TABS (MEJORA PRINCIPAL)
 ══════════════════════════════════════════ */
-.mod-section { margin-bottom: 22px; }
-.mod-title { font-size: 11px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
-.mod-badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 8px; text-transform: none; letter-spacing: 0; }
-.badge-req { background: var(--red-light); color: var(--red); }
-.badge-opt { background: var(--bg); color: var(--text-3); }
+.mod-tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; margin-bottom: 14px; padding-bottom: 2px; flex-shrink: 0; }
+.mod-tabs::-webkit-scrollbar { display: none; }
+.mod-tab { flex-shrink: 0; padding: 6px 14px; border-radius: 20px; border: 1.5px solid var(--border-2); background: transparent; font-size: 12px; font-weight: 500; color: var(--text-2); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; white-space: nowrap; }
+.mod-tab.active { background: var(--red-light); border-color: var(--red-mid); color: var(--red-dark); font-weight: 600; }
+.mod-tab.has-sel { background: var(--red); border-color: var(--red); color: #fff; }
+/* Paneles de mods */
+.mod-panel { display: none; }
+.mod-panel.active { display: block; }
 
-.sizes-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
-.size-card { border: 2px solid var(--border-2); border-radius: 14px; padding: 12px 8px; text-align: center; cursor: pointer; transition: all 0.15s; }
+.mod-section { margin-bottom: 16px; }
+.mod-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.mod-badge { font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 10px; }
+.badge-req { background: var(--red-light); color: var(--red-dark); }
+.badge-opt { background: var(--bg); color: var(--text-3); border: 1px solid var(--border-2); }
+
+.sizes-row { display: flex; gap: 8px; }
+.size-card { flex: 1; padding: 10px 8px; border: 2px solid var(--border-2); border-radius: 14px; cursor: pointer; text-align: center; transition: all 0.15s; }
 .size-card:active { transform: scale(0.97); }
 .size-card.sel { border-color: var(--red); background: var(--red-light); }
-.size-icon { font-size: 22px; margin-bottom: 4px; }
+.size-icon { font-size: 24px; margin-bottom: 4px; }
 .size-name { font-size: 13px; font-weight: 600; color: var(--text); }
 .size-extra { font-size: 11px; color: var(--text-3); margin-top: 2px; }
 .size-card.sel .size-name { color: var(--red-dark); }
@@ -267,9 +274,10 @@ html, body {
 .cf-price { flex: 1; }
 .cf-label { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.8px; }
 .cf-val { font-family: 'Bebas Neue', serif; font-size: 30px; color: var(--text); letter-spacing: 0.5px; }
-.cf-btn { flex: 2; height: 54px; background: var(--red); color: #fff; border: none; border-radius: 14px; font-family: 'Bebas Neue', serif; font-size: 18px; letter-spacing: 2px; cursor: pointer; }
+/* MEJORA: botón agregar más grande y con estado loading */
+.cf-btn { flex: 2; height: 54px; background: var(--red); color: #fff; border: none; border-radius: 14px; font-family: 'Bebas Neue', serif; font-size: 18px; letter-spacing: 2px; cursor: pointer; transition: all 0.15s; }
 .cf-btn:active { background: var(--red-dark); }
-.cf-btn:disabled { opacity: 0.35; }
+.cf-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
 /* ══════════════════════════════════════════
    ORDER SHEET
@@ -285,7 +293,7 @@ html, body {
 .tag-top { background: var(--red-light); color: var(--red-dark); }
 .tag-paid { background: var(--amber-light); color: var(--amber); }
 .oi-note { font-size: 10px; color: var(--text-3); font-style: italic; margin-top: 3px; }
-.oi-edit { font-size: 10px; color: var(--text-3); margin-top: 3px; cursor: pointer; display: inline-block; }
+.oi-edit { font-size: 10px; color: var(--blue); margin-top: 3px; cursor: pointer; display: inline-block; padding: 2px 0; font-weight: 500; }
 .oi-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
 .oi-price { font-size: 13px; font-weight: 700; color: var(--text); }
 .qty-row { display: flex; align-items: center; gap: 6px; }
@@ -313,10 +321,15 @@ html, body {
 .cobrar-btn:active { background: var(--red-dark); }
 .cobrar-btn:disabled { opacity: 0.35; }
 
-/* Descuento */
-.disc-row { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+/* Descuento — MEJORA: agregado campo de monto fijo */
+.disc-row { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
 .disc-btn { padding: 6px 14px; border: 1.5px solid var(--border-2); border-radius: 20px; background: transparent; font-size: 12px; font-weight: 500; color: var(--text-2); cursor: pointer; font-family: 'DM Sans', sans-serif; }
 .disc-btn.active { background: var(--amber-light); border-color: var(--amber); color: var(--amber); font-weight: 600; }
+.disc-monto-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.disc-monto-input { flex: 1; height: 38px; border: 1.5px solid var(--border-2); border-radius: 10px; padding: 0 12px; font-size: 14px; font-family: 'DM Sans', sans-serif; color: var(--text); outline: none; background: var(--surface); }
+.disc-monto-input:focus { border-color: var(--amber); }
+.disc-monto-btn { height: 38px; padding: 0 14px; border-radius: 10px; border: none; background: var(--amber); color: #fff; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; }
+
 .promo-code-row { display: flex; gap: 8px; margin-bottom: 10px; }
 .promo-code-input { flex: 1; height: 42px; border: 1.5px solid var(--border-2); border-radius: 10px; padding: 0 12px; font-size: 14px; font-family: 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: 1px; color: var(--text); outline: none; background: var(--surface); }
 .promo-code-input:focus { border-color: var(--red); }
@@ -340,25 +353,34 @@ html, body {
 .cambio-box { background: var(--green-light); border-radius: 12px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .cambio-label { font-size: 13px; color: var(--green); font-weight: 600; }
 .cambio-val { font-family: 'Bebas Neue', serif; font-size: 30px; color: var(--green); letter-spacing: 0.5px; }
-.confirmar-btn { width: 100%; height: 58px; background: var(--green); color: #fff; border: none; border-radius: 14px; font-family: 'Bebas Neue', serif; font-size: 20px; letter-spacing: 3px; cursor: pointer; }
+/* MEJORA: botón confirmar con estado loading para prevenir doble cobro */
+.confirmar-btn { width: 100%; height: 58px; background: var(--green); color: #fff; border: none; border-radius: 14px; font-family: 'Bebas Neue', serif; font-size: 20px; letter-spacing: 3px; cursor: pointer; transition: all 0.2s; }
 .confirmar-btn:active { background: #032606; }
-.confirmar-btn:disabled { opacity: 0.35; }
+.confirmar-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.confirmar-btn.loading { letter-spacing: 1px; font-size: 14px; font-family: 'DM Sans', sans-serif; }
 
 /* ══════════════════════════════════════════
-   SUCCESS FLASH
+   SUCCESS FLASH — MEJORADO (cambio prominente, cierra con tap)
 ══════════════════════════════════════════ */
 #success-flash {
   display: none; position: fixed; inset: 0; z-index: 200;
   background: linear-gradient(135deg, #672626, #A6182E);
   flex-direction: column; align-items: center; justify-content: center;
-  color: #fff; gap: 12px; padding: 40px;
+  color: #fff; gap: 10px; padding: 40px;
+  cursor: pointer; /* tap para cerrar */
 }
 #success-flash.open { display: flex; animation: flashIn 0.3s ease; }
 @keyframes flashIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-.sf-icon { font-size: 80px; }
+.sf-icon { font-size: 72px; }
 .sf-title { font-family: 'Bebas Neue', serif; font-size: 48px; letter-spacing: 3px; }
 .sf-sub { font-size: 16px; opacity: 0.85; text-align: center; }
-.sf-cambio { font-family: 'Bebas Neue', serif; font-size: 30px; margin-top: 4px; }
+/* MEJORA: cambio MUY visible */
+.sf-cambio-wrap { background: rgba(255,255,255,0.2); border-radius: 16px; padding: 14px 28px; text-align: center; margin: 6px 0; }
+.sf-cambio-label { font-size: 11px; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 1.5px; }
+.sf-cambio { font-family: 'Bebas Neue', serif; font-size: 52px; letter-spacing: 1px; color: #fff; line-height: 1; }
+.sf-tap-hint { font-size: 12px; opacity: 0.5; margin-top: 16px; }
+.sf-actions { display: flex; gap: 10px; margin-top: 16px; }
+.sf-actions button { padding: 13px 22px; border: 2px solid rgba(255,255,255,0.4); border-radius: 14px; background: transparent; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; }
 
 /* ══════════════════════════════════════════
    HISTORIAL & CIERRE
@@ -391,6 +413,14 @@ html, body {
 .empty-state .e-icon { font-size: 48px; margin-bottom: 10px; }
 .empty-state p { font-size: 14px; }
 ::-webkit-scrollbar { display: none; }
+
+/* Error banner — NUEVO */
+.error-banner {
+  background: #FFF0F0; border: 1px solid #FFAAAA; border-radius: 10px;
+  padding: 10px 14px; font-size: 13px; color: #8B0000;
+  margin-bottom: 12px; display: none; align-items: center; gap: 8px;
+}
+.error-banner.show { display: flex; }
 </style>
 </head>
 <body>
@@ -485,6 +515,8 @@ html, body {
       </div>
     </div>
   </div>
+  <!-- MEJORA: tabs de modificadores + cuerpo por panel -->
+  <div id="cust-mod-tabs" class="mod-tabs" style="padding: 10px 20px 0;"></div>
   <div class="sheet-body" id="cust-body"></div>
   <div class="sheet-footer">
     <div class="custom-footer">
@@ -536,6 +568,11 @@ html, body {
         <button class="disc-btn" onclick="setDiscount(15,this)">15%</button>
         <button class="disc-btn" onclick="setDiscount(20,this)">20%</button>
       </div>
+      <!-- MEJORA: descuento por monto fijo -->
+      <div class="disc-monto-row" id="disc-monto-row">
+        <input type="number" class="disc-monto-input" id="disc-monto-input" placeholder="Desc. $— monto fijo" min="0" step="1">
+        <button class="disc-monto-btn" onclick="aplicarDescuentoMonto()">Aplicar $</button>
+      </div>
     </div>
     <div class="order-totals" id="order-totals"></div>
   </div>
@@ -563,6 +600,10 @@ html, body {
     </div>
   </div>
   <div class="sheet-body">
+    <!-- MEJORA: error banner para fallas de red -->
+    <div class="error-banner" id="cobro-error-banner">
+      <span>⚠️</span><span id="cobro-error-msg">Error al procesar el pago. Intenta de nuevo.</span>
+    </div>
     <div class="cobro-total" id="cobro-total">$0</div>
     <div class="cobro-sub" id="cobro-pay-label"></div>
     <div id="efec-section">
@@ -612,21 +653,28 @@ html, body {
   </div>
 </div>
 
-<!-- SUCCESS FLASH -->
-<div id="success-flash">
+<!-- SUCCESS FLASH — MEJORADO: tap para cerrar, cambio prominente -->
+<div id="success-flash" onclick="cerrarSuccessFlash()">
   <div class="sf-icon">✓</div>
   <div class="sf-title">¡VENTA LISTA!</div>
   <div class="sf-sub" id="sf-sub"></div>
-  <div class="sf-cambio" id="sf-cambio"></div>
-  <div style="display:flex;gap:10px;margin-top:24px;">
-    <button id="sf-share-btn" onclick="_sfShare()" style="display:none;padding:13px 22px;border:2px solid rgba(255,255,255,0.4);border-radius:14px;background:transparent;color:#fff;font-family:DM Sans,sans-serif;font-size:14px;font-weight:600;cursor:pointer;">📤 Enviar ticket</button>
-    <button id="sf-reprint-btn" onclick="_sfReprint()" style="display:none;padding:13px 22px;border:2px solid rgba(255,255,255,0.4);border-radius:14px;background:transparent;color:#fff;font-family:DM Sans,sans-serif;font-size:14px;font-weight:600;cursor:pointer;">🖨️ Reimprimir</button>
+  <div class="sf-cambio-wrap" id="sf-cambio-wrap" style="display:none;">
+    <div class="sf-cambio-label">CAMBIO</div>
+    <div class="sf-cambio" id="sf-cambio"></div>
   </div>
+  <div class="sf-actions" onclick="event.stopPropagation()">
+    <button id="sf-share-btn" onclick="_sfShare()" style="display:none;">📤 Enviar ticket</button>
+    <button id="sf-reprint-btn" onclick="_sfReprint()" style="display:none;">🖨️ Reimprimir</button>
+  </div>
+  <div class="sf-tap-hint">Toca para continuar</div>
 </div>
 
 <script>
 // ═══════════════════════════════
-// SUPABASE
+// SUPABASE — credenciales centralizadas
+// NOTA DE SEGURIDAD: Mover SB_KEY a una variable de entorno o Supabase Edge
+// Function cuando sea posible. Asegúrate de que RLS esté habilitado en todas
+// las tablas críticas (orders, users, turnos).
 // ═══════════════════════════════
 const SB_URL = 'https://ngpumyxxxlafuzcsaepy.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ncHVteXh4eGxhZnV6Y3NhZXB5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyNjkzNzYsImV4cCI6MjA4OTg0NTM3Nn0.u4WHkOXLrNn4WSKHJedXXNDYrCMdfaDNK8KlvJNfXLg';
@@ -635,6 +683,11 @@ const SB_H = { 'Content-Type':'application/json', 'apikey':SB_KEY, 'Authorizatio
 function nowMX() { return new Date(new Date().toLocaleString('en-US',{timeZone:'America/Mexico_City'})); }
 function fmtMX(d) { return new Date(d).toLocaleString('es-MX',{timeZone:'America/Mexico_City',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}); }
 function timeMX(d) { return new Date(d).toLocaleTimeString('es-MX',{timeZone:'America/Mexico_City',hour:'2-digit',minute:'2-digit',hour12:false}); }
+// MEJORA: sanitizar texto antes de inyectar en innerHTML (previene XSS)
+function sanitize(str) {
+  if(!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 
 async function sbGet(table, q='') {
   try {
@@ -717,6 +770,7 @@ let turnoStartTime = new Date();
 let turnoId = null;
 let cierreData = null;
 let discount = 0;
+let discountMonto = 0; // NUEVO: descuento por monto fijo
 let promoActiva = null;
 let promosCargadas = [];
 let payMethod = 'efectivo';
@@ -725,6 +779,8 @@ let catFilter = 'all';
 let CS = {};
 var ticketCfg = {};
 var comandaCfg = {};
+// MEJORA: flag para prevenir doble cobro
+let _cobroPending = false;
 
 const PERMS = {
   cajero:    { discount:false, cierre:false, dashboard:false },
@@ -764,7 +820,6 @@ async function reconstruirTurnoDesdeDB() {
   try {
     const dbOrders = await sbGet('orders', 'turno_id=eq.'+turnoId+'&select=id,total,iva,pay_method,created_at');
     if (!Array.isArray(dbOrders) || dbOrders.length <= sales.length) return;
-    console.log('[Turno] Reconstruyendo: DB='+dbOrders.length+' RAM='+sales.length);
     const ids = dbOrders.map(o=>o.id).join(',');
     const allItems = await sbGet('order_items','order_id=in.('+ids+')&select=order_id,product_name,qty,unit_price');
     sales = dbOrders.map(o=>({
@@ -774,7 +829,12 @@ async function reconstruirTurnoDesdeDB() {
         name:i.product_name, qty:i.qty, unitPrice:parseFloat(i.unit_price)||0, emoji:EMOJI_MAP[i.product_name]||'🍓'
       }))
     }));
-    if (dbOrders.length) turnoStartTime = new Date(dbOrders[0].created_at);
+    // MEJORA: sincronizar orderN con la DB para evitar colisiones
+    if (dbOrders.length) {
+      turnoStartTime = new Date(dbOrders[0].created_at);
+      const maxId = Math.max(...dbOrders.map(o=>o.id));
+      if (maxId >= orderN) { orderN = maxId + 1; localStorage.setItem('lf_order_n', orderN); }
+    }
   } catch(e) { console.warn('[Turno reconstruir]', e); }
 }
 
@@ -794,16 +854,29 @@ async function pinEnter() {
   if (pinBuffer.length < 4) return;
   const errEl = document.getElementById('login-error');
   errEl.textContent = '';
+  // Deshabilitar teclado durante la verificación
+  document.querySelectorAll('.pin-btn').forEach(b=>b.disabled=true);
   try {
     const res = await fetch(`${SB_URL}/rest/v1/users?pin=eq.${pinBuffer}&active=eq.true&select=*`,{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}});
     const users = await res.json();
-    if (!Array.isArray(users)||!users.length) { errEl.textContent='PIN incorrecto'; pinBuffer=''; updateDots(); return; }
+    if (!Array.isArray(users)||!users.length) {
+      errEl.textContent='PIN incorrecto';
+      pinBuffer=''; updateDots();
+      // Vibración de error en dispositivos que lo soporten
+      if(navigator.vibrate) navigator.vibrate([80,30,80]);
+      return;
+    }
     currentUser = users[0];
     localStorage.setItem('lf_session', JSON.stringify({date:nowMX().toDateString(), user:{id:currentUser.id,name:currentUser.name,role:currentUser.role,sucursal:currentUser.sucursal}}));
     await abrirTurnoDB(currentUser);
     await reconstruirTurnoDesdeDB();
     showPOS();
-  } catch(e) { errEl.textContent='Error de conexión'; pinBuffer=''; updateDots(); }
+  } catch(e) {
+    errEl.textContent='Error de conexión. Reintentando...';
+    pinBuffer=''; updateDots();
+  } finally {
+    document.querySelectorAll('.pin-btn').forEach(b=>b.disabled=false);
+  }
 }
 
 function showPOS() {
@@ -814,7 +887,6 @@ function showPOS() {
   document.getElementById('order-num-2').textContent = String(orderN).padStart(3,'0');
   const p = PERMS[currentUser.role] || PERMS.cajero;
   window._hasDiscount = p.discount;
-  // Mostrar botón cierre solo si tiene permiso
   document.getElementById('btn-cierre').style.display = p.cierre ? 'flex' : 'none';
   loadCategoriasPos();
   loadCatalog();
@@ -829,13 +901,13 @@ function logout() {
   document.getElementById('screen-pos').classList.remove('active');
   document.getElementById('screen-login').classList.add('active');
   document.getElementById('login-error').textContent='';
-  order=[]; discount=0; promoActiva=null; payMethod='efectivo'; svcType='mostrador';
+  order=[]; discount=0; discountMonto=0; promoActiva=null; payMethod='efectivo'; svcType='mostrador';
   document.getElementById('promo-applied-bar').classList.add('hidden');
   document.getElementById('disc-row').style.display='flex';
   renderOrderBar();
 }
 
-// Swipe derecha en productos → abre orden
+// Swipe derecha → abre orden
 (function(){
   let sx=0,sy=0;
   const area=document.getElementById('products-area');
@@ -939,9 +1011,9 @@ function renderProducts() {
     return `<div class="prod-card${qty?' in-order':''}" onclick="openCustom(${p.id})">
       ${qty?`<div class="prod-qty-badge">${qty}</div>`:''}
       ${isSpec?'<div class="prod-cat-badge">Especial</div>':''}
-      <div class="prod-emoji">${pEmoji(p.name)}</div>
-      <div class="prod-name">${p.name}</div>
-      ${p.desc?`<div class="prod-desc">${p.desc}</div>`:''}
+      <div class="prod-emoji">${sanitize(pEmoji(p.name))}</div>
+      <div class="prod-name">${sanitize(p.name)}</div>
+      ${p.desc?`<div class="prod-desc">${sanitize(p.desc)}</div>`:''}
       <div class="prod-price">$${p.price}${p.mods.includes('Tamaño')?' base':''}</div>
     </div>`;
   }).join('');
@@ -954,8 +1026,13 @@ function renderProducts() {
 }
 
 // ═══════════════════════════════
-// CUSTOMIZER
+// CUSTOMIZER — CON TABS (MEJORA PRINCIPAL)
 // ═══════════════════════════════
+// Grupos que van en sus propios tabs vs. siempre visible
+const CUST_TAB_GROUPS = ['Toppings Incluidos','Toppings Extra Básicos','Toppings Extra Premium','Doble Topping','Shots Extra'];
+
+let _custActiveTab = null;
+
 function openCustom(pid, editIdx=null) {
   const p=PRODUCTS.find(x=>x.id===pid); if(!p) return;
   const sel={};
@@ -967,16 +1044,136 @@ function openCustom(pid, editIdx=null) {
   document.getElementById('cust-emoji').textContent=pEmoji(p.name);
   document.getElementById('cust-name').textContent=p.name;
   document.getElementById('cust-desc').textContent=p.desc||'';
-  renderCustomBody(); updateCustomPrice(); openSheet('custom');
+  // Determinar tab inicial
+  const hasBasics = p.mods.some(m=>['Tamaño','Bases'].includes(m));
+  _custActiveTab = hasBasics ? 'base' : (p.mods.find(m=>CUST_TAB_GROUPS.includes(m))||'nota');
+  renderCustomTabs();
+  updateCustomPrice();
+  openSheet('custom');
 }
 
-function renderCustomBody() {
+function renderCustomTabs() {
+  const p=CS.p;
+  const tabsEl=document.getElementById('cust-mod-tabs');
+  const bodyEl=document.getElementById('cust-body');
+
+  // Construir tabs
+  const tabs=[];
+  const hasBasics=p.mods.some(m=>['Tamaño','Bases'].includes(m));
+  if(hasBasics) tabs.push({id:'base',label:'🧁 Base'});
+  const toppingMods=p.mods.filter(m=>CUST_TAB_GROUPS.includes(m));
+  if(toppingMods.length>0) tabs.push({id:'tops',label:'🍬 Toppings'});
+  tabs.push({id:'nota',label:'📝 Nota'});
+
+  if(tabs.length<=1){
+    // Sin tabs — mostrar todo en una sola vista
+    tabsEl.innerHTML=''; tabsEl.style.display='none';
+    renderCustomBody_All();
+    return;
+  }
+  tabsEl.style.display='flex';
+
+  tabsEl.innerHTML=tabs.map(t=>{
+    // Indicador si tiene selecciones
+    let hasSel=false;
+    if(t.id==='base'){
+      hasSel=(CS.sel['Tamaño']&&CS.sel['Tamaño']!=='Chico')||(CS.sel['Bases']&&CS.sel['Bases']!=='Crema');
+    } else if(t.id==='tops'){
+      hasSel=toppingMods.some(m=>(CS.sel[m]||[]).length>0);
+    }
+    const isActive=_custActiveTab===t.id;
+    return `<button class="mod-tab${isActive?' active':hasSel?' has-sel':''}" onclick="switchCustTab('${t.id}')">${t.label}</button>`;
+  }).join('');
+
+  renderCustomBody_Tab(_custActiveTab, toppingMods);
+}
+
+function switchCustTab(tabId){
+  _custActiveTab=tabId;
+  renderCustomTabs();
+}
+
+function renderCustomBody_Tab(tabId, toppingMods){
+  const p=CS.p;
+  let html='';
+
+  if(tabId==='base'){
+    // Tamaño
+    if(p.mods.includes('Tamaño')){
+      const mod=MODS['Tamaño'];
+      html+=`<div class="mod-section"><div class="mod-title">Tamaño <span class="mod-badge badge-req">Requerido</span></div>`;
+      const icons={Chico:'🫙',Mediano:'🥤',Grande:'🪣'};
+      html+=`<div class="sizes-row">`;
+      mod.options.forEach(o=>{
+        const sel=CS.sel['Tamaño']===o.name;
+        html+=`<div class="size-card${sel?' sel':''}" onclick="selSingle('Tamaño','${o.name}');renderCustomTabs();">
+          <div class="size-icon">${icons[o.name]||'🥤'}</div>
+          <div class="size-name">${sanitize(o.name)}</div>
+          <div class="size-extra">${o.extra===0?'Base':'+$'+o.extra}</div>
+        </div>`;
+      });
+      html+=`</div></div>`;
+    }
+    // Bases
+    if(p.mods.includes('Bases')){
+      const mod=MODS['Bases'];
+      html+=`<div class="mod-section"><div class="mod-title">Base <span class="mod-badge badge-req">Requerido</span></div><div class="bases-grid">`;
+      mod.options.forEach(o=>{
+        const sel=CS.sel['Bases']===o.name;
+        html+=`<div class="base-chip${sel?' sel':''}" onclick="selSingle('Bases','${o.name}');renderCustomTabs();">
+          <span style="font-size:18px;">${tEmoji(o.name)}</span>
+          <div class="base-name">${sanitize(o.name)}</div>
+          <div class="base-extra">${o.extra===0?'incl.':'+$'+o.extra}</div>
+          <div class="base-check">${sel?'✓':''}</div>
+        </div>`;
+      });
+      html+=`</div></div>`;
+    }
+  } else if(tabId==='tops' && toppingMods){
+    toppingMods.forEach(modKey=>{
+      const mod=MODS[modKey]; if(!mod) return;
+      const isPrem=modKey==='Toppings Extra Premium';
+      const isShot=modKey==='Shots Extra';
+      const isDoble=modKey==='Doble Topping';
+      const isIncl=modKey==='Toppings Incluidos';
+      html+=`<div class="mod-section"><div class="mod-title">${sanitize(modKey)} <span class="mod-badge badge-opt">${mod.label||'Opcional'}</span></div>`;
+      if(isIncl){
+        const cnt=(CS.sel[modKey]||[]).length;
+        html+=`<div class="free-bar"><span style="font-size:12px;color:var(--text-2);">Hasta 2 sin costo</span><div class="free-pill${cnt>=2?' full':''}">  ${cnt}/2 gratis</div></div>`;
+      }
+      html+=`<div class="tops-grid">`;
+      mod.options.forEach(o=>{
+        const arr=CS.sel[modKey]||[];
+        const cnt=arr.filter(x=>x===o.name).length;
+        const isSel=cnt>0;
+        const cls=isSel?(isPrem?'sel-prem':isShot?'sel-shot':'sel'):'';
+        const priceLabel=isSel?(o.extra===0?'gratis ✓':`+$${o.extra*cnt}${cnt>1?` ×${cnt}`:''}`):(o.extra===0?'gratis':'+$'+o.extra);
+        html+=`<div class="top-chip${cls?' '+cls:''}" onclick="toggleTop('${modKey}','${sanitize(o.name)}');renderCustomTabs();">
+          <span class="top-emoji">${tEmoji(o.name)}</span>
+          <span class="top-name">${sanitize(o.name)}</span>
+          <span class="top-price">${priceLabel}</span>
+        </div>`;
+      });
+      html+=`</div></div>`;
+    });
+  } else if(tabId==='nota'){
+    const nota=CS.note||(CS.editIdx!==null?(order[CS.editIdx]?.note||''):'');
+    html+=`<div class="mod-section"><div class="mod-title">Nota <span class="mod-badge badge-opt">Opcional</span></div>
+      <textarea class="nota-input" id="cust-nota" placeholder="Sin chamoy, extra crema...">${sanitize(nota)}</textarea>
+    </div>`;
+  }
+
+  document.getElementById('cust-body').innerHTML=html;
+}
+
+// Fallback para productos sin tabs (pocos modificadores)
+function renderCustomBody_All() {
   const p=CS.p; let html='';
   p.mods.forEach(modKey=>{
     const mod=MODS[modKey]; if(!mod) return;
     const isSingle=mod.max===1;
     html+=`<div class="mod-section">`;
-    html+=`<div class="mod-title">${modKey} <span class="mod-badge ${mod.required?'badge-req':'badge-opt'}">${mod.required?'Requerido':'Opcional'}</span></div>`;
+    html+=`<div class="mod-title">${sanitize(modKey)} <span class="mod-badge ${mod.required?'badge-req':'badge-opt'}">${mod.required?'Requerido':'Opcional'}</span></div>`;
     if(modKey==='Toppings Incluidos'){
       const cnt=(CS.sel[modKey]||[]).length;
       html+=`<div class="free-bar"><span style="font-size:12px;color:var(--text-2);">Hasta 2 sin costo</span><div class="free-pill${cnt>=2?' full':''}">${cnt}/2 gratis</div></div>`;
@@ -986,9 +1183,9 @@ function renderCustomBody() {
       html+=`<div class="sizes-row">`;
       mod.options.forEach(o=>{
         const sel=CS.sel[modKey]===o.name;
-        html+=`<div class="size-card${sel?' sel':''}" onclick="selSingle('${modKey}','${o.name}')">
+        html+=`<div class="size-card${sel?' sel':''}" onclick="selSingle('${modKey}','${o.name}');renderCustomBody_All();">
           <div class="size-icon">${icons[o.name]||'🥤'}</div>
-          <div class="size-name">${o.name}</div>
+          <div class="size-name">${sanitize(o.name)}</div>
           <div class="size-extra">${o.extra===0?'Base':'+$'+o.extra}</div>
         </div>`;
       });
@@ -997,9 +1194,9 @@ function renderCustomBody() {
       html+=`<div class="bases-grid">`;
       mod.options.forEach(o=>{
         const sel=CS.sel[modKey]===o.name;
-        html+=`<div class="base-chip${sel?' sel':''}" onclick="selSingle('${modKey}','${o.name}')">
+        html+=`<div class="base-chip${sel?' sel':''}" onclick="selSingle('${modKey}','${o.name}');renderCustomBody_All();">
           <span style="font-size:18px;">${tEmoji(o.name)}</span>
-          <div class="base-name">${o.name}</div>
+          <div class="base-name">${sanitize(o.name)}</div>
           <div class="base-extra">${o.extra===0?'incl.':'+$'+o.extra}</div>
           <div class="base-check">${sel?'✓':''}</div>
         </div>`;
@@ -1015,9 +1212,9 @@ function renderCustomBody() {
         const isSel=cnt>0;
         const cls=isSel?(isPrem?'sel-prem':isShot?'sel-shot':'sel'):'';
         const priceLabel=isSel?(o.extra===0?'gratis ✓':`+$${o.extra*cnt}${cnt>1?` ×${cnt}`:''}`):(o.extra===0?'gratis':'+$'+o.extra);
-        html+=`<div class="top-chip${cls?' '+cls:''}" onclick="toggleTop('${modKey}','${o.name}')">
+        html+=`<div class="top-chip${cls?' '+cls:''}" onclick="toggleTop('${modKey}','${sanitize(o.name)}');renderCustomBody_All();">
           <span class="top-emoji">${tEmoji(o.name)}</span>
-          <span class="top-name">${o.name}</span>
+          <span class="top-name">${sanitize(o.name)}</span>
           <span class="top-price">${priceLabel}</span>
         </div>`;
       });
@@ -1025,15 +1222,14 @@ function renderCustomBody() {
     }
     html+=`</div>`;
   });
-  const nota=CS.note||(CS.editIdx!==null?order[CS.editIdx].note:'');
-  html+=`<div class="mod-section">
-    <div class="mod-title">Nota <span class="mod-badge badge-opt">Opcional</span></div>
-    <textarea class="nota-input" id="cust-nota" placeholder="Sin chamoy, extra crema...">${nota}</textarea>
+  const nota=CS.note||(CS.editIdx!==null?(order[CS.editIdx]?.note||''):'');
+  html+=`<div class="mod-section"><div class="mod-title">Nota <span class="mod-badge badge-opt">Opcional</span></div>
+    <textarea class="nota-input" id="cust-nota" placeholder="Sin chamoy, extra crema...">${sanitize(nota)}</textarea>
   </div>`;
   document.getElementById('cust-body').innerHTML=html;
 }
 
-function selSingle(modKey,val){CS.sel[modKey]=val;renderCustomBody();updateCustomPrice();}
+function selSingle(modKey,val){CS.sel[modKey]=val;updateCustomPrice();}
 
 function toggleTop(modKey,name){
   const mod=MODS[modKey]; if(!mod) return;
@@ -1041,8 +1237,8 @@ function toggleTop(modKey,name){
   const cnt=arr.filter(x=>x===name).length;
   if(cnt>0&&arr.length<mod.max) arr.push(name);
   else if(cnt>0){const idx=arr.lastIndexOf(name);arr.splice(idx,1);}
-  else{if(arr.length>=mod.max) return; arr.push(name);}
-  CS.sel[modKey]=arr; renderCustomBody(); updateCustomPrice();
+  else{if(arr.length>=mod.max){showToast('Máximo '+mod.max+' selecciones');return;} arr.push(name);}
+  CS.sel[modKey]=arr; updateCustomPrice();
 }
 
 function calcItemPrice(){
@@ -1083,10 +1279,12 @@ function closeCustom(){closeSheet('custom');}
 // ═══════════════════════════════
 function calcTotals(){
   const sub=order.reduce((s,i)=>s+i.unitPrice*i.qty,0);
-  const desc=Math.round(sub*discount/100);
+  let descMonto=discountMonto>0?Math.min(discountMonto,sub):0;
+  const descPct=Math.round(sub*discount/100);
+  const desc=discountMonto>0?descMonto:descPct;
   const total=sub-desc;
   const iva=Math.round(total-total/1.16);
-  return{sub,desc,iva,total};
+  return{sub,desc,iva,total,descMonto:discountMonto>0};
 }
 
 function renderOrderBar(){
@@ -1111,7 +1309,7 @@ function openOrderSheet(){
 }
 
 function renderOrderItems(){
-  const{sub,desc,iva,total}=calcTotals();
+  const{sub,desc,iva,total,descMonto}=calcTotals();
   const list=document.getElementById('order-items-list');
   if(!order.length){
     list.innerHTML='<div class="empty-state"><div class="e-icon">🛒</div><p>Agrega productos</p></div>';
@@ -1122,18 +1320,18 @@ function renderOrderItems(){
         if(t.modKey==='Tamaño') cls='oi-tag tag-size';
         else if(t.modKey==='Bases') cls='oi-tag tag-base';
         else if(t.extra>0) cls='oi-tag tag-paid';
-        return `<span class="${cls}">${t.name}${t.extra>0?' +$'+t.extra:''}</span>`;
+        return `<span class="${cls}">${sanitize(t.name)}${t.extra>0?' +$'+t.extra:''}</span>`;
       }).join('');
       return `<div class="order-item-row">
-        <div class="oi-emoji">${item.emoji}</div>
+        <div class="oi-emoji">${sanitize(item.emoji)}</div>
         <div class="oi-info">
-          <div class="oi-name">${item.name}</div>
+          <div class="oi-name">${sanitize(item.name)}</div>
           ${tagHtml?`<div class="oi-tags">${tagHtml}</div>`:''}
-          ${item.note?`<div class="oi-note">📝 ${item.note}</div>`:''}
+          ${item.note?`<div class="oi-note">📝 ${sanitize(item.note)}</div>`:''}
           <span class="oi-edit" onclick="closeOrderSheet();openCustom(${item.productId},${idx})">✏️ Editar</span>
         </div>
         <div class="oi-right">
-          <div class="oi-price">$${item.unitPrice*item.qty}</div>
+          <div class="oi-price">$${(item.unitPrice*item.qty).toLocaleString('es-MX',{minimumFractionDigits:2})}</div>
           <div class="qty-row">
             <button class="qty-btn" onclick="chgQty(${idx},-1)">−</button>
             <span class="qty-num">${item.qty}</span>
@@ -1144,7 +1342,9 @@ function renderOrderItems(){
     }).join('');
   }
   const totEl=document.getElementById('order-totals');
-  const descRow=desc>0?`<div class="ot-row" style="color:var(--green)"><span>Descuento (${discount}%)</span><span>-$${desc}</span></div>`:'';
+  let descRow='';
+  if(descMonto&&desc>0) descRow=`<div class="ot-row" style="color:var(--green)"><span>Descuento ($)</span><span>-$${desc.toFixed(2)}</span></div>`;
+  else if(desc>0) descRow=`<div class="ot-row" style="color:var(--green)"><span>Descuento (${discount}%)</span><span>-$${desc}</span></div>`;
   totEl.innerHTML=descRow
     +`<div class="ot-row" style="font-size:11px;color:var(--text-3);"><span>IVA incluido</span><span>$${iva}</span></div>`
     +`<div class="ot-row"><span>Total</span><span style="color:var(--red)">$${total.toLocaleString('es-MX',{minimumFractionDigits:2})}</span></div>`;
@@ -1171,17 +1371,33 @@ function setPay(m,btn){
 }
 
 function setDiscount(p,btn){
-  discount=p;
+  discount=p; discountMonto=0;
   document.querySelectorAll('.disc-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
+  const inp=document.getElementById('disc-monto-input');
+  if(inp) inp.value='';
+  renderOrderItems(); renderOrderBar();
+}
+
+// NUEVO: descuento por monto fijo
+function aplicarDescuentoMonto(){
+  const inp=document.getElementById('disc-monto-input');
+  const monto=parseFloat(inp?.value)||0;
+  if(monto<=0){showToast('Ingresa un monto válido');return;}
+  discountMonto=monto; discount=0;
+  document.querySelectorAll('.disc-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.disc-btn')?.classList.add('active');
+  showToast('Descuento $'+monto+' aplicado');
   renderOrderItems(); renderOrderBar();
 }
 
 function cancelOrder(){
   if(!confirm('¿Cancelar esta orden?')) return;
-  order=[]; discount=0; promoActiva=null; payMethod='efectivo'; svcType='mostrador';
+  order=[]; discount=0; discountMonto=0; promoActiva=null; payMethod='efectivo'; svcType='mostrador';
   document.getElementById('promo-applied-bar').classList.add('hidden');
   document.getElementById('disc-row').style.display='flex';
+  const discMonto=document.getElementById('disc-monto-input');
+  if(discMonto) discMonto.value='';
   document.querySelectorAll('.svc-btn')[0].click();
   document.querySelectorAll('.pay-btn')[0].click();
   closeSheet('order'); renderOrderBar(); renderProducts();
@@ -1190,7 +1406,7 @@ function cancelOrder(){
 function closeOrderSheet(){closeSheet('order');}
 
 // ═══════════════════════════════
-// COBRO
+// COBRO — CON PREVENCIÓN DE DOBLE COBRO + ERROR HANDLING
 // ═══════════════════════════════
 function openCobro(){
   const{total}=calcTotals();
@@ -1199,6 +1415,8 @@ function openCobro(){
   document.getElementById('cobro-pay-label').textContent=payMethod==='efectivo'?'💵 Efectivo':payMethod==='tarjeta'?'💳 Tarjeta':'📲 Transferencia';
   const efecSection=document.getElementById('efec-section');
   efecSection.style.display=payMethod==='efectivo'?'block':'none';
+  // Reset error banner
+  document.getElementById('cobro-error-banner').classList.remove('show');
   if(payMethod==='efectivo'){
     document.getElementById('efec-input').value='';
     document.getElementById('cambio-val').textContent='$0';
@@ -1225,82 +1443,124 @@ function calcCambio(){
 function closeCobro(){closeSheet('cobro');}
 
 async function confirmarPago(){
+  // MEJORA: prevenir doble cobro
+  if(_cobroPending) return;
+  _cobroPending=true;
+  const btn=document.getElementById('confirmar-btn');
+  btn.disabled=true;
+  btn.classList.add('loading');
+  btn.textContent='Procesando...';
+  document.getElementById('cobro-error-banner').classList.remove('show');
+
   const{total,sub,desc,iva}=calcTotals();
   const con=parseFloat(document.getElementById('efec-input').value)||total;
   const cambio=payMethod==='efectivo'?con-total:0;
   const client=document.getElementById('client-input').value.trim();
   const saleData={
     id:orderN, date:nowMX(), items:[...order], sub,desc,iva,total,
-    payMethod,svcType,client,cambio,discount,cashReceived:con,
-    paid_at:new Date().toISOString(),
+    payMethod,svcType,client,cambio,discount:discountMonto>0?('$'+discountMonto):discount,
+    cashReceived:con, paid_at:new Date().toISOString(),
   };
-  sales.push(saleData);
-  saveToSupabase(saleData);
-  descontarInventario(saleData);
-  printSale(saleData);
-  closeSheet('cobro');
-  document.getElementById('sf-sub').textContent=(client?client+' · ':'')+'$'+total.toLocaleString('es-MX',{minimumFractionDigits:2});
-  document.getElementById('sf-cambio').textContent=cambio>0?'Cambio: $'+cambio.toLocaleString('es-MX',{minimumFractionDigits:2}):'';
-  window._lastSale=saleData;
-  const shareBtn=document.getElementById('sf-share-btn');
-  const reprintBtn=document.getElementById('sf-reprint-btn');
-  if(shareBtn) shareBtn.style.display='block';
-  if(reprintBtn&&printerCfg.ip) reprintBtn.style.display='block';
-  const sf=document.getElementById('success-flash');
-  sf.classList.add('open');
-  sf._autoClose=setTimeout(()=>sf.classList.remove('open'),3000);
-  orderN++; order=[]; discount=0; payMethod='efectivo'; svcType='mostrador'; promoActiva=null;
-  document.getElementById('order-num').textContent=String(orderN).padStart(3,'0');
-  document.getElementById('order-num-2').textContent=String(orderN).padStart(3,'0');
-  localStorage.setItem('lf_order_n',orderN);
-  document.getElementById('client-input').value='';
-  document.getElementById('promo-applied-bar').classList.add('hidden');
-  document.getElementById('disc-row').style.display='flex';
-  document.querySelectorAll('.svc-btn')[0].click();
-  document.querySelectorAll('.pay-btn')[0].click();
-  renderOrderBar(); renderProducts();
+
+  try {
+    // MEJORA: guardar PRIMERO en Supabase antes de confirmar éxito
+    const saveOk = await saveToSupabase(saleData);
+    if(!saveOk && navigator.onLine){
+      // Falla real de red — mostrar error, no avanzar
+      throw new Error('No se pudo guardar la venta en el servidor.');
+    }
+    // Si está offline, la offline queue ya lo manejó — continuar
+    sales.push(saleData);
+    descontarInventario(saleData); // fire-and-forget para inventario (no bloquea el flujo)
+    printSale(saleData);
+    closeSheet('cobro');
+
+    // Success flash
+    document.getElementById('sf-sub').textContent=(client?client+' · ':'')+'$'+total.toLocaleString('es-MX',{minimumFractionDigits:2});
+    const cambioWrap=document.getElementById('sf-cambio-wrap');
+    if(cambio>0){
+      cambioWrap.style.display='block';
+      document.getElementById('sf-cambio').textContent='$'+cambio.toLocaleString('es-MX',{minimumFractionDigits:2});
+    } else {
+      cambioWrap.style.display='none';
+    }
+    window._lastSale=saleData;
+    const shareBtn=document.getElementById('sf-share-btn');
+    const reprintBtn=document.getElementById('sf-reprint-btn');
+    if(shareBtn) shareBtn.style.display='block';
+    if(reprintBtn&&printerCfg.ip) reprintBtn.style.display='block';
+    document.getElementById('success-flash').classList.add('open');
+
+    // Resetear orden
+    orderN++; order=[]; discount=0; discountMonto=0; payMethod='efectivo'; svcType='mostrador'; promoActiva=null;
+    document.getElementById('order-num').textContent=String(orderN).padStart(3,'0');
+    document.getElementById('order-num-2').textContent=String(orderN).padStart(3,'0');
+    localStorage.setItem('lf_order_n',orderN);
+    document.getElementById('client-input').value='';
+    document.getElementById('promo-applied-bar').classList.add('hidden');
+    document.getElementById('disc-row').style.display='flex';
+    const discMonto=document.getElementById('disc-monto-input');
+    if(discMonto) discMonto.value='';
+    document.querySelectorAll('.svc-btn')[0].click();
+    document.querySelectorAll('.pay-btn')[0].click();
+    renderOrderBar(); renderProducts();
+
+  } catch(err) {
+    // Mostrar error al cajero sin avanzar
+    const errBanner=document.getElementById('cobro-error-banner');
+    document.getElementById('cobro-error-msg').textContent=err.message||'Error al procesar. Intenta de nuevo.';
+    errBanner.classList.add('show');
+    btn.textContent='CONFIRMAR PAGO';
+    btn.classList.remove('loading');
+    btn.disabled=payMethod==='efectivo'?(parseFloat(document.getElementById('efec-input').value)||0)<total:false;
+  } finally {
+    _cobroPending=false;
+  }
+}
+
+// MEJORA: success flash cierra con tap
+function cerrarSuccessFlash(){
+  document.getElementById('success-flash').classList.remove('open');
 }
 
 // ═══════════════════════════════
-// SUPABASE SAVE
+// SUPABASE SAVE — retorna true/false
 // ═══════════════════════════════
 let offlineQueue=JSON.parse(localStorage.getItem('lf_offline_queue')||'[]');
 
 async function saveToSupabase(saleData){
-  try {
-    const orderPayload={
-      order_number:saleData.id,
-      sucursal:currentUser?.sucursal||'Principal',
-      cajero_id:currentUser?.id||null,
-      cajero_name:currentUser?.name||'POS',
-      service_type:saleData.svcType,
-      client_name:saleData.client||null,
-      pay_method:saleData.payMethod,
-      subtotal:saleData.sub,
-      discount_pct:saleData.discount,
-      discount_amt:saleData.desc,
-      iva:saleData.iva,
-      total:saleData.total,
-      cash_received:saleData.payMethod==='efectivo'?saleData.cashReceived:null,
-      change_given:saleData.payMethod==='efectivo'?saleData.cambio:null,
-      turno_id:turnoId||null,
-      paid_at:saleData.paid_at||new Date().toISOString(),
-    };
-    const res=await fetch(SB_URL+'/rest/v1/orders',{method:'POST',headers:SB_H,body:JSON.stringify(orderPayload)});
-    if(!res.ok) throw new Error('orders failed');
-    const[saved]=await res.json();
-    const itemsPayload=saleData.items.map(item=>({
-      order_id:saved.id, product_id:item.productId, product_name:item.name,
-      size:item.sel?.['Tamaño']||null, base:item.sel?.['Bases']||null,
-      toppings:JSON.stringify({incluidos:item.sel?.['Toppings Incluidos']||[],basicos:item.sel?.['Toppings Extra Básicos']||[],premium:item.sel?.['Toppings Extra Premium']||[],doble:item.sel?.['Doble Topping']||[],shots:item.sel?.['Shots Extra']||[]}),
-      note:item.note||null, unit_price:item.unitPrice, qty:item.qty, subtotal:item.unitPrice*item.qty,
-    }));
-    await fetch(SB_URL+'/rest/v1/order_items',{method:'POST',headers:SB_H,body:JSON.stringify(itemsPayload)});
-    if(offlineQueue.length) flushOfflineQueue();
-  } catch {
+  // Si offline, encolar
+  if(!navigator.onLine){
     offlineQueue.push(saleData);
     localStorage.setItem('lf_offline_queue',JSON.stringify(offlineQueue));
-    showToast('⚠️ Sin conexión — guardado local');
+    showToast('📵 Sin conexión — guardado localmente');
+    return true; // No es un error, se re-intentará al reconectar
+  }
+  try {
+    const orderPayload={
+      order_number:saleData.id, sucursal:currentUser?.sucursal||'Principal',
+      cajero_id:currentUser?.id||null, cajero_name:currentUser?.name||'',
+      turno_id:turnoId||null,
+      subtotal:saleData.sub, descuento:saleData.desc, iva:saleData.iva, total:saleData.total,
+      pay_method:saleData.payMethod, service_type:saleData.svcType,
+      client_name:saleData.client||null,
+      paid_at:saleData.paid_at,
+    };
+    const res=await fetch(SB_URL+'/rest/v1/orders',{method:'POST',headers:SB_H,body:JSON.stringify(orderPayload)});
+    if(!res.ok) return false;
+    const [savedOrder]=await res.json();
+    const orderId=savedOrder.id;
+    if(saleData.items.length){
+      const itemsPayload=saleData.items.flatMap(item=>{
+        const rows=[{order_id:orderId,product_id:item.productId||null,product_name:item.name,qty:item.qty,unit_price:item.unitPrice,subtotal:item.unitPrice*item.qty}];
+        return rows;
+      });
+      await fetch(SB_URL+'/rest/v1/order_items',{method:'POST',headers:{...SB_H,Prefer:'return=minimal'},body:JSON.stringify(itemsPayload)});
+    }
+    return true;
+  } catch(e){
+    console.error('[saveToSupabase]',e);
+    return false;
   }
 }
 
@@ -1309,11 +1569,12 @@ async function flushOfflineQueue(){
   const pending=[...offlineQueue]; offlineQueue=[];
   localStorage.setItem('lf_offline_queue','[]');
   for(const s of pending) await saveToSupabase(s);
+  if(offlineQueue.length===0) showToast('✅ Ventas offline sincronizadas');
 }
 window.addEventListener('online',()=>{if(offlineQueue.length) flushOfflineQueue();});
 
 // ═══════════════════════════════
-// INVENTORY DEDUCTION
+// INVENTORY DEDUCTION (sin cambios)
 // ═══════════════════════════════
 async function descontarInventario(saleData){
   try {
@@ -1376,14 +1637,14 @@ async function openHist(){
     </div>`
     +list.map(o=>`<div class="hist-order">
       <div class="hist-head"><span class="hist-num">#${String(o.order_number||'?').padStart(3,'0')}</span><span class="hist-amt">${fmtD(o.total)}</span></div>
-      <div class="hist-meta">${timeMX(o.created_at)} · ${payLbl[o.pay_method]||''} ${o.pay_method} · ${o.service_type==='para-llevar'?'Para llevar':o.service_type==='delivery'?'Delivery':'Mostrador'}${o.client_name?' · '+o.client_name:''}</div>
+      <div class="hist-meta">${timeMX(o.created_at)} · ${payLbl[o.pay_method]||''} ${sanitize(o.pay_method)} · ${o.service_type==='para-llevar'?'Para llevar':o.service_type==='delivery'?'Delivery':'Mostrador'}${o.client_name?' · '+sanitize(o.client_name):''}</div>
     </div>`).join('');
   } catch{body.innerHTML='<div class="empty-state"><div class="e-icon">⚠️</div><p>Error cargando historial</p></div>';}
 }
 function closeHist(){closeSheet('hist');}
 
 // ═══════════════════════════════
-// CIERRE DE TURNO
+// CIERRE DE TURNO (sin cambios funcionales)
 // ═══════════════════════════════
 function openCierreSheet(){
   if(!currentUser){return;}
@@ -1411,8 +1672,7 @@ function buildCierreData(){
   const topProds=Object.entries(byProd).sort((a,b)=>b[1].qty-a[1].qty);
   cierreData={
     sucursal:currentUser.sucursal||'Principal',
-    cajero_id:currentUser.id,
-    cajero_name:currentUser.name,
+    cajero_id:currentUser.id, cajero_name:currentUser.name,
     total_ventas:totalVentas, total_ordenes:totalOrdenes,
     ticket_promedio:ticketProm,
     efectivo:byPay.efectivo||0, tarjeta:byPay.tarjeta||0, transferencia:byPay.transferencia||0,
@@ -1446,7 +1706,7 @@ function renderCierreModal(){
     <div class="cierre-pay-row" style="font-weight:600;"><div class="cierre-pay-label" style="font-weight:700;">Total</div><div class="cierre-pay-amt" style="color:var(--red)">${fmtD(d.total_ventas)}</div></div>
     ${d.productos.length?`
     <div class="cierre-section-title">Productos vendidos</div>
-    ${d.productos.map(p=>`<div class="cierre-prod-row"><span style="font-size:16px">${p.emoji}</span><div class="cierre-prod-name">${p.name}</div><div class="cierre-prod-qty">${p.qty} uds</div><div class="cierre-prod-rev">$${Math.round(p.rev).toLocaleString('es-MX')}</div></div>`).join('')}`:''}
+    ${d.productos.map(p=>`<div class="cierre-prod-row"><span style="font-size:16px">${sanitize(p.emoji)}</span><div class="cierre-prod-name">${sanitize(p.name)}</div><div class="cierre-prod-qty">${p.qty} uds</div><div class="cierre-prod-rev">$${Math.round(p.rev).toLocaleString('es-MX')}</div></div>`).join('')}`:''}
     <div class="cierre-section-title">Notas del turno</div>
     <textarea class="cierre-notas" id="cierre-notas" placeholder="Incidencias, observaciones, faltante de caja..."></textarea>
   `;
@@ -1502,7 +1762,7 @@ function finalizarCierre(){
   document.getElementById('order-num-2').textContent='001';
   localStorage.removeItem('lf_session');
   localStorage.removeItem('lf_order_n');
-  order=[]; discount=0; promoActiva=null; payMethod='efectivo'; svcType='mostrador';
+  order=[]; discount=0; discountMonto=0; promoActiva=null; payMethod='efectivo'; svcType='mostrador';
   renderOrderBar(); renderProducts();
   currentUser=null; pinBuffer=''; updateDots();
   document.getElementById('screen-pos').classList.remove('active');
@@ -1539,7 +1799,7 @@ function verificarPromoHora(){
 }
 
 function aplicarPromo(promo){
-  promoActiva=promo; discount=parseFloat(promo.valor)||0;
+  promoActiva=promo; discount=parseFloat(promo.valor)||0; discountMonto=0;
   document.getElementById('disc-row').style.display='none';
   document.getElementById('promo-applied-bar').classList.remove('hidden');
   document.getElementById('promo-applied-text').textContent='🎁 '+promo.nombre+' — '+promo.valor+'% OFF';
@@ -1550,7 +1810,7 @@ function aplicarPromo(promo){
 }
 
 function quitarPromo(){
-  promoActiva=null; discount=0;
+  promoActiva=null; discount=0; discountMonto=0;
   document.getElementById('promo-applied-bar').classList.add('hidden');
   document.getElementById('disc-row').style.display='flex';
   document.querySelectorAll('.disc-btn').forEach((b,i)=>{if(i===0) b.classList.add('active'); else b.classList.remove('active');});
@@ -1558,7 +1818,7 @@ function quitarPromo(){
 }
 
 // ═══════════════════════════════
-// SHEET HELPERS + SWIPE DOWN TO CLOSE
+// SHEET HELPERS + SWIPE DOWN
 // ═══════════════════════════════
 let _sheetStack=[];
 
@@ -1618,7 +1878,7 @@ window.addEventListener('popstate',()=>{
 });
 
 // ═══════════════════════════════
-// PRINTING — EPSON ePOS + FALLBACK
+// PRINTING — EPSON ePOS + FALLBACK (sin cambios)
 // ═══════════════════════════════
 let printerCfg=JSON.parse(localStorage.getItem('lf_printer')||'{"ip":"","port":"8008","ticket":true,"comanda":true}');
 
@@ -1698,15 +1958,16 @@ function buildTicketXML(saleData,type='ticket'){
     });
     xml+=divider();
     xml+=line('Subtotal',fmtD(saleData.sub));
-    if(saleData.desc>0) xml+=line('Descuento ('+saleData.discount+'%)','-'+fmtD(saleData.desc));
+    if(saleData.desc>0) xml+=line('Descuento','-'+fmtD(saleData.desc));
     if(mostrarIva) xml+=line('IVA (16%)',fmtD(saleData.iva));
     xml+=divider();
     xml+=line('TOTAL',fmtD(saleData.total),true);
     xml+=divider();
     const payLabel=saleData.payMethod==='efectivo'?'Efectivo':saleData.payMethod==='tarjeta'?'Tarjeta':'Transferencia';
     xml+=line('Pago',payLabel);
+    // MEJORA: recibido y cambio en ticket
     if(saleData.payMethod==='efectivo'&&saleData.cambio>0){
-      xml+=line('Con',fmtD(saleData.cashReceived||saleData.total));
+      xml+=line('Recibió',fmtD(saleData.cashReceived||saleData.total));
       xml+=line('Cambio',fmtD(saleData.cambio),true);
     }
     if(rfc){xml+=divider();xml+=center('RFC: '+rfc);}
@@ -1756,11 +2017,14 @@ function buildTicketText(saleData){
     if(item.note) text+=`  📝 ${item.note}\n`;
   });
   text+=`─────────────────\n`;
-  if(saleData.desc>0) text+=`Descuento (${saleData.discount}%): -${fmtD(saleData.desc)}\n`;
+  if(saleData.desc>0) text+=`Descuento: -${fmtD(saleData.desc)}\n`;
   text+=`Total: ${fmtD(saleData.total)}\n`;
   const payLabel=saleData.payMethod==='efectivo'?'Efectivo':saleData.payMethod==='tarjeta'?'Tarjeta':'Transferencia';
   text+=`Pago: ${payLabel}\n`;
-  if(saleData.payMethod==='efectivo'&&saleData.cambio>0) text+=`Cambio: ${fmtD(saleData.cambio)}\n`;
+  if(saleData.payMethod==='efectivo'&&saleData.cambio>0){
+    text+=`Recibió: ${fmtD(saleData.cashReceived||saleData.total)}\n`;
+    text+=`Cambio: ${fmtD(saleData.cambio)}\n`;
+  }
   text+=`─────────────────\nladyfresa.mx`;
   return text;
 }
@@ -1786,8 +2050,8 @@ function showShareSheet(saleData){
   document.body.appendChild(div);
 }
 
-function _sfShare(){clearTimeout(document.getElementById('success-flash')._autoClose);document.getElementById('success-flash').classList.remove('open');if(window._lastSale) showShareSheet(window._lastSale);}
-function _sfReprint(){clearTimeout(document.getElementById('success-flash')._autoClose);document.getElementById('success-flash').classList.remove('open');if(window._lastSale) printSale(window._lastSale);}
+function _sfShare(){cerrarSuccessFlash();if(window._lastSale) showShareSheet(window._lastSale);}
+function _sfReprint(){cerrarSuccessFlash();if(window._lastSale) printSale(window._lastSale);}
 
 // ── PRINTER CONFIG ──
 function openPrinterCfg(){
