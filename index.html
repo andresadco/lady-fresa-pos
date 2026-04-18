@@ -1108,7 +1108,7 @@ function renderCustomBody() {
       html+=`<div class="sizes-row">`;
       mod.options.forEach(o=>{
         const sel=CS.sel['Tamaño']===o.name;
-        html+=`<div class="size-card${sel?' sel':''}" onclick="selSingle('Tamaño','${o.name}');refreshAcc('${modKey.replace(/\s/g,'_')}');">
+        html+=`<div class="size-card${sel?' sel':''}" onclick="selSingle('Tamaño','${o.name}')">
           <div class="size-icon">${icons[o.name]||'🥤'}</div>
           <div class="size-name">${sanitize(o.name)}</div>
           <div class="size-extra">${o.extra===0?'Base':'+$'+o.extra}</div>
@@ -1119,7 +1119,7 @@ function renderCustomBody() {
       html+=`<div class="bases-grid">`;
       mod.options.forEach(o=>{
         const sel=CS.sel[modKey]===o.name;
-        html+=`<div class="base-chip${sel?' sel':''}" onclick="selSingle('${modKey}','${o.name}');refreshAcc('${modKey.replace(/\s/g,'_')}');">
+        html+=`<div class="base-chip${sel?' sel':''}" onclick="selSingle('${modKey}','${o.name}')">
           <span style="font-size:18px;">${tEmoji(o.name)}</span>
           <div class="base-name">${sanitize(o.name)}</div>
           <div class="base-extra">${o.extra===0?'incl.':'+$'+o.extra}</div>
@@ -1142,7 +1142,7 @@ function renderCustomBody() {
         const isSel=cnt>0;
         const cls=isSel?(isPrem?'sel-prem':isShot?'sel-shot':'sel'):'';
         const priceLabel=isSel?(o.extra===0?'gratis ✓':`+$${o.extra*cnt}${cnt>1?` ×${cnt}`:''}`):(o.extra===0?'gratis':'+$'+o.extra);
-        html+=`<div class="top-chip${cls?' '+cls:''}" onclick="toggleTop('${modKey}','${sanitize(o.name)}');refreshAcc('${modKey.replace(/\s/g,'_')}');">
+        html+=`<div class="top-chip${cls?' '+cls:''}" onclick="toggleTop('${modKey}','${sanitize(o.name)}')">
           <span class="top-emoji">${tEmoji(o.name)}</span>
           <span class="top-name">${sanitize(o.name)}</span>
           <span class="top-price">${priceLabel}</span>
@@ -1206,16 +1206,86 @@ function refreshAcc(id){
   }
 }
 
-function selSingle(modKey,val){CS.sel[modKey]=val;renderCustomBody();}
+function selSingle(modKey, val) {
+  CS.sel[modKey] = val;
+  // Actualizar clases de los chips en el DOM sin re-renderizar todo
+  const accId = 'acc-' + modKey.replace(/\s/g,'_');
+  const sec = document.getElementById(accId); if(!sec) return;
+  if(modKey === 'Tamaño') {
+    sec.querySelectorAll('.size-card').forEach(el => {
+      const name = el.querySelector('.size-name')?.textContent;
+      el.classList.toggle('sel', name === val);
+    });
+  } else {
+    sec.querySelectorAll('.base-chip').forEach(el => {
+      const name = el.querySelector('.base-name')?.textContent;
+      el.classList.toggle('sel', name === val);
+      const check = el.querySelector('.base-check');
+      if(check) check.textContent = name === val ? '✓' : '';
+    });
+  }
+  updateBadge(accId, modKey);
+  updateCustomPrice();
+}
 
-function toggleTop(modKey,name){
-  const mod=MODS[modKey]; if(!mod) return;
-  const arr=CS.sel[modKey]||[];
-  const cnt=arr.filter(x=>x===name).length;
-  if(cnt>0&&arr.length<mod.max) arr.push(name);
-  else if(cnt>0){const idx=arr.lastIndexOf(name);arr.splice(idx,1);}
-  else{if(arr.length>=mod.max){showToast('Máximo '+mod.max+' selecciones');return;} arr.push(name);}
-  CS.sel[modKey]=arr; renderCustomBody();
+function toggleTop(modKey, name) {
+  const mod = MODS[modKey]; if(!mod) return;
+  const arr = CS.sel[modKey] || [];
+  const cnt = arr.filter(x => x === name).length;
+  if(cnt > 0 && arr.length < mod.max) arr.push(name);
+  else if(cnt > 0) { const idx = arr.lastIndexOf(name); arr.splice(idx,1); }
+  else { if(arr.length >= mod.max) { showToast('Máximo '+mod.max+' selecciones'); return; } arr.push(name); }
+  CS.sel[modKey] = arr;
+
+  const isPrem = modKey === 'Toppings Extra Premium';
+  const isShot = modKey === 'Shots Extra';
+  const accId = 'acc-' + modKey.replace(/\s/g,'_');
+  const sec = document.getElementById(accId); if(!sec) return;
+
+  // Actualizar cada chip en el DOM
+  sec.querySelectorAll('.top-chip').forEach(el => {
+    const chipName = el.querySelector('.top-name')?.textContent;
+    const chipArr = CS.sel[modKey] || [];
+    const chipCnt = chipArr.filter(x => x === chipName).length;
+    const isSel = chipCnt > 0;
+    const opt = mod.options.find(o => o.name === chipName);
+    // Clases
+    el.className = 'top-chip' + (isSel ? (' ' + (isPrem?'sel-prem':isShot?'sel-shot':'sel')) : '');
+    // Precio
+    const priceEl = el.querySelector('.top-price');
+    if(priceEl && opt) {
+      priceEl.textContent = isSel
+        ? (opt.extra===0 ? 'gratis ✓' : `+$${opt.extra*chipCnt}${chipCnt>1?` ×${chipCnt}`:''}`)
+        : (opt.extra===0 ? 'gratis' : '+$'+opt.extra);
+    }
+  });
+
+  // Actualizar free-pill si aplica
+  if(modKey === 'Toppings Incluidos') {
+    const cnt2 = (CS.sel[modKey]||[]).length;
+    const fp = sec.querySelector('.free-pill');
+    if(fp) { fp.textContent = cnt2+'/2 gratis'; fp.classList.toggle('full', cnt2>=2); }
+  }
+
+  updateBadge(accId, modKey);
+  updateCustomPrice();
+}
+
+// Actualiza solo el badge del header de una sección
+function updateBadge(accId, modKey) {
+  const sec = document.getElementById(accId); if(!sec) return;
+  const mod = MODS[modKey]; if(!mod) return;
+  const isSingle = mod.max === 1;
+  const selCount = isSingle ? (CS.sel[modKey]?1:0) : (CS.sel[modKey]||[]).length;
+  let pill;
+  if(mod.required) pill = `<span class="acc-pill acc-pill-req">Req.</span>`;
+  else if(selCount > 0) pill = `<span class="acc-pill acc-pill-ok">+${selCount} ✓</span>`;
+  else pill = `<span class="acc-pill acc-pill-opt">Opcional</span>`;
+  const meta = sec.querySelector('.acc-meta');
+  if(meta) {
+    const arrow = meta.querySelector('.acc-arrow');
+    meta.innerHTML = pill + (arrow ? arrow.outerHTML : '<span class="acc-arrow">▼</span>');
+  }
 }
 
 function calcItemPrice(){
