@@ -212,16 +212,29 @@ html, body {
 .sheet-footer { padding: 12px 20px 8px; border-top: 1px solid var(--border); flex-shrink: 0; }
 
 /* ══════════════════════════════════════════
-   CUSTOMIZER — TABS (MEJORA PRINCIPAL)
+   CUSTOMIZER — ACORDEÓN
 ══════════════════════════════════════════ */
-.mod-tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; margin-bottom: 14px; padding-bottom: 2px; flex-shrink: 0; }
-.mod-tabs::-webkit-scrollbar { display: none; }
-.mod-tab { flex-shrink: 0; padding: 6px 14px; border-radius: 20px; border: 1.5px solid var(--border-2); background: transparent; font-size: 12px; font-weight: 500; color: var(--text-2); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; white-space: nowrap; }
-.mod-tab.active { background: var(--red-light); border-color: var(--red-mid); color: var(--red-dark); font-weight: 600; }
-.mod-tab.has-sel { background: var(--red); border-color: var(--red); color: #fff; }
-/* Paneles de mods */
-.mod-panel { display: none; }
-.mod-panel.active { display: block; }
+/* Acordeón: siempre visible, colapsable */
+.acc-section { border: 1.5px solid var(--border-2); border-radius: 14px; margin-bottom: 10px; overflow: hidden; }
+.acc-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; cursor: pointer; user-select: none;
+  background: var(--surface); gap: 10px;
+}
+.acc-header:active { background: var(--bg); }
+.acc-title { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; }
+.acc-meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.acc-pill { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+.acc-pill-req { background: var(--red-light); color: var(--red-dark); }
+.acc-pill-ok { background: var(--green-light); color: var(--green); }
+.acc-pill-opt { background: var(--bg); color: var(--text-3); border: 1px solid var(--border-2); }
+.acc-arrow { font-size: 12px; color: var(--text-3); transition: transform 0.2s; flex-shrink: 0; }
+.acc-section.open .acc-arrow { transform: rotate(180deg); }
+.acc-body { display: none; padding: 0 14px 14px; }
+.acc-section.open .acc-body { display: block; }
+/* Secciones base (Tamaño/Bases) siempre abiertas */
+.acc-section.always-open .acc-arrow { display: none; }
+.acc-section.always-open .acc-header { cursor: default; }
 
 .mod-section { margin-bottom: 16px; }
 .mod-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
@@ -515,8 +528,6 @@ html, body {
       </div>
     </div>
   </div>
-  <!-- MEJORA: tabs de modificadores + cuerpo por panel -->
-  <div id="cust-mod-tabs" class="mod-tabs" style="padding: 10px 20px 0;"></div>
   <div class="sheet-body" id="cust-body"></div>
   <div class="sheet-footer">
     <div class="custom-footer">
@@ -1026,12 +1037,19 @@ function renderProducts() {
 }
 
 // ═══════════════════════════════
-// CUSTOMIZER — CON TABS (MEJORA PRINCIPAL)
+// CUSTOMIZER — ACORDEÓN
+// Siempre visible, sin riesgo de olvidar secciones.
+// Base/Tamaño: siempre abierto. Toppings: colapsado pero visible.
 // ═══════════════════════════════
-// Grupos que van en sus propios tabs vs. siempre visible
-const CUST_TAB_GROUPS = ['Toppings Incluidos','Toppings Extra Básicos','Toppings Extra Premium','Doble Topping','Shots Extra'];
-
-let _custActiveTab = null;
+// Secciones que arrancan colapsadas (el cajero las ve y decide si expande)
+const TOPS_GROUPS = ['Toppings Incluidos','Toppings Extra Básicos','Toppings Extra Premium','Doble Topping','Shots Extra'];
+// Labels cortos para el header del acordeón
+const MOD_LABELS = {
+  'Tamaño':'Tamaño','Bases':'Base / Crema',
+  'Toppings Incluidos':'Toppings gratis','Toppings Extra Básicos':'Toppings extra +$15',
+  'Toppings Extra Premium':'Toppings premium +$25','Doble Topping':'Doble topping',
+  'Shots Extra':'Shots extra +$25',
+};
 
 function openCustom(pid, editIdx=null) {
   const p=PRODUCTS.find(x=>x.id===pid); if(!p) return;
@@ -1044,146 +1062,46 @@ function openCustom(pid, editIdx=null) {
   document.getElementById('cust-emoji').textContent=pEmoji(p.name);
   document.getElementById('cust-name').textContent=p.name;
   document.getElementById('cust-desc').textContent=p.desc||'';
-  // Determinar tab inicial
-  const hasBasics = p.mods.some(m=>['Tamaño','Bases'].includes(m));
-  _custActiveTab = hasBasics ? 'base' : (p.mods.find(m=>CUST_TAB_GROUPS.includes(m))||'nota');
-  renderCustomTabs();
+  renderCustomBody();
   updateCustomPrice();
   openSheet('custom');
 }
 
-function renderCustomTabs() {
-  const p=CS.p;
-  const tabsEl=document.getElementById('cust-mod-tabs');
-  const bodyEl=document.getElementById('cust-body');
-
-  // Construir tabs
-  const tabs=[];
-  const hasBasics=p.mods.some(m=>['Tamaño','Bases'].includes(m));
-  if(hasBasics) tabs.push({id:'base',label:'🧁 Base'});
-  const toppingMods=p.mods.filter(m=>CUST_TAB_GROUPS.includes(m));
-  if(toppingMods.length>0) tabs.push({id:'tops',label:'🍬 Toppings'});
-  tabs.push({id:'nota',label:'📝 Nota'});
-
-  if(tabs.length<=1){
-    // Sin tabs — mostrar todo en una sola vista
-    tabsEl.innerHTML=''; tabsEl.style.display='none';
-    renderCustomBody_All();
-    return;
-  }
-  tabsEl.style.display='flex';
-
-  tabsEl.innerHTML=tabs.map(t=>{
-    // Indicador si tiene selecciones
-    let hasSel=false;
-    if(t.id==='base'){
-      hasSel=(CS.sel['Tamaño']&&CS.sel['Tamaño']!=='Chico')||(CS.sel['Bases']&&CS.sel['Bases']!=='Crema');
-    } else if(t.id==='tops'){
-      hasSel=toppingMods.some(m=>(CS.sel[m]||[]).length>0);
-    }
-    const isActive=_custActiveTab===t.id;
-    return `<button class="mod-tab${isActive?' active':hasSel?' has-sel':''}" onclick="switchCustTab('${t.id}')">${t.label}</button>`;
-  }).join('');
-
-  renderCustomBody_Tab(_custActiveTab, toppingMods);
-}
-
-function switchCustTab(tabId){
-  _custActiveTab=tabId;
-  renderCustomTabs();
-}
-
-function renderCustomBody_Tab(tabId, toppingMods){
-  const p=CS.p;
-  let html='';
-
-  if(tabId==='base'){
-    // Tamaño
-    if(p.mods.includes('Tamaño')){
-      const mod=MODS['Tamaño'];
-      html+=`<div class="mod-section"><div class="mod-title">Tamaño <span class="mod-badge badge-req">Requerido</span></div>`;
-      const icons={Chico:'🫙',Mediano:'🥤',Grande:'🪣'};
-      html+=`<div class="sizes-row">`;
-      mod.options.forEach(o=>{
-        const sel=CS.sel['Tamaño']===o.name;
-        html+=`<div class="size-card${sel?' sel':''}" onclick="selSingle('Tamaño','${o.name}');renderCustomTabs();">
-          <div class="size-icon">${icons[o.name]||'🥤'}</div>
-          <div class="size-name">${sanitize(o.name)}</div>
-          <div class="size-extra">${o.extra===0?'Base':'+$'+o.extra}</div>
-        </div>`;
-      });
-      html+=`</div></div>`;
-    }
-    // Bases
-    if(p.mods.includes('Bases')){
-      const mod=MODS['Bases'];
-      html+=`<div class="mod-section"><div class="mod-title">Base <span class="mod-badge badge-req">Requerido</span></div><div class="bases-grid">`;
-      mod.options.forEach(o=>{
-        const sel=CS.sel['Bases']===o.name;
-        html+=`<div class="base-chip${sel?' sel':''}" onclick="selSingle('Bases','${o.name}');renderCustomTabs();">
-          <span style="font-size:18px;">${tEmoji(o.name)}</span>
-          <div class="base-name">${sanitize(o.name)}</div>
-          <div class="base-extra">${o.extra===0?'incl.':'+$'+o.extra}</div>
-          <div class="base-check">${sel?'✓':''}</div>
-        </div>`;
-      });
-      html+=`</div></div>`;
-    }
-  } else if(tabId==='tops' && toppingMods){
-    toppingMods.forEach(modKey=>{
-      const mod=MODS[modKey]; if(!mod) return;
-      const isPrem=modKey==='Toppings Extra Premium';
-      const isShot=modKey==='Shots Extra';
-      const isDoble=modKey==='Doble Topping';
-      const isIncl=modKey==='Toppings Incluidos';
-      html+=`<div class="mod-section"><div class="mod-title">${sanitize(modKey)} <span class="mod-badge badge-opt">${mod.label||'Opcional'}</span></div>`;
-      if(isIncl){
-        const cnt=(CS.sel[modKey]||[]).length;
-        html+=`<div class="free-bar"><span style="font-size:12px;color:var(--text-2);">Hasta 2 sin costo</span><div class="free-pill${cnt>=2?' full':''}">  ${cnt}/2 gratis</div></div>`;
-      }
-      html+=`<div class="tops-grid">`;
-      mod.options.forEach(o=>{
-        const arr=CS.sel[modKey]||[];
-        const cnt=arr.filter(x=>x===o.name).length;
-        const isSel=cnt>0;
-        const cls=isSel?(isPrem?'sel-prem':isShot?'sel-shot':'sel'):'';
-        const priceLabel=isSel?(o.extra===0?'gratis ✓':`+$${o.extra*cnt}${cnt>1?` ×${cnt}`:''}`):(o.extra===0?'gratis':'+$'+o.extra);
-        html+=`<div class="top-chip${cls?' '+cls:''}" onclick="toggleTop('${modKey}','${sanitize(o.name)}');renderCustomTabs();">
-          <span class="top-emoji">${tEmoji(o.name)}</span>
-          <span class="top-name">${sanitize(o.name)}</span>
-          <span class="top-price">${priceLabel}</span>
-        </div>`;
-      });
-      html+=`</div></div>`;
-    });
-  } else if(tabId==='nota'){
-    const nota=CS.note||(CS.editIdx!==null?(order[CS.editIdx]?.note||''):'');
-    html+=`<div class="mod-section"><div class="mod-title">Nota <span class="mod-badge badge-opt">Opcional</span></div>
-      <textarea class="nota-input" id="cust-nota" placeholder="Sin chamoy, extra crema...">${sanitize(nota)}</textarea>
-    </div>`;
-  }
-
-  document.getElementById('cust-body').innerHTML=html;
-}
-
-// Fallback para productos sin tabs (pocos modificadores)
-function renderCustomBody_All() {
+function renderCustomBody() {
   const p=CS.p; let html='';
+  const icons={Chico:'🫙',Mediano:'🥤',Grande:'🪣'};
+
   p.mods.forEach(modKey=>{
     const mod=MODS[modKey]; if(!mod) return;
     const isSingle=mod.max===1;
-    html+=`<div class="mod-section">`;
-    html+=`<div class="mod-title">${sanitize(modKey)} <span class="mod-badge ${mod.required?'badge-req':'badge-opt'}">${mod.required?'Requerido':'Opcional'}</span></div>`;
-    if(modKey==='Toppings Incluidos'){
-      const cnt=(CS.sel[modKey]||[]).length;
-      html+=`<div class="free-bar"><span style="font-size:12px;color:var(--text-2);">Hasta 2 sin costo</span><div class="free-pill${cnt>=2?' full':''}">${cnt}/2 gratis</div></div>`;
-    }
-    if(isSingle&&modKey==='Tamaño'){
-      const icons={Chico:'🫙',Mediano:'🥤',Grande:'🪣'};
+    const isTopping=TOPS_GROUPS.includes(modKey);
+    const selCount=isSingle?(CS.sel[modKey]?1:0):(CS.sel[modKey]||[]).length;
+    const label=MOD_LABELS[modKey]||modKey;
+
+    // Badge de estado
+    let pillHtml='';
+    if(mod.required) pillHtml=`<span class="acc-pill acc-pill-req">Req.</span>`;
+    else if(selCount>0) pillHtml=`<span class="acc-pill acc-pill-ok">+${selCount} ✓</span>`;
+    else pillHtml=`<span class="acc-pill acc-pill-opt">Opcional</span>`;
+
+    // Secciones base: siempre abiertas. Toppings: colapsados por defecto
+    // (pero si ya tenía selección al editar, los abre)
+    const isAlwaysOpen=!isTopping;
+    const startOpen=isAlwaysOpen||(selCount>0);
+    const sectionClass=`acc-section${startOpen?' open':''}${isAlwaysOpen?' always-open':''}`;
+
+    html+=`<div class="${sectionClass}" id="acc-${modKey.replace(/\s/g,'_')}">
+      <div class="acc-header" onclick="toggleAcc('${modKey.replace(/\s/g,'_')}')">
+        <span class="acc-title">${sanitize(label)}</span>
+        <div class="acc-meta">${pillHtml}<span class="acc-arrow">▼</span></div>
+      </div>
+      <div class="acc-body">`;
+
+    if(isSingle && modKey==='Tamaño'){
       html+=`<div class="sizes-row">`;
       mod.options.forEach(o=>{
-        const sel=CS.sel[modKey]===o.name;
-        html+=`<div class="size-card${sel?' sel':''}" onclick="selSingle('${modKey}','${o.name}');renderCustomBody_All();">
+        const sel=CS.sel['Tamaño']===o.name;
+        html+=`<div class="size-card${sel?' sel':''}" onclick="selSingle('Tamaño','${o.name}');refreshAcc('${modKey.replace(/\s/g,'_')}');">
           <div class="size-icon">${icons[o.name]||'🥤'}</div>
           <div class="size-name">${sanitize(o.name)}</div>
           <div class="size-extra">${o.extra===0?'Base':'+$'+o.extra}</div>
@@ -1194,7 +1112,7 @@ function renderCustomBody_All() {
       html+=`<div class="bases-grid">`;
       mod.options.forEach(o=>{
         const sel=CS.sel[modKey]===o.name;
-        html+=`<div class="base-chip${sel?' sel':''}" onclick="selSingle('${modKey}','${o.name}');renderCustomBody_All();">
+        html+=`<div class="base-chip${sel?' sel':''}" onclick="selSingle('${modKey}','${o.name}');refreshAcc('${modKey.replace(/\s/g,'_')}');">
           <span style="font-size:18px;">${tEmoji(o.name)}</span>
           <div class="base-name">${sanitize(o.name)}</div>
           <div class="base-extra">${o.extra===0?'incl.':'+$'+o.extra}</div>
@@ -1205,6 +1123,11 @@ function renderCustomBody_All() {
     } else {
       const isPrem=modKey==='Toppings Extra Premium';
       const isShot=modKey==='Shots Extra';
+      const isIncl=modKey==='Toppings Incluidos';
+      if(isIncl){
+        const cnt=(CS.sel[modKey]||[]).length;
+        html+=`<div class="free-bar"><span style="font-size:12px;color:var(--text-2);">Hasta 2 sin costo</span><div class="free-pill${cnt>=2?' full':''}">${cnt}/2 gratis</div></div>`;
+      }
       html+=`<div class="tops-grid">`;
       mod.options.forEach(o=>{
         const arr=CS.sel[modKey]||[];
@@ -1212,7 +1135,7 @@ function renderCustomBody_All() {
         const isSel=cnt>0;
         const cls=isSel?(isPrem?'sel-prem':isShot?'sel-shot':'sel'):'';
         const priceLabel=isSel?(o.extra===0?'gratis ✓':`+$${o.extra*cnt}${cnt>1?` ×${cnt}`:''}`):(o.extra===0?'gratis':'+$'+o.extra);
-        html+=`<div class="top-chip${cls?' '+cls:''}" onclick="toggleTop('${modKey}','${sanitize(o.name)}');renderCustomBody_All();">
+        html+=`<div class="top-chip${cls?' '+cls:''}" onclick="toggleTop('${modKey}','${sanitize(o.name)}');refreshAcc('${modKey.replace(/\s/g,'_')}');">
           <span class="top-emoji">${tEmoji(o.name)}</span>
           <span class="top-name">${sanitize(o.name)}</span>
           <span class="top-price">${priceLabel}</span>
@@ -1220,13 +1143,59 @@ function renderCustomBody_All() {
       });
       html+=`</div>`;
     }
-    html+=`</div>`;
+    html+=`</div></div>`; // acc-body + acc-section
   });
+
+  // Nota siempre al final, colapsada
   const nota=CS.note||(CS.editIdx!==null?(order[CS.editIdx]?.note||''):'');
-  html+=`<div class="mod-section"><div class="mod-title">Nota <span class="mod-badge badge-opt">Opcional</span></div>
-    <textarea class="nota-input" id="cust-nota" placeholder="Sin chamoy, extra crema...">${sanitize(nota)}</textarea>
+  const hasNota=nota.length>0;
+  html+=`<div class="acc-section${hasNota?' open':''}" id="acc-nota">
+    <div class="acc-header" onclick="toggleAcc('nota')">
+      <span class="acc-title">Nota especial</span>
+      <div class="acc-meta">
+        ${hasNota?'<span class="acc-pill acc-pill-ok">✓</span>':'<span class="acc-pill acc-pill-opt">Opcional</span>'}
+        <span class="acc-arrow">▼</span>
+      </div>
+    </div>
+    <div class="acc-body">
+      <textarea class="nota-input" id="cust-nota" placeholder="Sin chamoy, extra crema...">${sanitize(nota)}</textarea>
+    </div>
   </div>`;
+
   document.getElementById('cust-body').innerHTML=html;
+}
+
+// Toggle acordeón — no re-renderiza todo, solo toggle la clase
+function toggleAcc(id){
+  const sec=document.getElementById('acc-'+id);
+  if(!sec||sec.classList.contains('always-open')) return;
+  sec.classList.toggle('open');
+}
+
+// Refresh solo el badge y estado interno de una sección tras selección
+function refreshAcc(id){
+  updateCustomPrice();
+  const modKey=id.replace(/_/g,' ');
+  const mod=MODS[modKey]; if(!mod) return;
+  const sec=document.getElementById('acc-'+id); if(!sec) return;
+  const isSingle=mod.max===1;
+  const selCount=isSingle?(CS.sel[modKey]?1:0):(CS.sel[modKey]||[]).length;
+  // Actualizar pill
+  let pillHtml='';
+  if(mod.required) pillHtml=`<span class="acc-pill acc-pill-req">Req.</span>`;
+  else if(selCount>0) pillHtml=`<span class="acc-pill acc-pill-ok">+${selCount} ✓</span>`;
+  else pillHtml=`<span class="acc-pill acc-pill-opt">Opcional</span>`;
+  const metaEl=sec.querySelector('.acc-meta');
+  if(metaEl){
+    const arrow=metaEl.querySelector('.acc-arrow');
+    metaEl.innerHTML=pillHtml+(arrow?arrow.outerHTML:'<span class="acc-arrow">▼</span>');
+  }
+  // Actualizar free-pill si aplica
+  if(modKey==='Toppings Incluidos'){
+    const cnt=(CS.sel[modKey]||[]).length;
+    const fp=sec.querySelector('.free-pill');
+    if(fp){fp.textContent=cnt+'/2 gratis';fp.classList.toggle('full',cnt>=2);}
+  }
 }
 
 function selSingle(modKey,val){CS.sel[modKey]=val;updateCustomPrice();}
