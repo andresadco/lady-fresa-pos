@@ -1596,7 +1596,12 @@ async function saveToSupabase(saleData){
       paid_at:saleData.paid_at,
     };
     const res=await fetch(SB_URL+'/rest/v1/orders',{method:'POST',headers:SB_H,body:JSON.stringify(orderPayload)});
-    if(!res.ok) return false;
+    if(!res.ok){
+      const errBody=await res.json().catch(()=>({}));
+      console.error('[orders POST]',res.status, errBody);
+      // Mostrar error específico en el banner para diagnóstico
+      throw new Error(`Error ${res.status}: ${errBody.message||errBody.hint||errBody.details||'revisa consola'}`);
+    }
     const [savedOrder]=await res.json();
     const orderId=savedOrder.id;
     if(saleData.items.length){
