@@ -1507,7 +1507,9 @@ async function confirmarPago(){
   const client=document.getElementById('client-input').value.trim();
   const saleData={
     id:orderN, date:nowMX(), items:[...order], sub,desc,iva,total,
-    payMethod,svcType,client,cambio,discount:discountMonto>0?('$'+discountMonto):discount,
+    payMethod,svcType,client,cambio,
+    discount: discountMonto>0 ? 0 : discount,
+    discountMonto: discountMonto>0 ? discountMonto : 0,
     cashReceived:con, paid_at:new Date().toISOString(),
   };
 
@@ -1590,7 +1592,7 @@ async function saveToSupabase(saleData){
       order_number:saleData.id, sucursal:currentUser?.sucursal||'Principal',
       cajero_id:currentUser?.id||null, cajero_name:currentUser?.name||'',
       turno_id:turnoId||null,
-      subtotal:saleData.sub, discount_pct:parseFloat(saleData.discount)||0, discount_amt:saleData.desc||0, iva:saleData.iva, total:saleData.total,
+      subtotal:saleData.sub, discount_pct:saleData.discount||0, discount_amt:saleData.desc||0, iva:saleData.iva, total:saleData.total,
       pay_method:saleData.payMethod, service_type:saleData.svcType,
       client_name:saleData.client||null,
       cash_received:saleData.payMethod==='efectivo'?saleData.cashReceived:null,
@@ -1616,8 +1618,6 @@ async function saveToSupabase(saleData){
     return true;
   } catch(e){
     console.error('[saveToSupabase]',e);
-    offlineQueue.push(saleData);
-    localStorage.setItem('lf_offline_queue',JSON.stringify(offlineQueue));
     return false;
   }
 }
@@ -1633,7 +1633,7 @@ async function flushOfflineQueue(){
         order_number:s.id, sucursal:s.sucursal||currentUser?.sucursal||'Principal',
         cajero_id:s.cajero_id||currentUser?.id||null, cajero_name:s.cajero_name||currentUser?.name||'',
         turno_id:s.turno_id||turnoId||null,
-        subtotal:s.sub, discount_pct:parseFloat(s.discount)||0, discount_amt:s.desc||0, iva:s.iva, total:s.total,
+        subtotal:s.sub, discount_pct:s.discount||0, discount_amt:s.desc||0, iva:s.iva, total:s.total,
         pay_method:s.payMethod, service_type:s.svcType, client_name:s.client||null,
         cash_received:s.payMethod==='efectivo'?s.cashReceived:null,
         change_given:s.payMethod==='efectivo'?s.cambio:null,
@@ -1657,6 +1657,7 @@ async function flushOfflineQueue(){
   }
 }
 window.addEventListener('online',()=>{if(offlineQueue.length) flushOfflineQueue();});
+
 
 // ═══════════════════════════════
 // INVENTORY DEDUCTION (sin cambios)
