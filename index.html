@@ -1590,7 +1590,7 @@ async function saveToSupabase(saleData){
       order_number:saleData.id, sucursal:currentUser?.sucursal||'Principal',
       cajero_id:currentUser?.id||null, cajero_name:currentUser?.name||'',
       turno_id:turnoId||null,
-      subtotal:saleData.sub, discount_pct:saleData.discount||0, discount_amt:saleData.desc||0, iva:saleData.iva, total:saleData.total,
+      subtotal:saleData.sub, discount_pct:parseFloat(saleData.discount)||0, discount_amt:saleData.desc||0, iva:saleData.iva, total:saleData.total,
       pay_method:saleData.payMethod, service_type:saleData.svcType,
       client_name:saleData.client||null,
       cash_received:saleData.payMethod==='efectivo'?saleData.cashReceived:null,
@@ -1616,6 +1616,8 @@ async function saveToSupabase(saleData){
     return true;
   } catch(e){
     console.error('[saveToSupabase]',e);
+    offlineQueue.push(saleData);
+    localStorage.setItem('lf_offline_queue',JSON.stringify(offlineQueue));
     return false;
   }
 }
@@ -1624,8 +1626,35 @@ async function flushOfflineQueue(){
   if(!offlineQueue.length) return;
   const pending=[...offlineQueue]; offlineQueue=[];
   localStorage.setItem('lf_offline_queue','[]');
-  for(const s of pending) await saveToSupabase(s);
-  if(offlineQueue.length===0) showToast('✅ Ventas offline sincronizadas');
+  const failed=[];
+  for(const s of pending){
+    try{
+      const op={
+        order_number:s.id, sucursal:s.sucursal||currentUser?.sucursal||'Principal',
+        cajero_id:s.cajero_id||currentUser?.id||null, cajero_name:s.cajero_name||currentUser?.name||'',
+        turno_id:s.turno_id||turnoId||null,
+        subtotal:s.sub, discount_pct:parseFloat(s.discount)||0, discount_amt:s.desc||0, iva:s.iva, total:s.total,
+        pay_method:s.payMethod, service_type:s.svcType, client_name:s.client||null,
+        cash_received:s.payMethod==='efectivo'?s.cashReceived:null,
+        change_given:s.payMethod==='efectivo'?s.cambio:null,
+        paid_at:s.paid_at||new Date().toISOString(),
+      };
+      const r=await fetch(SB_URL+'/rest/v1/orders',{method:'POST',headers:SB_H,body:JSON.stringify(op)});
+      if(!r.ok) throw new Error('flush failed');
+      const[saved]=await r.json();
+      if(s.items?.length){
+        const ip=s.items.map(item=>({order_id:saved.id,product_id:item.productId||null,product_name:item.name,qty:item.qty,unit_price:item.unitPrice,subtotal:item.unitPrice*item.qty}));
+        await fetch(SB_URL+'/rest/v1/order_items',{method:'POST',headers:{...SB_H,Prefer:'return=minimal'},body:JSON.stringify(ip)});
+      }
+    } catch{ failed.push(s); }
+  }
+  if(failed.length){
+    offlineQueue.push(...failed);
+    localStorage.setItem('lf_offline_queue',JSON.stringify(offlineQueue));
+    showToast('⚠️ '+failed.length+' venta(s) pendientes de sincronizar');
+  } else {
+    showToast('✅ '+pending.length+' venta(s) sincronizada(s)');
+  }
 }
 window.addEventListener('online',()=>{if(offlineQueue.length) flushOfflineQueue();});
 
