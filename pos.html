@@ -445,6 +445,7 @@ html, body {
       </button>
       <button class="tb-btn" style="background:var(--red-light);border-color:var(--red-mid);color:var(--red);" onclick="logout()" title="Salir">⏻</button>
       <div class="tb-badge" id="tb-badge-turno">● Turno</div>
+      <div class="tb-badge" id="tb-badge-online" style="display:none;">📵 Sin conexión</div>
     </div>
   </div>
 
@@ -1231,11 +1232,12 @@ async function confirmarPago(){
   const client=document.getElementById('client-input').value.trim();
   const saleData={
     id:orderN, date:nowMX(), items:[...order], sub,desc,iva,total,
-    payMethod,svcType,client,cambio,discount,cashReceived:con,
+    payMethod,svcType,client,cambio,discount:discount||0,cashReceived:con,
     paid_at:new Date().toISOString(),
   };
   sales.push(saleData);
-  await saveToSupabase(saleData);
+  const saveOk = await saveToSupabase(saleData);
+  if(!saveOk) showToast('⚠️ Venta guardada localmente — se sincronizará al reconectar');
   descontarInventario(saleData);
   printSale(saleData);
   closeSheet('cobro');
@@ -1267,6 +1269,12 @@ async function confirmarPago(){
 let offlineQueue=JSON.parse(localStorage.getItem('lf_offline_queue')||'[]');
 
 async function saveToSupabase(saleData){
+  if(!navigator.onLine){
+    offlineQueue.push(saleData);
+    localStorage.setItem('lf_offline_queue',JSON.stringify(offlineQueue));
+    updateOnlineIndicator();
+    return false;
+  }
   try {
     const orderPayload={
       order_number:saleData.id,
@@ -1277,8 +1285,8 @@ async function saveToSupabase(saleData){
       client_name:saleData.client||null,
       pay_method:saleData.payMethod,
       subtotal:saleData.sub,
-      discount_pct:saleData.discount,
-      discount_amt:saleData.desc,
+      discount_pct:saleData.discount||0,
+      discount_amt:saleData.desc||0,
       iva:saleData.iva,
       total:saleData.total,
       cash_received:saleData.payMethod==='efectivo'?saleData.cashReceived:null,
@@ -1287,7 +1295,7 @@ async function saveToSupabase(saleData){
       paid_at:saleData.paid_at||new Date().toISOString(),
     };
     const res=await fetch(SB_URL+'/rest/v1/orders',{method:'POST',headers:SB_H,body:JSON.stringify(orderPayload)});
-    if(!res.ok) throw new Error('orders failed');
+    if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(`${res.status}: ${e.message||e.hint||''}`); }
     const[saved]=await res.json();
     const itemsPayload=saleData.items.map(item=>({
       order_id:saved.id, product_id:item.productId, product_name:item.name,
@@ -1297,10 +1305,13 @@ async function saveToSupabase(saleData){
     }));
     await fetch(SB_URL+'/rest/v1/order_items',{method:'POST',headers:SB_H,body:JSON.stringify(itemsPayload)});
     if(offlineQueue.length) flushOfflineQueue();
-  } catch {
+    return true;
+  } catch(e) {
+    console.error('[saveToSupabase]',e);
     offlineQueue.push(saleData);
     localStorage.setItem('lf_offline_queue',JSON.stringify(offlineQueue));
-    showToast('⚠️ Sin conexión — guardado local');
+    updateOnlineIndicator();
+    return false;
   }
 }
 
@@ -1339,7 +1350,24 @@ async function flushOfflineQueue(){
     showToast('✅ '+pending.length+' venta'+(pending.length>1?'s':'')+' sincronizada'+(pending.length>1?'s':''));
   }
 }
-window.addEventListener('online',()=>{if(offlineQueue.length) flushOfflineQueue();});
+function updateOnlineIndicator(){
+  const badge=document.getElementById('tb-badge-online');
+  if(!badge) return;
+  const q=offlineQueue.length;
+  if(!navigator.onLine){
+    badge.style.display='block';
+    badge.textContent='📵 Sin conexión';
+    badge.className='tb-badge offline';
+  } else if(q>0){
+    badge.style.display='block';
+    badge.textContent=`⏳ ${q} pendiente${q>1?'s':''}`;
+    badge.className='tb-badge offline';
+  } else {
+    badge.style.display='none';
+  }
+}
+window.addEventListener('online',()=>{ updateOnlineIndicator(); if(offlineQueue.length) flushOfflineQueue(); });
+window.addEventListener('offline',()=>{ updateOnlineIndicator(); });
 
 // ═══════════════════════════════
 // INVENTORY DEDUCTION

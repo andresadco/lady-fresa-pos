@@ -105,6 +105,7 @@ html, body {
 .tb-btn { width: 38px; height: 38px; border-radius: 12px; border: 1.5px solid var(--border-2); background: var(--bg); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .tb-btn:active { background: var(--red-light); }
 .tb-badge { font-size: 9px; font-weight: 600; color: var(--green); letter-spacing: 0.5px; display: flex; align-items: center; gap: 3px; white-space: nowrap; }
+.tb-badge.offline { background: #FDF3DC; color: #B45309; padding: 3px 8px; border-radius: 10px; }
 
 /* ══════════════════════════════════════════
    CAT TABS
@@ -489,6 +490,7 @@ html, body {
       </button>
       <button class="tb-btn" style="background:var(--red-light);border-color:var(--red-mid);color:var(--red);" onclick="logout()" title="Salir">⏻</button>
       <div class="tb-badge" id="tb-badge-turno">● Turno</div>
+      <div class="tb-badge" id="tb-badge-online" style="display:none;">📵 Sin conexión</div>
     </div>
   </div>
 
@@ -1507,9 +1509,7 @@ async function confirmarPago(){
   const client=document.getElementById('client-input').value.trim();
   const saleData={
     id:orderN, date:nowMX(), items:[...order], sub,desc,iva,total,
-    payMethod,svcType,client,cambio,
-    discount: discountMonto>0 ? 0 : discount,
-    discountMonto: discountMonto>0 ? discountMonto : 0,
+    payMethod,svcType,client,cambio,discount:discountMonto>0?('$'+discountMonto):discount,
     cashReceived:con, paid_at:new Date().toISOString(),
   };
 
@@ -1585,18 +1585,17 @@ async function saveToSupabase(saleData){
     offlineQueue.push(saleData);
     localStorage.setItem('lf_offline_queue',JSON.stringify(offlineQueue));
     showToast('📵 Sin conexión — guardado localmente');
-    return true; // No es un error, se re-intentará al reconectar
+    updateOnlineIndicator();
+    return true;
   }
   try {
     const orderPayload={
       order_number:saleData.id, sucursal:currentUser?.sucursal||'Principal',
       cajero_id:currentUser?.id||null, cajero_name:currentUser?.name||'',
       turno_id:turnoId||null,
-      subtotal:saleData.sub, discount_pct:saleData.discount||0, discount_amt:saleData.desc||0, iva:saleData.iva, total:saleData.total,
+      subtotal:saleData.sub, descuento:saleData.desc, iva:saleData.iva, total:saleData.total,
       pay_method:saleData.payMethod, service_type:saleData.svcType,
       client_name:saleData.client||null,
-      cash_received:saleData.payMethod==='efectivo'?saleData.cashReceived:null,
-      change_given:saleData.payMethod==='efectivo'?saleData.cambio:null,
       paid_at:saleData.paid_at,
     };
     const res=await fetch(SB_URL+'/rest/v1/orders',{method:'POST',headers:SB_H,body:JSON.stringify(orderPayload)});
@@ -1626,38 +1625,27 @@ async function flushOfflineQueue(){
   if(!offlineQueue.length) return;
   const pending=[...offlineQueue]; offlineQueue=[];
   localStorage.setItem('lf_offline_queue','[]');
-  const failed=[];
-  for(const s of pending){
-    try{
-      const op={
-        order_number:s.id, sucursal:s.sucursal||currentUser?.sucursal||'Principal',
-        cajero_id:s.cajero_id||currentUser?.id||null, cajero_name:s.cajero_name||currentUser?.name||'',
-        turno_id:s.turno_id||turnoId||null,
-        subtotal:s.sub, discount_pct:s.discount||0, discount_amt:s.desc||0, iva:s.iva, total:s.total,
-        pay_method:s.payMethod, service_type:s.svcType, client_name:s.client||null,
-        cash_received:s.payMethod==='efectivo'?s.cashReceived:null,
-        change_given:s.payMethod==='efectivo'?s.cambio:null,
-        paid_at:s.paid_at||new Date().toISOString(),
-      };
-      const r=await fetch(SB_URL+'/rest/v1/orders',{method:'POST',headers:SB_H,body:JSON.stringify(op)});
-      if(!r.ok) throw new Error('flush failed');
-      const[saved]=await r.json();
-      if(s.items?.length){
-        const ip=s.items.map(item=>({order_id:saved.id,product_id:item.productId||null,product_name:item.name,qty:item.qty,unit_price:item.unitPrice,subtotal:item.unitPrice*item.qty}));
-        await fetch(SB_URL+'/rest/v1/order_items',{method:'POST',headers:{...SB_H,Prefer:'return=minimal'},body:JSON.stringify(ip)});
-      }
-    } catch{ failed.push(s); }
-  }
-  if(failed.length){
-    offlineQueue.push(...failed);
-    localStorage.setItem('lf_offline_queue',JSON.stringify(offlineQueue));
-    showToast('⚠️ '+failed.length+' venta(s) pendientes de sincronizar');
+  for(const s of pending) await saveToSupabase(s);
+  if(offlineQueue.length===0){ showToast('✅ Ventas offline sincronizadas'); updateOnlineIndicator(); }
+}
+function updateOnlineIndicator(){
+  const badge=document.getElementById('tb-badge-online');
+  if(!badge) return;
+  const q=offlineQueue.length;
+  if(!navigator.onLine){
+    badge.style.display='flex';
+    badge.textContent='📵 Sin conexión';
+    badge.className='tb-badge offline';
+  } else if(q>0){
+    badge.style.display='flex';
+    badge.textContent=`⏳ ${q} pendiente${q>1?'s':''}`;
+    badge.className='tb-badge offline';
   } else {
-    showToast('✅ '+pending.length+' venta(s) sincronizada(s)');
+    badge.style.display='none';
   }
 }
-window.addEventListener('online',()=>{if(offlineQueue.length) flushOfflineQueue();});
-
+window.addEventListener('online',()=>{ updateOnlineIndicator(); if(offlineQueue.length) flushOfflineQueue(); });
+window.addEventListener('offline',()=>{ updateOnlineIndicator(); });
 
 // ═══════════════════════════════
 // INVENTORY DEDUCTION (sin cambios)
