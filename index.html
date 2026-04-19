@@ -105,7 +105,6 @@ html, body {
 .tb-btn { width: 38px; height: 38px; border-radius: 12px; border: 1.5px solid var(--border-2); background: var(--bg); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .tb-btn:active { background: var(--red-light); }
 .tb-badge { font-size: 9px; font-weight: 600; color: var(--green); letter-spacing: 0.5px; display: flex; align-items: center; gap: 3px; white-space: nowrap; }
-.tb-badge.offline { background: #FDF3DC; color: #B45309; padding: 3px 8px; border-radius: 10px; }
 
 /* ══════════════════════════════════════════
    CAT TABS
@@ -490,7 +489,6 @@ html, body {
       </button>
       <button class="tb-btn" style="background:var(--red-light);border-color:var(--red-mid);color:var(--red);" onclick="logout()" title="Salir">⏻</button>
       <div class="tb-badge" id="tb-badge-turno">● Turno</div>
-      <div class="tb-badge" id="tb-badge-online" style="display:none;">📵 Sin conexión</div>
     </div>
   </div>
 
@@ -778,7 +776,7 @@ const PRODUCTS = [];
 let currentUser = null;
 let pinBuffer = '';
 let order = [];
-let orderN = parseInt(localStorage.getItem('lf_order_n') || '1');
+let orderN = parseInt(localStorage.getItem('lf_order_n_'+(currentUser?.sucursal||'x')) || '1');
 let sales = [];
 let turnoStartTime = new Date();
 let turnoId = null;
@@ -847,7 +845,7 @@ async function reconstruirTurnoDesdeDB() {
     if (dbOrders.length) {
       turnoStartTime = new Date(dbOrders[0].created_at);
       const maxId = Math.max(...dbOrders.map(o=>o.id));
-      if (maxId >= orderN) { orderN = maxId + 1; localStorage.setItem('lf_order_n', orderN); }
+      if (maxId >= orderN) { orderN = maxId + 1; localStorage.setItem('lf_order_n_'+(currentUser?.sucursal||'x'), orderN); }
     }
   } catch(e) { console.warn('[Turno reconstruir]', e); }
 }
@@ -881,7 +879,7 @@ async function pinEnter() {
       return;
     }
     currentUser = users[0];
-    localStorage.setItem('lf_session', JSON.stringify({date:nowMX().toDateString(), user:{id:currentUser.id,name:currentUser.name,role:currentUser.role,sucursal:currentUser.sucursal}}));
+    localStorage.setItem('lf_session', JSON.stringify({savedAt:Date.now(), user:{id:currentUser.id,name:currentUser.name,role:currentUser.role,sucursal:currentUser.sucursal}}));
     await abrirTurnoDB(currentUser);
     await reconstruirTurnoDesdeDB();
     showPOS();
@@ -939,9 +937,13 @@ function logout() {
 (function(){
   try {
     const s=JSON.parse(localStorage.getItem('lf_session')||'null');
-    if(!s||s.date!==nowMX().toDateString()){localStorage.removeItem('lf_session');return;}
+    if(!s) return;
+    // Expirar sesión solo si tiene más de 16 horas (no al cambiar día)
+    const savedAt=s.savedAt||0;
+    const hoursOld=(Date.now()-savedAt)/(1000*60*60);
+    if(hoursOld>16){localStorage.removeItem('lf_session');return;}
     currentUser=s.user;
-    orderN=parseInt(localStorage.getItem('lf_order_n')||'1');
+    orderN=parseInt(localStorage.getItem('lf_order_n_'+(currentUser?.sucursal||'x'))||'1');
     setTimeout(async()=>{
       await abrirTurnoDB(currentUser);
       await reconstruirTurnoDesdeDB();
@@ -1546,7 +1548,7 @@ async function confirmarPago(){
     orderN++; order=[]; discount=0; discountMonto=0; payMethod='efectivo'; svcType='mostrador'; promoActiva=null;
     document.getElementById('order-num').textContent=String(orderN).padStart(3,'0');
     document.getElementById('order-num-2').textContent=String(orderN).padStart(3,'0');
-    localStorage.setItem('lf_order_n',orderN);
+    localStorage.setItem('lf_order_n_'+(currentUser?.sucursal||'x'),orderN);
     document.getElementById('client-input').value='';
     document.getElementById('promo-applied-bar').classList.add('hidden');
     document.getElementById('disc-row').style.display='flex';
@@ -1585,8 +1587,7 @@ async function saveToSupabase(saleData){
     offlineQueue.push(saleData);
     localStorage.setItem('lf_offline_queue',JSON.stringify(offlineQueue));
     showToast('📵 Sin conexión — guardado localmente');
-    updateOnlineIndicator();
-    return true;
+    return true; // No es un error, se re-intentará al reconectar
   }
   try {
     const orderPayload={
@@ -1626,26 +1627,9 @@ async function flushOfflineQueue(){
   const pending=[...offlineQueue]; offlineQueue=[];
   localStorage.setItem('lf_offline_queue','[]');
   for(const s of pending) await saveToSupabase(s);
-  if(offlineQueue.length===0){ showToast('✅ Ventas offline sincronizadas'); updateOnlineIndicator(); }
+  if(offlineQueue.length===0) showToast('✅ Ventas offline sincronizadas');
 }
-function updateOnlineIndicator(){
-  const badge=document.getElementById('tb-badge-online');
-  if(!badge) return;
-  const q=offlineQueue.length;
-  if(!navigator.onLine){
-    badge.style.display='flex';
-    badge.textContent='📵 Sin conexión';
-    badge.className='tb-badge offline';
-  } else if(q>0){
-    badge.style.display='flex';
-    badge.textContent=`⏳ ${q} pendiente${q>1?'s':''}`;
-    badge.className='tb-badge offline';
-  } else {
-    badge.style.display='none';
-  }
-}
-window.addEventListener('online',()=>{ updateOnlineIndicator(); if(offlineQueue.length) flushOfflineQueue(); });
-window.addEventListener('offline',()=>{ updateOnlineIndicator(); });
+window.addEventListener('online',()=>{if(offlineQueue.length) flushOfflineQueue();});
 
 // ═══════════════════════════════
 // INVENTORY DEDUCTION (sin cambios)
@@ -1756,10 +1740,22 @@ function guardarRetiro(){
   const motivo=(document.getElementById('retiro-motivo')?.value||'').trim();
   if(monto<=0){ showToast('Ingresa un monto válido'); return; }
   if(!motivo){ showToast('Escribe el motivo del retiro'); return; }
-  retiros.push({ monto, motivo, hora:new Date().toISOString(), nombre:currentUser?.name||'—' });
+  const retiro={ monto, motivo, hora:new Date().toISOString(), nombre:currentUser?.name||'—' };
+  retiros.push(retiro);
+  // Guardar en Supabase inmediatamente
+  fetch(SB_URL+'/rest/v1/gastos_operativos',{
+    method:'POST', headers:SB_H,
+    body:JSON.stringify({
+      turno_id:turnoId||null,
+      sucursal:currentUser?.sucursal||'Principal',
+      cajero_name:currentUser?.name||'—',
+      monto, concepto:motivo,
+      tipo:'retiro',
+      fecha:retiro.hora,
+    })
+  }).catch(()=>{}); // fire-and-forget, igual queda en cierre de turno
   document.querySelector('div[style*="position:fixed"][style*="flex-end"]')?.remove();
   showToast('✅ Retiro de $'+monto.toLocaleString('es-MX')+' registrado');
-  // Si el cierre estaba abierto, actualizar el cálculo
   if(document.getElementById('sheet-cierre').classList.contains('open')){
     buildCierreData(); renderCierreModal();
   }
@@ -2011,7 +2007,7 @@ function finalizarCierre(){
   document.getElementById('order-num').textContent='001';
   document.getElementById('order-num-2').textContent='001';
   localStorage.removeItem('lf_session');
-  localStorage.removeItem('lf_order_n');
+  localStorage.removeItem('lf_order_n_'+(currentUser?.sucursal||'x'));
   order=[]; discount=0; discountMonto=0; promoActiva=null; payMethod='efectivo'; svcType='mostrador';
   renderOrderBar(); renderProducts();
   currentUser=null; pinBuffer=''; updateDots();
