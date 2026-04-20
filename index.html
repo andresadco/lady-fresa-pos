@@ -830,7 +830,14 @@ async function abrirTurnoDB(user) {
 async function reconstruirTurnoDesdeDB() {
   if (!turnoId) return;
   try {
-    const dbOrders = await sbGet('orders', 'turno_id=eq.'+turnoId+'&select=id,total,iva,pay_method,created_at');
+    const [dbOrders, dbRetiros] = await Promise.all([
+      sbGet('orders', 'turno_id=eq.'+turnoId+'&select=id,total,iva,pay_method,created_at'),
+      sbGet('gastos_operativos', 'turno_id=eq.'+turnoId+'&tipo=eq.retiro&select=monto,concepto,cajero_name,fecha'),
+    ]);
+    // Reconstruir retiros en memoria
+    if(Array.isArray(dbRetiros) && dbRetiros.length){
+      retiros = dbRetiros.map(r=>({ monto:parseFloat(r.monto)||0, motivo:r.concepto||'', hora:r.fecha||'', nombre:r.cajero_name||'—' }));
+    }
     if (!Array.isArray(dbOrders) || dbOrders.length <= sales.length) return;
     const ids = dbOrders.map(o=>o.id).join(',');
     const allItems = await sbGet('order_items','order_id=in.('+ids+')&select=order_id,product_name,qty,unit_price');
@@ -841,7 +848,6 @@ async function reconstruirTurnoDesdeDB() {
         name:i.product_name, qty:i.qty, unitPrice:parseFloat(i.unit_price)||0, emoji:EMOJI_MAP[i.product_name]||'🍓'
       }))
     }));
-    // MEJORA: sincronizar orderN con la DB para evitar colisiones
     if (dbOrders.length) {
       turnoStartTime = new Date(dbOrders[0].created_at);
       const maxId = Math.max(...dbOrders.map(o=>o.id));
@@ -1684,21 +1690,52 @@ async function openHist(){
   openSheet('hist');
   try {
     const today=new Date(); today.setHours(0,0,0,0);
-    const orders=await sbGet('orders','created_at=gte.'+today.toISOString()+'&order=created_at.desc&limit=50');
+    const [orders, gastos]=await Promise.all([
+      sbGet('orders','created_at=gte.'+today.toISOString()+'&order=created_at.desc&limit=50'),
+      sbGet('gastos_operativos','created_at=gte.'+today.toISOString()+'&tipo=eq.retiro&order=created_at.desc&limit=50'),
+    ]);
     const list=Array.isArray(orders)?orders:[];
-    document.getElementById('hist-sub').textContent=list.length+' órdenes hoy';
-    if(!list.length){body.innerHTML='<div class="empty-state"><div class="e-icon">📋</div><p>Sin órdenes hoy</p></div>';return;}
+    const retiList=Array.isArray(gastos)?gastos:[];
+    document.getElementById('hist-sub').textContent=list.length+' órdenes · '+retiList.length+' retiro'+(retiList.length!==1?'s':'');
     const totalHoy=list.reduce((s,o)=>s+Number(o.total||0),0);
+    const totalReti=retiList.reduce((s,r)=>s+Number(r.monto||0),0);
     const fmtD=n=>'$'+Number(n).toLocaleString('es-MX',{minimumFractionDigits:2});
     const payLbl={efectivo:'💵',tarjeta:'💳',transferencia:'📲'};
-    body.innerHTML=`<div style="background:var(--red-light);border-radius:12px;padding:12px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;">
-      <div style="font-size:12px;color:var(--text-2);">Total del día</div>
+    let html=`<div style="background:var(--red-light);border-radius:12px;padding:12px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+      <div style="font-size:12px;color:var(--text-2);">Ventas del día</div>
       <div style="font-family:'Bebas Neue',serif;font-size:26px;color:var(--red);">${fmtD(totalHoy)}</div>
-    </div>`
-    +list.map(o=>`<div class="hist-order">
-      <div class="hist-head"><span class="hist-num">#${String(o.order_number||'?').padStart(3,'0')}</span><span class="hist-amt">${fmtD(o.total)}</span></div>
-      <div class="hist-meta">${timeMX(o.created_at)} · ${payLbl[o.pay_method]||''} ${sanitize(o.pay_method)} · ${o.service_type==='para-llevar'?'Para llevar':o.service_type==='delivery'?'Delivery':'Mostrador'}${o.client_name?' · '+sanitize(o.client_name):''}</div>
-    </div>`).join('');
+    </div>`;
+    if(retiList.length){
+      html+=`<div style="background:#FDF3DC;border-radius:12px;padding:12px 16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:12px;color:#92400E;">Retiros del día</div>
+        <div style="font-family:'Bebas Neue',serif;font-size:20px;color:#B45309;">-${fmtD(totalReti)}</div>
+      </div>`;
+    }
+    if(!list.length && !retiList.length){
+      body.innerHTML=html+'<div class="empty-state"><div class="e-icon">📋</div><p>Sin actividad hoy</p></div>';
+      return;
+    }
+    // Merge y ordenar por hora
+    const allEvents=[
+      ...list.map(o=>({tipo:'venta',ts:o.created_at,data:o})),
+      ...retiList.map(r=>({tipo:'retiro',ts:r.fecha||r.created_at,data:r})),
+    ].sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+    html+=allEvents.map(ev=>{
+      if(ev.tipo==='venta'){
+        const o=ev.data;
+        return `<div class="hist-order">
+          <div class="hist-head"><span class="hist-num">#${String(o.order_number||'?').padStart(3,'0')}</span><span class="hist-amt">${fmtD(o.total)}</span></div>
+          <div class="hist-meta">${timeMX(o.created_at)} · ${payLbl[o.pay_method]||''} ${sanitize(o.pay_method)} · ${o.service_type==='para-llevar'?'Para llevar':o.service_type==='delivery'?'Delivery':'Mostrador'}${o.client_name?' · '+sanitize(o.client_name):''}</div>
+        </div>`;
+      } else {
+        const r=ev.data;
+        return `<div class="hist-order" style="border-left:3px solid #F59E0B;">
+          <div class="hist-head"><span class="hist-num" style="color:#B45309;">💸 Retiro</span><span class="hist-amt" style="color:#B45309;">-${fmtD(r.monto)}</span></div>
+          <div class="hist-meta">${timeMX(r.fecha||r.created_at)} · ${sanitize(r.cajero_name||'—')} · ${sanitize(r.concepto||'')}</div>
+        </div>`;
+      }
+    }).join('');
+    body.innerHTML=html;
   } catch{body.innerHTML='<div class="empty-state"><div class="e-icon">⚠️</div><p>Error cargando historial</p></div>';}
 }
 function closeHist(){closeSheet('hist');}
