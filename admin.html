@@ -1335,7 +1335,12 @@ async function loadOverview() {
 
   var ventasHoy = ordHoy.reduce(function(s,o){ return s+(+o.total||0); }, 0);
   var ventasMes = ordMes.reduce(function(s,o){ return s+(+o.total||0); }, 0);
-  var gastosMesTot = gasArr.reduce(function(s,g){ return s+(+g.monto||0); }, 0);
+  var descuentosMes = ordMes.reduce(function(s,o){ return s+(+o.discount_amt||0); }, 0);
+  var retirosMes = gasArr.filter(function(g){ return g.categoria==='Retiro de caja'; }).reduce(function(s,g){ return s+(+g.monto||0); }, 0);
+  var gastosMesTot = gasArr.filter(function(g){ return g.categoria!=='Retiro de caja'; }).reduce(function(s,g){ return s+(+g.monto||0); }, 0);
+  var pagosEfectivo = ordMes.filter(function(o){ return o.pay_method==='efectivo'; }).reduce(function(s,o){ return s+(+o.total||0); }, 0);
+  var pagosTarjeta = ordMes.filter(function(o){ return o.pay_method==='tarjeta'; }).reduce(function(s,o){ return s+(+o.total||0); }, 0);
+  var pagosTransfer = ordMes.filter(function(o){ return o.pay_method==='transferencia'; }).reduce(function(s,o){ return s+(+o.total||0); }, 0);
 
   // Gastos del app de gastos (todos los del mes)
   var gastosAppMes = gastosApp.reduce(function(s,e){ return s+(+e.monto||0); }, 0);
@@ -1362,6 +1367,8 @@ async function loadOverview() {
   document.getElementById('dash-kpis').innerHTML = [
     { label:'Ventas hoy', val:'$'+ventasHoy.toLocaleString('es-MX'), sub: ordHoy.length+' órdenes · $'+ticketProm+' prom', color:'var(--pink)' },
     { label:'Ventas del mes', val:'$'+ventasMes.toLocaleString('es-MX'), sub: ordMes.length+' órdenes', color:'var(--pink)' },
+    { label:'Descuentos mes', val:descuentosMes>0?'-$'+descuentosMes.toLocaleString('es-MX'):'$0', sub: ventasMes>0?Math.round((descuentosMes/ventasMes)*100)+'% de ventas':'sin descuentos', color: descuentosMes>0?'#B45309':'var(--green)' },
+    { label:'Retiros mes', val:retirosMes>0?'$'+retirosMes.toLocaleString('es-MX'):'$0', sub:'Salidas de caja', color: retirosMes>0?'#B45309':'var(--text-3)' },
     { label:'Margen real', val: margenMes+'%', sub:'Ventas - insumos - egresos', color: margenMes >= 30 ? 'var(--green)' : margenMes >= 0 ? '#BA7517' : '#A32D2D' },
     { label:'⚠️ Stock bajo', val: stockBajoCount+' insumos', sub:'$'+Math.round(valorStock).toLocaleString('es-MX')+' valor total', color: stockBajoCount > 0 ? '#A32D2D' : 'var(--green)' },
   ].map(function(k){
@@ -1370,7 +1377,14 @@ async function loadOverview() {
       + '<div style="font-size:24px;font-weight:700;color:' + k.color + ';line-height:1.1;">' + k.val + '</div>'
       + '<div style="font-size:11px;color:var(--text-3);margin-top:4px;">' + k.sub + '</div>'
       + '</div>';
-  }).join('');
+  }).join('')
+  + '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;grid-column:1/-1;">'
+  + '<div style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Métodos de pago — mes</div>'
+  + '<div style="display:flex;gap:16px;flex-wrap:wrap;">'
+  + '<span style="font-size:13px;">💵 Efectivo <strong>$'+pagosEfectivo.toLocaleString('es-MX')+'</strong></span>'
+  + '<span style="font-size:13px;">💳 Tarjeta <strong>$'+pagosTarjeta.toLocaleString('es-MX')+'</strong></span>'
+  + '<span style="font-size:13px;">📲 Transferencia <strong>$'+pagosTransfer.toLocaleString('es-MX')+'</strong></span>'
+  + '</div></div>';
 
   // ── BLOQUE 2: Ventas por sucursal ──
   var ventasPorSuc = {};
@@ -1437,6 +1451,10 @@ async function loadOverview() {
     +   '<span style="font-size:11px;color:var(--text-3);">Compras / insumos</span>'
     +   '<span style="font-size:12px;font-weight:600;color:#BA7517;">$'+gastosAppMes.toLocaleString('es-MX')+'</span>'
     + '</div>'
+    + (retirosMes>0?'<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
+    +   '<span style="font-size:11px;color:var(--text-3);">Retiros de caja</span>'
+    +   '<span style="font-size:12px;font-weight:600;color:#B45309;">$'+retirosMes.toLocaleString('es-MX')+'</span>'
+    + '</div>':'')
     + '<div style="display:flex;justify-content:space-between;padding-top:4px;border-top:1px solid var(--border);">'
     +   '<span style="font-size:12px;font-weight:600;color:var(--text-2);">Total egresos</span>'
     +   '<span style="font-size:14px;font-weight:700;color:#BA7517;">$'+(totalEgresosMes+costoInsumosMes).toLocaleString('es-MX')+'</span>'
@@ -1568,7 +1586,11 @@ async function loadOverview() {
   document.getElementById('overview-turnos').innerHTML = !turArr.length
     ? '<div style="text-align:center;padding:20px;color:var(--text-3);">Sin turnos cerrados aún</div>'
     : turArr.map(function(t){
-        return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">'
+        var dif = t.diferencia_caja||0;
+        var difColor = dif===0?'var(--green)':dif>0?'var(--blue)':'#A32D2D';
+        var difLabel = dif===0?'✅ Cuadre exacto':dif>0?'↑ Sobran $'+Math.abs(dif).toLocaleString('es-MX'):'↓ Faltan $'+Math.abs(dif).toLocaleString('es-MX');
+        return '<div style="padding:12px 0;border-bottom:1px solid var(--border);">'
+          + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">'
           + '<div style="flex:1;">'
           +   '<div style="font-size:13px;font-weight:500;">'+(t.cajero_name||'—')+' · '+(t.sucursal||'—')+'</div>'
           +   '<div style="font-size:11px;color:var(--text-3);">'+new Date(t.cerrado_at||t.created_at).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})+'</div>'
@@ -1576,7 +1598,12 @@ async function loadOverview() {
           + '<div style="text-align:right;">'
           +   '<div style="font-size:13px;font-weight:600;color:var(--pink);">$'+(+t.total_ventas||0).toLocaleString('es-MX')+'</div>'
           +   '<div style="font-size:11px;color:var(--text-3);">'+(t.total_ordenes||0)+' órdenes</div>'
-          + '</div></div>';
+          + '</div></div>'
+          + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+          + (t.total_retiros>0?'<span style="font-size:11px;background:#FDF3DC;color:#B45309;padding:2px 8px;border-radius:6px;">💸 Retiros $'+Number(t.total_retiros).toLocaleString('es-MX')+'</span>':'')
+          + (t.diferencia_caja!=null?'<span style="font-size:11px;background:var(--bg);color:'+difColor+';padding:2px 8px;border-radius:6px;">'+difLabel+'</span>':'')
+          + '</div>'
+          + '</div>';
       }).join('');
 }
 
