@@ -483,6 +483,7 @@ html, body {
       <button class="tb-btn" onclick="openCierreSheet()" title="Cierre de turno" id="btn-cierre" style="display:none;">🔐</button>
       <button class="tb-btn" onclick="abrirRetiro()" title="Registrar retiro" id="btn-retiro" style="display:none;">💸</button>
       <button class="tb-btn" onclick="openPrinterCfg()" title="Impresora">🖨️</button>
+      <a href="admin.html" class="tb-btn" id="btn-admin" style="display:none;text-decoration:none;" title="Admin">⚙️</a>
       <button onclick="openOrderSheet()" id="tb-order-btn" title="Ver orden"
         style="display:none;height:38px;padding:0 14px;border-radius:20px;border:2px solid var(--red);background:var(--red);color:#fff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;align-items:center;gap:5px;white-space:nowrap;">
         🧾 <span id="tb-order-count">0</span>
@@ -907,6 +908,7 @@ function showPOS() {
   window._hasDiscount = p.discount;
   document.getElementById('btn-cierre').style.display = p.cierre ? 'flex' : 'none';
   document.getElementById('btn-retiro').style.display = p.discount ? 'flex' : 'none';
+  document.getElementById('btn-admin').style.display = p.dashboard ? 'flex' : 'none';
   loadCategoriasPos();
   loadCatalog();
   cargarPromos();
