@@ -832,11 +832,11 @@ async function reconstruirTurnoDesdeDB() {
   try {
     const [dbOrders, dbRetiros] = await Promise.all([
       sbGet('orders', 'turno_id=eq.'+turnoId+'&select=id,total,iva,pay_method,created_at'),
-      sbGet('gastos_operativos', 'turno_id=eq.'+turnoId+'&tipo=eq.retiro&select=monto,concepto,cajero_name,fecha'),
+      sbGet('gastos_operativos', 'nota=like.*'+turnoId+'*&categoria=eq.Retiro de caja&select=monto,concepto,quien,fecha'),
     ]);
     // Reconstruir retiros en memoria
     if(Array.isArray(dbRetiros) && dbRetiros.length){
-      retiros = dbRetiros.map(r=>({ monto:parseFloat(r.monto)||0, motivo:r.concepto||'', hora:r.fecha||'', nombre:r.cajero_name||'—' }));
+      retiros = dbRetiros.map(r=>({ monto:parseFloat(r.monto)||0, motivo:(r.concepto||'').replace('[RETIRO] ',''), hora:r.fecha||'', nombre:r.quien||'—' }));
     }
     if (!Array.isArray(dbOrders) || dbOrders.length <= sales.length) return;
     const ids = dbOrders.map(o=>o.id).join(',');
@@ -1692,7 +1692,7 @@ async function openHist(){
     const today=new Date(); today.setHours(0,0,0,0);
     const [orders, gastos]=await Promise.all([
       sbGet('orders','created_at=gte.'+today.toISOString()+'&order=created_at.desc&limit=50'),
-      sbGet('gastos_operativos','created_at=gte.'+today.toISOString()+'&tipo=eq.retiro&order=created_at.desc&limit=50'),
+      sbGet('gastos_operativos','fecha=eq.'+today.toISOString().slice(0,10)+'&categoria=eq.Retiro de caja&select=monto,concepto,quien,fecha,created_at&order=created_at.desc'),
     ]);
     const list=Array.isArray(orders)?orders:[];
     const retiList=Array.isArray(gastos)?gastos:[];
@@ -1711,14 +1711,13 @@ async function openHist(){
         <div style="font-family:'Bebas Neue',serif;font-size:20px;color:#B45309;">-${fmtD(totalReti)}</div>
       </div>`;
     }
-    if(!list.length && !retiList.length){
+    if(!list.length&&!retiList.length){
       body.innerHTML=html+'<div class="empty-state"><div class="e-icon">📋</div><p>Sin actividad hoy</p></div>';
       return;
     }
-    // Merge y ordenar por hora
     const allEvents=[
       ...list.map(o=>({tipo:'venta',ts:o.created_at,data:o})),
-      ...retiList.map(r=>({tipo:'retiro',ts:r.fecha||r.created_at,data:r})),
+      ...retiList.map(r=>({tipo:'retiro',ts:r.created_at||r.fecha,data:r})),
     ].sort((a,b)=>new Date(b.ts)-new Date(a.ts));
     html+=allEvents.map(ev=>{
       if(ev.tipo==='venta'){
@@ -1731,7 +1730,7 @@ async function openHist(){
         const r=ev.data;
         return `<div class="hist-order" style="border-left:3px solid #F59E0B;">
           <div class="hist-head"><span class="hist-num" style="color:#B45309;">💸 Retiro</span><span class="hist-amt" style="color:#B45309;">-${fmtD(r.monto)}</span></div>
-          <div class="hist-meta">${timeMX(r.fecha||r.created_at)} · ${sanitize(r.cajero_name||'—')} · ${sanitize(r.concepto||'')}</div>
+          <div class="hist-meta">${timeMX(r.created_at||r.fecha)} · ${sanitize(r.quien||'—')} · ${sanitize((r.concepto||'').replace('[RETIRO] ',''))}</div>
         </div>`;
       }
     }).join('');
@@ -1781,18 +1780,22 @@ function guardarRetiro(){
   if(!motivo){ showToast('Escribe el motivo del retiro'); return; }
   const retiro={ monto, motivo, hora:new Date().toISOString(), nombre:currentUser?.name||'—' };
   retiros.push(retiro);
-  // Guardar en Supabase inmediatamente
+  // Guardar en Supabase inmediatamente con columnas correctas
   fetch(SB_URL+'/rest/v1/gastos_operativos',{
     method:'POST', headers:SB_H,
     body:JSON.stringify({
-      turno_id:turnoId||null,
+      fecha:new Date().toISOString().slice(0,10),
+      monto,
+      concepto:'[RETIRO] '+motivo,
+      categoria:'Retiro de caja',
+      forma_pago:'Efectivo',
+      tipo_pago:'contado',
+      quien:currentUser?.name||'—',
       sucursal:currentUser?.sucursal||'Principal',
-      cajero_name:currentUser?.name||'—',
-      monto, concepto:motivo,
-      tipo:'retiro',
-      fecha:retiro.hora,
+      nota:'Turno: '+(turnoId||'—'),
+      pagado:true,
     })
-  }).catch(()=>{}); // fire-and-forget, igual queda en cierre de turno
+  }).catch(()=>{});
   document.querySelector('div[style*="position:fixed"][style*="flex-end"]')?.remove();
   showToast('✅ Retiro de $'+monto.toLocaleString('es-MX')+' registrado');
   if(document.getElementById('sheet-cierre').classList.contains('open')){
