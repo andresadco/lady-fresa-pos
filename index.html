@@ -1511,7 +1511,7 @@ async function confirmarPago(){
   const client=document.getElementById('client-input').value.trim();
   const saleData={
     id:orderN, date:nowMX(), items:[...order], sub,desc,iva,total,
-    payMethod,svcType,client,cambio,discount:discountMonto>0?('$'+discountMonto):discount,
+    payMethod,svcType,client,cambio,discount:discountMonto>0?0:discount,discountMonto:discountMonto>0?discountMonto:0,
     cashReceived:con, paid_at:new Date().toISOString(),
   };
 
@@ -1594,9 +1594,11 @@ async function saveToSupabase(saleData){
       order_number:saleData.id, sucursal:currentUser?.sucursal||'Principal',
       cajero_id:currentUser?.id||null, cajero_name:currentUser?.name||'',
       turno_id:turnoId||null,
-      subtotal:saleData.sub, descuento:saleData.desc, iva:saleData.iva, total:saleData.total,
+      subtotal:saleData.sub, discount_pct:saleData.discount||0, discount_amt:saleData.desc||0, iva:saleData.iva, total:saleData.total,
       pay_method:saleData.payMethod, service_type:saleData.svcType,
       client_name:saleData.client||null,
+      cash_received:saleData.payMethod==='efectivo'?saleData.cashReceived:null,
+      change_given:saleData.payMethod==='efectivo'?saleData.cambio:null,
       paid_at:saleData.paid_at,
     };
     const res=await fetch(SB_URL+'/rest/v1/orders',{method:'POST',headers:SB_H,body:JSON.stringify(orderPayload)});
