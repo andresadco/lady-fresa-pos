@@ -343,6 +343,15 @@ html, body {
 .confirmar-btn { width: 100%; height: 58px; background: var(--green); color: #fff; border: none; border-radius: 14px; font-family: 'Bebas Neue', serif; font-size: 20px; letter-spacing: 3px; cursor: pointer; }
 .confirmar-btn:active { background: #032606; }
 .confirmar-btn:disabled { opacity: 0.35; }
+.confirmar-btn.loading { letter-spacing: 1px; font-size: 14px; font-family: 'DM Sans', sans-serif; }
+/* Error banner */
+.error-banner { background: #FFF0F0; border: 1px solid #FFAAAA; border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #8B0000; margin-bottom: 12px; display: none; align-items: center; gap: 8px; }
+.error-banner.show { display: flex; }
+/* Descuento monto fijo */
+.disc-monto-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.disc-monto-input { flex: 1; height: 38px; border: 1.5px solid var(--border-2); border-radius: 10px; padding: 0 12px; font-size: 14px; font-family: 'DM Sans', sans-serif; color: var(--text); outline: none; background: var(--surface); }
+.disc-monto-input:focus { border-color: var(--amber); }
+.disc-monto-btn { height: 38px; padding: 0 14px; border-radius: 10px; border: none; background: var(--amber); color: #fff; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; }
 
 /* ══════════════════════════════════════════
    SUCCESS FLASH
@@ -437,6 +446,7 @@ html, body {
     </div>
     <div class="tb-actions">
       <button class="tb-btn" onclick="openHist()" title="Historial">📋</button>
+      <button class="tb-btn" onclick="abrirRetiro()" title="Registrar retiro" id="btn-retiro" style="display:none;">💸</button>
       <button class="tb-btn" onclick="openCierreSheet()" title="Cierre de turno" id="btn-cierre" style="display:none;">🔐</button>
       <button class="tb-btn" onclick="openPrinterCfg()" title="Impresora">🖨️</button>
       <button onclick="openOrderSheet()" id="tb-order-btn" title="Ver orden"
@@ -537,6 +547,10 @@ html, body {
         <button class="disc-btn" onclick="setDiscount(15,this)">15%</button>
         <button class="disc-btn" onclick="setDiscount(20,this)">20%</button>
       </div>
+      <div class="disc-monto-row" id="disc-monto-row">
+        <input type="number" class="disc-monto-input" id="disc-monto-input" placeholder="Desc. $— monto fijo" min="0" step="1">
+        <button class="disc-monto-btn" onclick="aplicarDescuentoMonto()">Aplicar $</button>
+      </div>
     </div>
     <div class="order-totals" id="order-totals"></div>
   </div>
@@ -566,6 +580,9 @@ html, body {
   <div class="sheet-body">
     <div class="cobro-total" id="cobro-total">$0</div>
     <div class="cobro-sub" id="cobro-pay-label"></div>
+    <div class="error-banner" id="cobro-error-banner">
+      <span>⚠️</span><span id="cobro-error-msg">Error al procesar el pago. Intenta de nuevo.</span>
+    </div>
     <div id="efec-section">
       <div class="efec-label">Recibiste:</div>
       <input type="number" class="efec-input" id="efec-input" placeholder="0" oninput="calcCambio()">
@@ -636,6 +653,11 @@ const SB_H = { 'Content-Type':'application/json', 'apikey':SB_KEY, 'Authorizatio
 function nowMX() { return new Date(new Date().toLocaleString('en-US',{timeZone:'America/Mexico_City'})); }
 function fmtMX(d) { return new Date(d).toLocaleString('es-MX',{timeZone:'America/Mexico_City',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}); }
 function timeMX(d) { return new Date(d).toLocaleTimeString('es-MX',{timeZone:'America/Mexico_City',hour:'2-digit',minute:'2-digit',hour12:false}); }
+
+function sanitize(str) {
+  if(!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 
 async function sbGet(table, q='') {
   try {
@@ -712,7 +734,7 @@ const PRODUCTS = [];
 let currentUser = null;
 let pinBuffer = '';
 let order = [];
-let orderN = parseInt(localStorage.getItem('lf_order_n') || '1');
+let orderN = parseInt(localStorage.getItem('lf_order_n_'+(window._lfSucursal||'x')) || localStorage.getItem('lf_order_n') || '1');
 let sales = [];
 let turnoStartTime = new Date();
 let turnoId = null;
@@ -721,6 +743,10 @@ let discount = 0;
 let promoActiva = null;
 let promosCargadas = [];
 let payMethod = 'efectivo';
+let discountMonto = 0; // Descuento por monto fijo
+let _cobroPending = false; // Prevenir doble cobro
+// retiros = [{monto, motivo, hora, nombre}]
+let retiros = [];
 let svcType = 'mostrador';
 let catFilter = 'all';
 let CS = {};
@@ -763,7 +789,7 @@ async function abrirTurnoDB(user) {
 async function reconstruirTurnoDesdeDB() {
   if (!turnoId) return;
   try {
-    const dbOrders = await sbGet('orders', 'turno_id=eq.'+turnoId+'&select=id,total,iva,pay_method,created_at');
+    const dbOrders = await sbGet('orders', 'turno_id=eq.'+turnoId+'&select=id,order_number,total,iva,pay_method,created_at');
     if (!Array.isArray(dbOrders) || dbOrders.length <= sales.length) return;
     console.log('[Turno] Reconstruyendo: DB='+dbOrders.length+' RAM='+sales.length);
     const ids = dbOrders.map(o=>o.id).join(',');
@@ -776,6 +802,9 @@ async function reconstruirTurnoDesdeDB() {
       }))
     }));
     if (dbOrders.length) turnoStartTime = new Date(dbOrders[0].created_at);
+    // Sincronizar orderN con DB para evitar colisiones entre turnos/sucursales
+    const maxId = Math.max(...dbOrders.map(o=>o.order_number||o.id));
+    if (maxId >= orderN) { orderN = maxId + 1; localStorage.setItem('lf_order_n_'+(currentUser?.sucursal||'x'), orderN); }
   } catch(e) { console.warn('[Turno reconstruir]', e); }
 }
 
@@ -817,6 +846,7 @@ function showPOS() {
   window._hasDiscount = p.discount;
   // Mostrar botón cierre solo si tiene permiso
   document.getElementById('btn-cierre').style.display = p.cierre ? 'flex' : 'none';
+  document.getElementById('btn-retiro').style.display = p.discount ? 'flex' : 'none';
   loadCategoriasPos();
   loadCatalog();
   cargarPromos();
@@ -855,7 +885,7 @@ function logout() {
     const s=JSON.parse(localStorage.getItem('lf_session')||'null');
     if(!s||s.date!==nowMX().toDateString()){localStorage.removeItem('lf_session');return;}
     currentUser=s.user;
-    orderN=parseInt(localStorage.getItem('lf_order_n')||'1');
+    orderN=parseInt(localStorage.getItem('lf_order_n_'+(s.user?.sucursal||'x'))||localStorage.getItem('lf_order_n')||'1');
     setTimeout(async()=>{
       await abrirTurnoDB(currentUser);
       await reconstruirTurnoDesdeDB();
@@ -1084,7 +1114,12 @@ function closeCustom(){closeSheet('custom');}
 // ═══════════════════════════════
 function calcTotals(){
   const sub=order.reduce((s,i)=>s+i.unitPrice*i.qty,0);
-  const desc=Math.round(sub*discount/100);
+  let desc;
+  if(discountMonto>0){
+    desc=Math.min(discountMonto,sub);
+  } else {
+    desc=Math.round(sub*discount/100);
+  }
   const total=sub-desc;
   const iva=Math.round(total-total/1.16);
   return{sub,desc,iva,total};
@@ -1172,17 +1207,32 @@ function setPay(m,btn){
 }
 
 function setDiscount(p,btn){
-  discount=p;
+  discount=p; discountMonto=0;
+  const inp=document.getElementById('disc-monto-input');
+  if(inp) inp.value='';
   document.querySelectorAll('.disc-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   renderOrderItems(); renderOrderBar();
 }
 
+function aplicarDescuentoMonto(){
+  const inp=document.getElementById('disc-monto-input');
+  const monto=parseFloat(inp?.value)||0;
+  if(monto<=0){showToast('Ingresa un monto válido');return;}
+  discountMonto=monto; discount=0;
+  document.querySelectorAll('.disc-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.disc-btn')?.classList.add('active');
+  showToast('Descuento $'+monto.toLocaleString('es-MX')+' aplicado');
+  renderOrderItems(); renderOrderBar();
+}
+
 function cancelOrder(){
   if(!confirm('¿Cancelar esta orden?')) return;
-  order=[]; discount=0; promoActiva=null; payMethod='efectivo'; svcType='mostrador';
+  order=[]; discount=0; discountMonto=0; promoActiva=null; payMethod='efectivo'; svcType='mostrador';
   document.getElementById('promo-applied-bar').classList.add('hidden');
   document.getElementById('disc-row').style.display='flex';
+  const discMonto=document.getElementById('disc-monto-input');
+  if(discMonto) discMonto.value='';
   document.querySelectorAll('.svc-btn')[0].click();
   document.querySelectorAll('.pay-btn')[0].click();
   closeSheet('order'); renderOrderBar(); renderProducts();
@@ -1198,6 +1248,7 @@ function openCobro(){
   document.getElementById('cobro-total').textContent='$'+total.toLocaleString('es-MX',{minimumFractionDigits:2});
   document.getElementById('cobro-sub').textContent=order.reduce((s,i)=>s+i.qty,0)+' productos';
   document.getElementById('cobro-pay-label').textContent=payMethod==='efectivo'?'💵 Efectivo':payMethod==='tarjeta'?'💳 Tarjeta':'📲 Transferencia';
+  document.getElementById('cobro-error-banner').classList.remove('show');
   const efecSection=document.getElementById('efec-section');
   efecSection.style.display=payMethod==='efectivo'?'block':'none';
   if(payMethod==='efectivo'){
@@ -1226,6 +1277,15 @@ function calcCambio(){
 function closeCobro(){closeSheet('cobro');}
 
 async function confirmarPago(){
+  // Prevenir doble cobro
+  if(_cobroPending) return;
+  _cobroPending=true;
+  const btn=document.getElementById('confirmar-btn');
+  btn.disabled=true;
+  btn.classList.add('loading');
+  btn.textContent='Procesando...';
+  document.getElementById('cobro-error-banner').classList.remove('show');
+
   const{total,sub,desc,iva}=calcTotals();
   const con=parseFloat(document.getElementById('efec-input').value)||total;
   const cambio=payMethod==='efectivo'?con-total:0;
@@ -1235,32 +1295,52 @@ async function confirmarPago(){
     payMethod,svcType,client,cambio,discount:discount||0,cashReceived:con,
     paid_at:new Date().toISOString(),
   };
-  sales.push(saleData);
-  const saveOk = await saveToSupabase(saleData);
-  if(!saveOk) showToast('⚠️ Venta guardada localmente — se sincronizará al reconectar');
-  descontarInventario(saleData);
-  printSale(saleData);
-  closeSheet('cobro');
-  document.getElementById('sf-sub').textContent=(client?client+' · ':'')+'$'+total.toLocaleString('es-MX',{minimumFractionDigits:2});
-  document.getElementById('sf-cambio').textContent=cambio>0?'Cambio: $'+cambio.toLocaleString('es-MX',{minimumFractionDigits:2}):'';
-  window._lastSale=saleData;
-  const shareBtn=document.getElementById('sf-share-btn');
-  const reprintBtn=document.getElementById('sf-reprint-btn');
-  if(shareBtn) shareBtn.style.display='block';
-  if(reprintBtn&&printerCfg.ip) reprintBtn.style.display='block';
-  const sf=document.getElementById('success-flash');
-  sf.classList.add('open');
-  sf._autoClose=setTimeout(()=>sf.classList.remove('open'),3000);
-  orderN++; order=[]; discount=0; payMethod='efectivo'; svcType='mostrador'; promoActiva=null;
-  document.getElementById('order-num').textContent=String(orderN).padStart(3,'0');
-  document.getElementById('order-num-2').textContent=String(orderN).padStart(3,'0');
-  localStorage.setItem('lf_order_n',orderN);
-  document.getElementById('client-input').value='';
-  document.getElementById('promo-applied-bar').classList.add('hidden');
-  document.getElementById('disc-row').style.display='flex';
-  document.querySelectorAll('.svc-btn')[0].click();
-  document.querySelectorAll('.pay-btn')[0].click();
-  renderOrderBar(); renderProducts();
+
+  try{
+    const saveOk = await saveToSupabase(saleData);
+    if(!saveOk && navigator.onLine){
+      throw new Error('No se pudo guardar la venta en el servidor.');
+    }
+    // Si offline, la queue ya lo maneja — continuar
+    sales.push(saleData);
+    descontarInventario(saleData);
+    printSale(saleData);
+    closeSheet('cobro');
+
+    document.getElementById('sf-sub').textContent=(client?client+' · ':'')+'$'+total.toLocaleString('es-MX',{minimumFractionDigits:2});
+    document.getElementById('sf-cambio').textContent=cambio>0?'Cambio: $'+cambio.toLocaleString('es-MX',{minimumFractionDigits:2}):'';
+    window._lastSale=saleData;
+    const shareBtn=document.getElementById('sf-share-btn');
+    const reprintBtn=document.getElementById('sf-reprint-btn');
+    if(shareBtn) shareBtn.style.display='block';
+    if(reprintBtn&&printerCfg.ip) reprintBtn.style.display='block';
+    const sf=document.getElementById('success-flash');
+    sf.classList.add('open');
+    sf._autoClose=setTimeout(()=>sf.classList.remove('open'),3000);
+
+    orderN++; order=[]; discount=0; discountMonto=0; payMethod='efectivo'; svcType='mostrador'; promoActiva=null;
+    document.getElementById('order-num').textContent=String(orderN).padStart(3,'0');
+    document.getElementById('order-num-2').textContent=String(orderN).padStart(3,'0');
+    localStorage.setItem('lf_order_n_'+(currentUser?.sucursal||'x'),orderN);
+    document.getElementById('client-input').value='';
+    document.getElementById('promo-applied-bar').classList.add('hidden');
+    document.getElementById('disc-row').style.display='flex';
+    const discMonto=document.getElementById('disc-monto-input');
+    if(discMonto) discMonto.value='';
+    document.querySelectorAll('.svc-btn')[0].click();
+    document.querySelectorAll('.pay-btn')[0].click();
+    renderOrderBar(); renderProducts();
+
+  }catch(err){
+    const errBanner=document.getElementById('cobro-error-banner');
+    document.getElementById('cobro-error-msg').textContent=err.message||'Error al procesar. Intenta de nuevo.';
+    errBanner.classList.add('show');
+    btn.textContent='CONFIRMAR PAGO';
+    btn.classList.remove('loading');
+    btn.disabled=payMethod==='efectivo'?(parseFloat(document.getElementById('efec-input').value)||0)<total:false;
+  }finally{
+    _cobroPending=false;
+  }
 }
 
 // ═══════════════════════════════
@@ -1285,8 +1365,7 @@ async function saveToSupabase(saleData){
       client_name:saleData.client||null,
       pay_method:saleData.payMethod,
       subtotal:saleData.sub,
-      discount_pct:saleData.discount||0,
-      discount_amt:saleData.desc||0,
+      descuento:saleData.desc||0,
       iva:saleData.iva,
       total:saleData.total,
       cash_received:saleData.payMethod==='efectivo'?saleData.cashReceived:null,
@@ -1295,15 +1374,30 @@ async function saveToSupabase(saleData){
       paid_at:saleData.paid_at||new Date().toISOString(),
     };
     const res=await fetch(SB_URL+'/rest/v1/orders',{method:'POST',headers:SB_H,body:JSON.stringify(orderPayload)});
-    if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(`${res.status}: ${e.message||e.hint||''}`); }
-    const[saved]=await res.json();
-    const itemsPayload=saleData.items.map(item=>({
-      order_id:saved.id, product_id:item.productId, product_name:item.name,
-      size:item.sel?.['Tamaño']||null, base:item.sel?.['Bases']||null,
-      toppings:JSON.stringify({incluidos:item.sel?.['Toppings Incluidos']||[],basicos:item.sel?.['Toppings Extra Básicos']||[],premium:item.sel?.['Toppings Extra Premium']||[],doble:item.sel?.['Doble Topping']||[],shots:item.sel?.['Shots Extra']||[]}),
-      note:item.note||null, unit_price:item.unitPrice, qty:item.qty, subtotal:item.unitPrice*item.qty,
-    }));
-    await fetch(SB_URL+'/rest/v1/order_items',{method:'POST',headers:SB_H,body:JSON.stringify(itemsPayload)});
+    if(!res.ok){
+      const e=await res.json().catch(()=>({}));
+      throw new Error(`${res.status}: ${e.message||e.hint||e.details||'error desconocido'}`);
+    }
+    const rows=await res.json();
+    const savedOrder=Array.isArray(rows)?rows[0]:rows;
+    if(!savedOrder||!savedOrder.id) throw new Error('No se recibió ID del servidor');
+    const orderId=savedOrder.id;
+    if(saleData.items.length){
+      const itemsPayload=saleData.items.map(item=>({
+        order_id:orderId,
+        product_id:item.productId||null,
+        product_name:item.name,
+        size:item.sel?.['Tamaño']||null,
+        base:item.sel?.['Bases']||null,
+        toppings:JSON.stringify({incluidos:item.sel?.['Toppings Incluidos']||[],basicos:item.sel?.['Toppings Extra Básicos']||[],premium:item.sel?.['Toppings Extra Premium']||[],doble:item.sel?.['Doble Topping']||[],shots:item.sel?.['Shots Extra']||[]}),
+        note:item.note||null,
+        unit_price:item.unitPrice,
+        qty:item.qty,
+        subtotal:item.unitPrice*item.qty,
+      }));
+      const itemsRes=await fetch(SB_URL+'/rest/v1/order_items',{method:'POST',headers:{...SB_H,'Prefer':'return=minimal'},body:JSON.stringify(itemsPayload)});
+      if(!itemsRes.ok){ const e=await itemsRes.json().catch(()=>({})); console.warn('[order_items]',itemsRes.status,e); }
+    }
     if(offlineQueue.length) flushOfflineQueue();
     return true;
   } catch(e) {
@@ -1326,21 +1420,25 @@ async function flushOfflineQueue(){
         order_number:s.id,sucursal:s.sucursal||currentUser?.sucursal||'Principal',
         cajero_id:s.cajero_id||currentUser?.id||null,cajero_name:s.cajero_name||currentUser?.name||'POS',
         service_type:s.svcType,client_name:s.client||null,pay_method:s.payMethod,
-        subtotal:s.sub,discount_pct:s.discount,discount_amt:s.desc,iva:s.iva,total:s.total,
+        subtotal:s.sub,descuento:s.desc||0,iva:s.iva,total:s.total,
         cash_received:s.payMethod==='efectivo'?s.cashReceived:null,
         change_given:s.payMethod==='efectivo'?s.cambio:null,
         turno_id:s.turno_id||turnoId||null,paid_at:s.paid_at||new Date().toISOString(),
       };
       const r=await fetch(SB_URL+'/rest/v1/orders',{method:'POST',headers:SB_H,body:JSON.stringify(op)});
       if(!r.ok) throw new Error('flush failed');
-      const[saved]=await r.json();
-      const ip=s.items.map(item=>({
-        order_id:saved.id,product_id:item.productId,product_name:item.name,
-        size:item.sel?.['Tamaño']||null,base:item.sel?.['Bases']||null,
-        toppings:JSON.stringify({incluidos:item.sel?.['Toppings Incluidos']||[],basicos:item.sel?.['Toppings Extra Básicos']||[],premium:item.sel?.['Toppings Extra Premium']||[],doble:item.sel?.['Doble Topping']||[],shots:item.sel?.['Shots Extra']||[]}),
-        note:item.note||null,unit_price:item.unitPrice,qty:item.qty,subtotal:item.unitPrice*item.qty,
-      }));
-      await fetch(SB_URL+'/rest/v1/order_items',{method:'POST',headers:SB_H,body:JSON.stringify(ip)});
+      const rows=await r.json();
+      const savedOrder=Array.isArray(rows)?rows[0]:rows;
+      if(!savedOrder||!savedOrder.id) throw new Error('No ID en flush');
+      if(s.items&&s.items.length){
+        const ip=s.items.map(item=>({
+          order_id:savedOrder.id,product_id:item.productId||null,product_name:item.name,
+          size:item.sel?.['Tamaño']||null,base:item.sel?.['Bases']||null,
+          toppings:JSON.stringify({incluidos:item.sel?.['Toppings Incluidos']||[],basicos:item.sel?.['Toppings Extra Básicos']||[],premium:item.sel?.['Toppings Extra Premium']||[],doble:item.sel?.['Doble Topping']||[],shots:item.sel?.['Shots Extra']||[]}),
+          note:item.note||null,unit_price:item.unitPrice,qty:item.qty,subtotal:item.unitPrice*item.qty,
+        }));
+        await fetch(SB_URL+'/rest/v1/order_items',{method:'POST',headers:{...SB_H,'Prefer':'return=minimal'},body:JSON.stringify(ip)});
+      }
     } catch{ failed.push(s); }
   }
   if(failed.length){
@@ -1438,6 +1536,53 @@ async function openHist(){
   } catch{body.innerHTML='<div class="empty-state"><div class="e-icon">⚠️</div><p>Error cargando historial</p></div>';}
 }
 function closeHist(){closeSheet('hist');}
+
+// ═══════════════════════════════
+// RETIROS
+// ═══════════════════════════════
+function abrirRetiro(){
+  const p=PERMS[currentUser?.role]||PERMS.cajero;
+  if(!p.discount){showToast('No tienes permiso para registrar retiros');return;}
+  const div=document.createElement('div');
+  div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;display:flex;align-items:flex-end;';
+  div.innerHTML=`<div style="background:#fff;border-radius:24px 24px 0 0;padding:20px;width:100%;padding-bottom:max(20px,env(safe-area-inset-bottom))">
+    <div style="width:44px;height:5px;background:#ddd;border-radius:3px;margin:0 auto 16px;"></div>
+    <div style="font-family:'Bebas Neue',serif;font-size:22px;color:#A6182E;letter-spacing:1px;margin-bottom:16px;">💸 Registrar Retiro</div>
+    <div style="font-size:12px;color:#9a7075;margin-bottom:6px;">Monto retirado</div>
+    <input id="retiro-monto" type="number" placeholder="0.00" min="0" step="1"
+      style="width:100%;height:52px;border:1.5px solid #e0c0c8;border-radius:12px;padding:0 16px;font-size:22px;font-weight:700;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:12px;text-align:right;">
+    <div style="font-size:12px;color:#9a7075;margin-bottom:6px;">Motivo</div>
+    <input id="retiro-motivo" type="text" placeholder="Ej. Compra de insumos, pago proveedor..."
+      style="width:100%;height:44px;border:1.5px solid #e0c0c8;border-radius:12px;padding:0 14px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:16px;">
+    <div style="display:flex;gap:8px;">
+      <button onclick="guardarRetiro()" style="flex:2;height:52px;background:#A6182E;color:#fff;border:none;border-radius:14px;font-family:'Bebas Neue',serif;font-size:18px;letter-spacing:2px;cursor:pointer;">REGISTRAR</button>
+      <button onclick="this.closest('div[style*=fixed]').remove()" style="flex:1;height:52px;background:#FDF6F7;border:none;border-radius:14px;color:#9a7075;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;">Cancelar</button>
+    </div>
+  </div>`;
+  div.onclick=e=>{if(e.target===div) div.remove();};
+  document.body.appendChild(div);
+  setTimeout(()=>document.getElementById('retiro-monto')?.focus(),100);
+}
+
+function guardarRetiro(){
+  const monto=parseFloat(document.getElementById('retiro-monto')?.value)||0;
+  const motivo=(document.getElementById('retiro-motivo')?.value||'').trim();
+  if(monto<=0){showToast('Ingresa un monto válido');return;}
+  if(!motivo){showToast('Escribe el motivo del retiro');return;}
+  const retiro={monto,motivo,hora:new Date().toISOString(),nombre:currentUser?.name||'—'};
+  retiros.push(retiro);
+  fetch(SB_URL+'/rest/v1/gastos_operativos',{
+    method:'POST',headers:SB_H,
+    body:JSON.stringify({
+      turno_id:turnoId||null,
+      sucursal:currentUser?.sucursal||'Principal',
+      cajero_name:currentUser?.name||'—',
+      monto,concepto:motivo,tipo:'retiro',fecha:retiro.hora,
+    })
+  }).catch(()=>{});
+  document.querySelector('div[style*="position:fixed"][style*="flex-end"]')?.remove();
+  showToast('✅ Retiro de $'+monto.toLocaleString('es-MX')+' registrado');
+}
 
 // ═══════════════════════════════
 // CIERRE DE TURNO
@@ -1554,11 +1699,12 @@ async function confirmarCierre(){
 
 function finalizarCierre(){
   closeCierreSheet();
-  sales=[]; turnoStartTime=new Date(); turnoId=null; orderN=1;
+  sales=[]; retiros=[]; turnoStartTime=new Date(); turnoId=null; orderN=1;
   document.getElementById('order-num').textContent='001';
   document.getElementById('order-num-2').textContent='001';
   localStorage.removeItem('lf_session');
   localStorage.removeItem('lf_order_n');
+  localStorage.removeItem('lf_order_n_'+(currentUser?.sucursal||'x'));
   order=[]; discount=0; promoActiva=null; payMethod='efectivo'; svcType='mostrador';
   renderOrderBar(); renderProducts();
   currentUser=null; pinBuffer=''; updateDots();
