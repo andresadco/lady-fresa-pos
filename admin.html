@@ -413,9 +413,12 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
           <div id="recetas-productos-list" style="overflow-y:auto;flex:1;"></div>
         </div>
         <div style="display:flex;flex-direction:column;gap:10px;min-height:0;">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
             <div id="recetas-titulo" style="font-size:14px;font-weight:600;color:var(--text-3);">← Selecciona un producto</div>
-            <button class="btn btn-primary btn-sm" id="btn-nueva-receta" onclick="openModalReceta()" style="display:none;">+ Agregar ingrediente</button>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-secondary btn-sm" id="btn-copiar-variante" onclick="copiarVariante()" style="display:none;" title="Copiar todos los ingredientes de esta sección a otra variante">📋 Copiar variante</button>
+              <button class="btn btn-primary btn-sm" id="btn-nueva-receta" onclick="openModalReceta()" style="display:none;">+ Agregar ingrediente</button>
+            </div>
           </div>
           <div id="recetas-variantes-tabs" style="display:flex;gap:6px;flex-wrap:wrap;min-height:30px;"></div>
           <div class="table-wrap" style="flex:1;overflow-y:auto;">
@@ -2326,10 +2329,10 @@ function getConvFactor(from,to){var g={kg:1000,g:1,gr:1},m={l:1000,ml:1};return(
 
 <!-- MODAL RECETA -->
 <div class="modal-overlay" id="modal-receta">
-  <div class="modal-box" style="max-width:540px;">
-    <div class="modal-title">Agregar ingrediente a receta</div>
+  <div class="modal-box" style="max-width:560px;">
+    <div class="modal-title" id="modal-receta-title">Agregar ingrediente a receta</div>
 
-    <!-- Paso 1: Producto + Tipo de componente -->
+    <!-- Producto + Tipo -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
       <div>
         <label class="form-label">Producto</label>
@@ -2346,14 +2349,19 @@ function getConvFactor(from,to){var g={kg:1000,g:1,gr:1},m={l:1000,ml:1};return(
       </div>
     </div>
 
-    <!-- Campos dinámicos según tipo -->
+    <!-- Campos dinámicos -->
     <div id="rec-campos-dinamicos" style="margin-bottom:16px;"></div>
 
-    <!-- Insumo + Cantidad + Unidad -->
+    <!-- Insumo con búsqueda + Unidad -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
       <div style="grid-column:1/3;">
         <label class="form-label">Insumo</label>
-        <select class="form-select" id="rec-insumo" onchange="onRecInsumoChange()"></select>
+        <div style="position:relative;">
+          <input class="form-input" id="rec-insumo-search" placeholder="Buscar insumo..." autocomplete="off"
+            oninput="filtrarInsumosModal()" onfocus="mostrarDropdownInsumos()" style="padding-right:30px;">
+          <div id="rec-insumo-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--border-2);border-radius:10px;max-height:180px;overflow-y:auto;z-index:200;box-shadow:0 4px 16px rgba(0,0,0,0.1);margin-top:2px;"></div>
+          <input type="hidden" id="rec-insumo">
+        </div>
       </div>
       <div>
         <label class="form-label">Unidad uso</label>
@@ -2372,7 +2380,7 @@ function getConvFactor(from,to){var g={kg:1000,g:1,gr:1},m={l:1000,ml:1};return(
 
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('modal-receta')">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveReceta()">Guardar</button>
+      <button class="btn btn-primary" id="btn-save-receta" onclick="saveReceta()">Guardar</button>
     </div>
   </div>
 </div>
@@ -2623,17 +2631,26 @@ async function saveMovimiento() {
 // ── RECETAS ──
 async function loadRecetas() {
   if (!allInsumos.length) await loadInventario();
-  const productos = await sbGet('productos', 'activo=eq.true&select=nombre&order=nombre.asc');
+  const [productos, todasRec] = await Promise.all([
+    sbGet('productos', 'activo=eq.true&select=nombre&order=nombre.asc'),
+    sbGet('recetas', 'select=producto_nombre')
+  ]);
   const list = document.getElementById('recetas-productos-list');
   if (!Array.isArray(productos) || !productos.length) {
     list.innerHTML = '<div style="padding:14px;font-size:13px;color:var(--text-3);">Sin productos</div>';
     return;
   }
+  // Build set of products that have at least one recipe line
+  const conReceta = new Set(Array.isArray(todasRec) ? todasRec.map(function(r){ return r.producto_nombre; }) : []);
   list.innerHTML = productos.map(function(p) {
+    const tiene = conReceta.has(p.nombre);
+    const badge = tiene
+      ? '<span style="font-size:10px;background:var(--green-light);color:var(--green);padding:1px 7px;border-radius:8px;font-weight:600;float:right;">✓</span>'
+      : '<span style="font-size:10px;background:var(--amber-light);color:var(--amber);padding:1px 7px;border-radius:8px;font-weight:600;float:right;">⚠</span>';
     return '<button data-nombre="' + encodeURIComponent(p.nombre) + '" onclick="selectProductoRecetaBtn(this)"'
       + ' style="width:100%;text-align:left;padding:10px 14px;border:none;background:none;cursor:pointer;font-size:13px;'
       + 'font-family:DM Sans,sans-serif;border-bottom:1px solid var(--border);transition:background 0.15s;">'
-      + p.nombre + '</button>';
+      + badge + p.nombre + '</button>';
   }).join('');
 }
 
@@ -2647,6 +2664,7 @@ function selectProductoRecetaBtn(btn) {
   selectedProductoReceta = nombre;
   document.getElementById('recetas-titulo').innerHTML = '<strong style="color:var(--pink);">🍓 ' + nombre + '</strong>';
   document.getElementById('btn-nueva-receta').style.display = '';
+  document.getElementById('btn-copiar-variante').style.display = '';
   renderRecetaVariantes(nombre);
 }
 
@@ -2732,11 +2750,14 @@ function renderRecetaLinesByTipo(lines, tipo) {
       costoTotal += costo;
       html += '<tr>'
         + '<td><strong>'+(ins?ins.nombre:'—')+'</strong></td>'
-        + '<td>'+l.cantidad+'</td>'
+        + '<td><span id="rec-val-'+l.id+'">'+l.cantidad+'</span></td>'
         + '<td>'+uu+'</td>'
         + '<td style="color:var(--text-3);font-size:12px;">'+equiv+'</td>'
         + '<td>$'+(costo<0.01?costo.toFixed(4):costo.toFixed(2))+'</td>'
-        + '<td><button class="btn btn-ghost btn-sm" style="color:#A32D2D;" onclick="deleteRecetaLine('+l.id+')">Quitar</button></td>'
+        + '<td style="white-space:nowrap;">'
+        + '<button class="btn btn-ghost btn-sm" onclick="editRecetaLine('+l.id+','+l.cantidad+',\''+uu+'\')" title="Editar cantidad">✏️</button> '
+        + '<button class="btn btn-ghost btn-sm" style="color:#A32D2D;" onclick="deleteRecetaLine('+l.id+')">✕</button>'
+        + '</td>'
         + '</tr>';
     });
   });
@@ -2751,12 +2772,121 @@ async function openModalReceta() {
   document.getElementById('rec-producto').innerHTML = (Array.isArray(produtos)?produtos:[]).map(function(p){
     return '<option value="'+p.nombre+'"'+(selectedProductoReceta===p.nombre?' selected':'')+'>'+p.nombre+'</option>';
   }).join('');
-  document.getElementById('rec-insumo').innerHTML = allInsumos.filter(function(i){return i.activo;}).map(function(i){
-    return '<option value="'+i.id+'">'+i.nombre+' ('+i.unidad+')</option>';
-  }).join('');
+  // Reset búsqueda insumo
+  document.getElementById('rec-insumo-search').value = '';
+  document.getElementById('rec-insumo').value = '';
+  document.getElementById('rec-insumo-dropdown').style.display = 'none';
+  // Pre-seleccionar tipo activo
+  if (selectedVarianteReceta) {
+    var tipoMap = { fruta:'fruta', base:'base', topping:'topping', ingrediente:'ingrediente' };
+    var tipoSel = tipoMap[selectedVarianteReceta] || 'fruta';
+    document.getElementById('rec-tipo').value = tipoSel;
+  }
+  // Título y modo
+  _recetaEditingId = null;
+  document.getElementById('modal-receta-title').textContent = 'Agregar ingrediente a receta';
+  document.getElementById('btn-save-receta').textContent = 'Guardar';
   onRecTipoChange();
-  onRecInsumoChange();
   document.getElementById('modal-receta').classList.add('open');
+}
+
+// ── BÚSQUEDA DE INSUMOS EN MODAL ──
+let _recetaEditingId = null; // null = nuevo, number = editando
+
+function filtrarInsumosModal() {
+  const q = document.getElementById('rec-insumo-search').value.toLowerCase().trim();
+  const dd = document.getElementById('rec-insumo-dropdown');
+  const activos = allInsumos.filter(function(i){ return i.activo !== false; });
+  const matches = q ? activos.filter(function(i){ return i.nombre.toLowerCase().includes(q); }) : activos;
+  if (!matches.length) { dd.style.display = 'none'; return; }
+  dd.innerHTML = matches.slice(0,20).map(function(i){
+    return '<div data-id="'+i.id+'" data-nombre="'+i.nombre+'" data-unidad="'+i.unidad+'"'
+      +' onclick="seleccionarInsumoModal(this)"'
+      +' style="padding:8px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);transition:background 0.1s;"'
+      +' onmouseover="this.style.background=\'var(--bg)\'" onmouseout="this.style.background=\'\'">'
+      +i.nombre+' <span style="color:var(--text-3);font-size:11px;">('+i.unidad+')</span></div>';
+  }).join('');
+  dd.style.display = 'block';
+}
+
+function mostrarDropdownInsumos() {
+  const q = document.getElementById('rec-insumo-search').value;
+  if (!q) {
+    // Show all activos on focus
+    const dd = document.getElementById('rec-insumo-dropdown');
+    const activos = allInsumos.filter(function(i){ return i.activo !== false; });
+    dd.innerHTML = activos.slice(0,20).map(function(i){
+      return '<div data-id="'+i.id+'" data-nombre="'+i.nombre+'" data-unidad="'+i.unidad+'"'
+        +' onclick="seleccionarInsumoModal(this)"'
+        +' style="padding:8px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);"'
+        +' onmouseover="this.style.background=\'var(--bg)\'" onmouseout="this.style.background=\'\'">'
+        +i.nombre+' <span style="color:var(--text-3);font-size:11px;">('+i.unidad+')</span></div>';
+    }).join('');
+    dd.style.display = 'block';
+  } else {
+    filtrarInsumosModal();
+  }
+}
+
+function seleccionarInsumoModal(el) {
+  document.getElementById('rec-insumo').value = el.dataset.id;
+  document.getElementById('rec-insumo-search').value = el.dataset.nombre;
+  document.getElementById('rec-unidad-uso').value = el.dataset.unidad;
+  document.getElementById('rec-insumo-dropdown').style.display = 'none';
+  updateRecetaEquiv();
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e){
+  if (!e.target.closest('#rec-insumo-search') && !e.target.closest('#rec-insumo-dropdown')) {
+    const dd = document.getElementById('rec-insumo-dropdown');
+    if (dd) dd.style.display = 'none';
+  }
+});
+
+// ── EDITAR LÍNEA DE RECETA INLINE ──
+async function editRecetaLine(id, cantidadActual, unidadActual) {
+  const nuevaCant = prompt('Nueva cantidad ('+unidadActual+'):', cantidadActual);
+  if (nuevaCant === null) return;
+  const val = parseFloat(nuevaCant);
+  if (!val || val <= 0) { toast('Cantidad inválida'); return; }
+  await fetch(SB_URL+'/rest/v1/recetas?id=eq.'+id, {
+    method: 'PATCH', headers: SB_H, body: JSON.stringify({ cantidad: val })
+  });
+  toast('✓ Cantidad actualizada');
+  if (selectedProductoReceta) await renderRecetaVariantes(selectedProductoReceta);
+}
+
+// ── COPIAR VARIANTE ──
+async function copiarVariante() {
+  if (!selectedProductoReceta || !window._recetaLines) return;
+  const tipo = selectedVarianteReceta;
+  const lineas = window._recetaLines.filter(function(l){ return (l.tipo_componente||'ingrediente') === tipo; });
+  if (!lineas.length) { toast('No hay ingredientes en esta sección'); return; }
+
+  // Get all variante keys present
+  const variantesActuales = [...new Set(lineas.map(function(l){ return l.modificador_opcion||'—'; }))];
+  const origen = variantesActuales.length === 1 ? variantesActuales[0]
+    : prompt('¿De qué variante copiar?\n' + variantesActuales.join('\n'));
+  if (!origen) return;
+
+  const destino = prompt('¿A qué variante copiar? (nombre exacto, ej: "Mediano · Crema")');
+  if (!destino || destino === origen) return;
+
+  const lineasOrigen = lineas.filter(function(l){ return (l.modificador_opcion||'—') === origen; });
+  const promises = lineasOrigen.map(function(l){
+    return sbPost('recetas', {
+      producto_nombre: l.producto_nombre,
+      insumo_id: l.insumo_id,
+      cantidad: l.cantidad,
+      unidad_uso: l.unidad_uso,
+      tipo_componente: l.tipo_componente,
+      modificador_opcion: destino,
+    });
+  });
+  await Promise.all(promises);
+  toast('✅ ' + lineasOrigen.length + ' ingredientes copiados a "' + destino + '"');
+  await renderRecetaVariantes(selectedProductoReceta);
 }
 
 const TAMANOS = ['Chico','Mediano','Grande'];
@@ -2864,7 +2994,11 @@ async function saveReceta() {
   var cantEl = document.getElementById('rec-cantidad');
   var cantidad = cantEl ? (parseFloat(cantEl.value)||0) : 0;
   var uu = document.getElementById('rec-unidad-uso').value;
-  if (!producto || !insId || cantidad <= 0) { toast('Completa todos los campos'); return; }
+  if (!producto || !insId || cantidad <= 0) {
+    if (!insId) toast('Selecciona un insumo de la lista');
+    else toast('Completa todos los campos');
+    return;
+  }
   var varKey = buildVarianteKey(tipo);
   await sbPost('recetas', {
     producto_nombre: producto,
@@ -2874,9 +3008,18 @@ async function saveReceta() {
     modificador_opcion: varKey.modificador_opcion,
     tipo_componente: varKey.tipo_componente,
   });
-  toast('Ingrediente guardado');
+  toast('✅ Ingrediente guardado');
   closeModal('modal-receta');
-  if (selectedProductoReceta === producto) await renderRecetaVariantes(producto);
+  await loadRecetas(); // Refresh badges ✓/⚠
+  if (selectedProductoReceta === producto) {
+    await renderRecetaVariantes(producto);
+    // Re-select the button
+    document.querySelectorAll('#recetas-productos-list button').forEach(function(b){
+      var n = decodeURIComponent(b.dataset.nombre||'');
+      b.style.background = n === producto ? 'var(--pink-light)' : 'none';
+      b.style.color = n === producto ? 'var(--pink)' : '';
+    });
+  }
 }
 
 function setRecetasVista(vista, btn) {
@@ -2957,7 +3100,7 @@ async function loadResumenCostos() {
         html += '<div style="padding:10px 18px 0;font-size:12px;font-weight:600;color:var(--text-3);">COSTO BASE (fruta + base) — sin toppings</div>';
         html += '<div style="overflow-x:auto;"><table class="data-table" style="font-size:12px;">'
               + '<thead><tr><th>Combinación</th><th>Costo Fruta</th><th>Costo Base</th>'
-              + '<th style="color:var(--pink);font-weight:700;">Subtotal base</th></tr></thead><tbody>';
+              + '<th style="color:var(--pink);font-weight:700;">Costo total</th><th style="color:var(--green);font-weight:700;">Margen</th></tr></thead><tbody>';
 
         tamanos.forEach(function(tam) {
           baseNames.forEach(function(base) {
@@ -2970,11 +3113,18 @@ async function loadResumenCostos() {
               .forEach(function(l){ costoBase += calcCosto(l); });
 
             var subtotal = costoFruta + costoBase;
+            // Find price for this product
+            var prod = productsData.find(function(p){ return p.name === producto; });
+            var precio = prod ? parseFloat(prod.price)||0 : 0;
+            var margen = precio > 0 ? precio - subtotal : null;
+            var margenPct = precio > 0 ? ((margen/precio)*100).toFixed(0) : null;
+            var margenColor = margenPct === null ? 'var(--text-3)' : margenPct >= 60 ? 'var(--green)' : margenPct >= 40 ? 'var(--amber)' : 'var(--red)';
             html += '<tr>'
               + '<td><strong>' + tam + '</strong> + ' + base + '</td>'
               + '<td>' + (costoFruta > 0 ? fmt(costoFruta) : '<span style="color:var(--text-3);">—</span>') + '</td>'
               + '<td>' + (costoBase > 0 ? fmt(costoBase) : '<span style="color:var(--text-3);">—</span>') + '</td>'
               + '<td style="font-weight:700;color:var(--pink);">' + fmt(subtotal) + '</td>'
+              + (precio > 0 ? '<td style="font-weight:700;color:'+margenColor+';">' + fmt(margen) + ' (' + margenPct + '%)</td>' : '<td style="color:var(--text-3);">—</td>')
               + '</tr>';
           });
         });
