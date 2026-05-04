@@ -2272,32 +2272,19 @@ function buildTicketXML(saleData,type='ticket'){
 }
 
 async function printEpson(saleData,type='ticket'){
-  const{ip,port}=printerCfg; if(!ip) return false;
-  // Puerto 8043 con HTTPS — funciona desde páginas seguras (GitHub Pages)
+  const{ip}=printerCfg; if(!ip) return false;
   const url='https://'+ip+':8043/cgi-bin/epos/service.cgi?devid=local_printer&timeout=10000';
-  try {
-    const res=await fetch(url,{
-      method:'POST', headers:{'Content-Type':'text/xml; charset=utf-8','SOAPAction':'""'},
-      body:buildTicketXML(saleData,type), signal:AbortSignal.timeout(10000),
-    });
-    if(res.ok&&type==='ticket'&&saleData.payMethod==='efectivo'){
-      fetch(url,{
-        method:'POST', headers:{'Content-Type':'text/xml; charset=utf-8','SOAPAction':'""'},
-        body:'<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print"><pulse drawer="drawer_1" time="pulse_100"/></epos-print></s:Body></s:Envelope>',
-      }).catch(()=>{});
-    }
+  const urlFallback='http://'+ip+':8008/cgi-bin/epos/service.cgi?devid=local_printer&timeout=10000';
+  const headers={'Content-Type':'text/xml; charset=utf-8','SOAPAction':'""'};
+  const drawerXml='<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print"><pulse drawer="drawer_1" time="pulse_100"/></epos-print></s:Body></s:Envelope>';
+  const openDrawer=(u)=>fetch(u,{method:'POST',headers,body:drawerXml}).catch(()=>{});
+  const tryPrint=async(u)=>{
+    const res=await fetch(u,{method:'POST',headers,body:buildTicketXML(saleData,type),signal:AbortSignal.timeout(10000)});
+    if(res.ok&&type==='ticket'&&saleData.payMethod==='efectivo') openDrawer(u);
     return res.ok;
-  } catch(e){
-    console.warn('[Printer]',e);
-    // Si falla HTTPS, intentar con HTTP (funciona si el browser lo permite)
-    try {
-      const res2=await fetch('http://'+ip+':8008/cgi-bin/epos/service.cgi?devid=local_printer&timeout=10000',{
-        method:'POST', headers:{'Content-Type':'text/xml; charset=utf-8','SOAPAction':'""'},
-        body:buildTicketXML(saleData,type), signal:AbortSignal.timeout(10000),
-      });
-      return res2.ok;
-    } catch{ return false; }
-  }
+  };
+  try { return await tryPrint(url); }
+  catch { try { return await tryPrint(urlFallback); } catch{ return false; } }
 }
 
 async function printSale(saleData){
@@ -2364,7 +2351,8 @@ function openPrinterCfg(){
     <div style="width:44px;height:5px;background:#ddd;border-radius:3px;margin:0 auto 16px;"></div>
     <div style="font-family:'Bebas Neue',serif;font-size:22px;color:#A6182E;letter-spacing:1px;margin-bottom:16px;">🖨️ Impresora Epson</div>
     <div style="font-size:12px;color:#9a7075;margin-bottom:6px;">IP de la impresora</div>
-    <input id="pcfg-ip" value="${ip}" placeholder="192.168.1.100" style="width:100%;height:48px;border:1.5px solid #e0c0c8;border-radius:12px;padding:0 14px;font-size:16px;font-family:monospace;outline:none;margin-bottom:14px;">
+    <input id="pcfg-ip" value="${ip}" placeholder="192.168.1.100" style="width:100%;height:48px;border:1.5px solid #e0c0c8;border-radius:12px;padding:0 14px;font-size:16px;font-family:monospace;outline:none;margin-bottom:10px;">
+    <div id="pcfg-status" style="min-height:36px;margin-bottom:10px;border-radius:10px;padding:8px 12px;font-size:12px;display:none;"></div>
     <div style="display:flex;gap:8px;margin-bottom:14px;">
       <label style="display:flex;align-items:center;gap:8px;flex:1;padding:12px;border:1.5px solid #e0e0e0;border-radius:12px;cursor:pointer;">
         <input type="checkbox" id="pcfg-ticket" ${printerCfg.ticket!==false?'checked':''} style="width:18px;height:18px;accent-color:#A6182E;">
@@ -2375,12 +2363,51 @@ function openPrinterCfg(){
         <span style="font-size:13px;font-weight:500;">Comanda</span>
       </label>
     </div>
-    <div style="display:flex;gap:8px;">
+    <div style="display:flex;gap:8px;margin-bottom:8px;">
       <button onclick="savePrinterCfg()" style="flex:2;height:52px;background:#A6182E;color:#fff;border:none;border-radius:14px;font-family:'Bebas Neue',serif;font-size:18px;letter-spacing:2px;cursor:pointer;">GUARDAR</button>
       <button onclick="this.closest('div[style*=fixed]').remove()" style="flex:1;height:52px;background:#FDF6F7;border:none;border-radius:14px;color:#9a7075;font-family:DM Sans,sans-serif;font-size:14px;cursor:pointer;">Cancelar</button>
     </div>
+    <button onclick="testPrinter()" style="width:100%;height:44px;background:#F0FDF4;border:1.5px solid #86efac;border-radius:14px;color:#166534;font-family:DM Sans,sans-serif;font-size:14px;font-weight:600;cursor:pointer;">🔌 Probar conexión</button>
   </div>`;
   document.body.appendChild(div);
+}
+
+async function testPrinter(){
+  const ip=document.getElementById('pcfg-ip').value.trim();
+  const status=document.getElementById('pcfg-status');
+  if(!ip){ status.style.display='block'; status.style.background='#FEF2F2'; status.style.color='#991B1B'; status.textContent='⚠️ Escribe la IP primero'; return; }
+  status.style.display='block'; status.style.background='#FFF7ED'; status.style.color='#92400E'; status.textContent='⏳ Probando conexión con '+ip+'...';
+  // Intentar HTTPS puerto 8043
+  try {
+    const res=await fetch('https://'+ip+':8043/cgi-bin/epos/service.cgi?devid=local_printer&timeout=3000',{
+      method:'POST', headers:{'Content-Type':'text/xml; charset=utf-8','SOAPAction':'""'},
+      body:'<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print"><sound pattern="pattern_a" repeat="1"/></epos-print></s:Body></s:Envelope>',
+      signal:AbortSignal.timeout(5000),
+    });
+    if(res.ok){
+      status.style.background='#F0FDF4'; status.style.color='#166534';
+      status.textContent='✅ Conexión exitosa — la impresora está lista (HTTPS:8043)';
+      return;
+    }
+    status.style.background='#FEF2F2'; status.style.color='#991B1B';
+    status.textContent='❌ La impresora respondió con error '+res.status+'. Revisa la IP.';
+  } catch(e){
+    // Intentar HTTP puerto 8008
+    try {
+      const res2=await fetch('http://'+ip+':8008/cgi-bin/epos/service.cgi?devid=local_printer&timeout=3000',{
+        method:'POST', headers:{'Content-Type':'text/xml; charset=utf-8','SOAPAction':'""'},
+        body:'<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print"><sound pattern="pattern_a" repeat="1"/></epos-print></s:Body></s:Envelope>',
+        signal:AbortSignal.timeout(5000),
+      });
+      if(res2.ok){
+        status.style.background='#F0FDF4'; status.style.color='#166534';
+        status.textContent='✅ Conexión exitosa (HTTP:8008)';
+        return;
+      }
+    } catch{}
+    status.style.background='#FEF2F2'; status.style.color='#991B1B';
+    status.textContent='❌ No se pudo conectar a '+ip+'. Verifica: 1) Tablet en mismo WiFi  2) IP correcta  3) Impresora encendida. Error: '+e.message;
+  }
 }
 
 function savePrinterCfg(){
