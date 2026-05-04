@@ -2273,19 +2273,31 @@ function buildTicketXML(saleData,type='ticket'){
 
 async function printEpson(saleData,type='ticket'){
   const{ip,port}=printerCfg; if(!ip) return false;
+  // Puerto 8043 con HTTPS — funciona desde páginas seguras (GitHub Pages)
+  const url='https://'+ip+':8043/cgi-bin/epos/service.cgi?devid=local_printer&timeout=10000';
   try {
-    const res=await fetch('http://'+ip+':'+port+'/cgi-bin/epos/service.cgi?devid=local_printer&timeout=10000',{
+    const res=await fetch(url,{
       method:'POST', headers:{'Content-Type':'text/xml; charset=utf-8','SOAPAction':'""'},
-      body:buildTicketXML(saleData,type), signal:AbortSignal.timeout(8000),
+      body:buildTicketXML(saleData,type), signal:AbortSignal.timeout(10000),
     });
     if(res.ok&&type==='ticket'&&saleData.payMethod==='efectivo'){
-      fetch('http://'+ip+':'+port+'/cgi-bin/epos/service.cgi?devid=local_printer&timeout=5000',{
+      fetch(url,{
         method:'POST', headers:{'Content-Type':'text/xml; charset=utf-8','SOAPAction':'""'},
         body:'<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print"><pulse drawer="drawer_1" time="pulse_100"/></epos-print></s:Body></s:Envelope>',
       }).catch(()=>{});
     }
     return res.ok;
-  } catch{return false;}
+  } catch(e){
+    console.warn('[Printer]',e);
+    // Si falla HTTPS, intentar con HTTP (funciona si el browser lo permite)
+    try {
+      const res2=await fetch('http://'+ip+':8008/cgi-bin/epos/service.cgi?devid=local_printer&timeout=10000',{
+        method:'POST', headers:{'Content-Type':'text/xml; charset=utf-8','SOAPAction':'""'},
+        body:buildTicketXML(saleData,type), signal:AbortSignal.timeout(10000),
+      });
+      return res2.ok;
+    } catch{ return false; }
+  }
 }
 
 async function printSale(saleData){
