@@ -2273,8 +2273,6 @@ function buildTicketXML(saleData,type='ticket'){
 
 async function printEpson(saleData,type='ticket'){
   const{ip}=printerCfg; if(!ip) return false;
-  const url='https://'+ip+':8043/cgi-bin/epos/service.cgi?devid=local_printer&timeout=10000';
-  const urlFallback='http://'+ip+':8008/cgi-bin/epos/service.cgi?devid=local_printer&timeout=10000';
   const headers={'Content-Type':'text/xml; charset=utf-8','SOAPAction':'""'};
   const drawerXml='<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print"><pulse drawer="drawer_1" time="pulse_100"/></epos-print></s:Body></s:Envelope>';
   const openDrawer=(u)=>fetch(u,{method:'POST',headers,body:drawerXml}).catch(()=>{});
@@ -2283,8 +2281,16 @@ async function printEpson(saleData,type='ticket'){
     if(res.ok&&type==='ticket'&&saleData.payMethod==='efectivo') openDrawer(u);
     return res.ok;
   };
-  try { return await tryPrint(url); }
-  catch { try { return await tryPrint(urlFallback); } catch{ return false; } }
+  // Intentar puertos en orden: HTTPS 8043, HTTP 8008, HTTP 80
+  const urls=[
+    'https://'+ip+':8043/cgi-bin/epos/service.cgi?devid=local_printer&timeout=10000',
+    'http://'+ip+':8008/cgi-bin/epos/service.cgi?devid=local_printer&timeout=10000',
+    'http://'+ip+'/cgi-bin/epos/service.cgi?devid=local_printer&timeout=10000',
+  ];
+  for(const u of urls){
+    try{ const ok=await tryPrint(u); if(ok) return true; } catch{}
+  }
+  return false;
 }
 
 async function printSale(saleData){
