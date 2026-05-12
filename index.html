@@ -438,23 +438,16 @@ html, body {
 /* ════════════════════════════════════════════════════════════════════════
    v2 — PANEL LATERAL DE ORDEN EN TABLET/DESKTOP (≥980px)
    ────────────────────────────────────────────────────────────────────────
-   En pantallas grandes el sheet de orden se queda fijo a la derecha,
-   siempre visible. En móvil/tablet vertical sigue siendo sheet.
+   El panel solo aparece cuando body tiene la clase .pos-active
+   (controlada por JavaScript al hacer login/logout).
 ══════════════════════════════════════════════════════════════════════ */
 @media (min-width: 980px) {
-  /* Reservar 400px a la derecha en TODA la pantalla del POS */
-  #screen-pos.active { padding-right: 400px; }
+  body.pos-active #screen-pos.active { padding-right: 400px; }
+  body.pos-active #tb-order-btn,
+  body.pos-active #order-bar { display: none !important; }
+  body.pos-active #ov-order { display: none !important; }
 
-  /* Botón VER ORDEN en topbar — ya no se necesita */
-  #tb-order-btn { display: none !important; }
-  /* El bottom bar tampoco */
-  #order-bar { display: none !important; }
-
-  /* Overlay del sheet de orden: invisible (panel siempre abierto) */
-  #ov-order { display: none !important; }
-
-  /* El sheet de orden ahora vive fijo a la derecha, siempre abierto */
-  #sheet-order {
+  body.pos-active #sheet-order {
     position: fixed !important;
     top: 0 !important;
     right: 0 !important;
@@ -474,38 +467,34 @@ html, body {
     z-index: 5 !important;
     padding-bottom: 0 !important;
   }
-  /* Ocultar el handle de arrastrar */
-  #sheet-order .sheet-drag { display: none !important; }
-  /* Ocultar el botón "‹" de cerrar */
-  #sheet-order .sheet-header > div > div:first-child > button:first-child {
+  body.pos-active #sheet-order .sheet-drag { display: none !important; }
+  body.pos-active #sheet-order .sheet-header > div > div:first-child > button:first-child {
     display: none !important;
   }
-  #sheet-order .sheet-header {
+  body.pos-active #sheet-order .sheet-header {
     padding: 16px 18px !important;
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
   }
-  #sheet-order .sheet-body {
+  body.pos-active #sheet-order .sheet-body {
     flex: 1 !important;
     overflow-y: auto !important;
     padding: 14px 18px !important;
     max-height: none !important;
   }
-  #sheet-order .sheet-footer {
+  body.pos-active #sheet-order .sheet-footer {
     border-top: 1px solid var(--border);
     padding: 14px 18px calc(14px + var(--safe-bottom)) !important;
     flex-shrink: 0;
   }
-  /* Topbar más limpia en desktop */
-  #topbar { padding: 0 24px !important; height: 62px; }
-  /* Grid de productos: aprovechar el espacio */
-  #products-grid {
+
+  /* Pulido visual ligero */
+  body.pos-active #topbar { padding: 0 24px !important; height: 62px; }
+  body.pos-active #products-grid {
     display: grid !important;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
     gap: 12px !important;
   }
-  /* Otros sheets (custom, cobro, hist, etc.) deben seguir siendo modales */
-  /* Ya tienen reglas propias — no las tocamos */
 }
 
 /* Mejora general: dot indicador de impresora */
@@ -977,6 +966,7 @@ async function pinEnter() {
 function showPOS() {
   document.getElementById('screen-login').classList.remove('active');
   document.getElementById('screen-pos').classList.add('active');
+  document.body.classList.add('pos-active');
   document.getElementById('tb-user').textContent = currentUser.name;
   document.getElementById('order-num').textContent = String(orderN).padStart(3,'0');
   document.getElementById('order-num-2').textContent = String(orderN).padStart(3,'0');
@@ -1014,6 +1004,7 @@ function logout() {
   localStorage.removeItem('lf_session');
   document.getElementById('screen-pos').classList.remove('active');
   document.getElementById('screen-login').classList.add('active');
+  document.body.classList.remove('pos-active');
   document.getElementById('login-error').textContent='';
   order=[]; discount=0; discountMonto=0; promoActiva=null; payMethod='efectivo'; svcType='mostrador';
   document.getElementById('promo-applied-bar').classList.add('hidden');
