@@ -438,58 +438,48 @@ html, body {
 /* ════════════════════════════════════════════════════════════════════════
    v2 — PANEL LATERAL DE ORDEN EN TABLET/DESKTOP (≥980px)
    ────────────────────────────────────────────────────────────────────────
-   En pantallas grandes, el sheet de orden se transforma en un panel fijo
-   a la derecha que está SIEMPRE visible. En móvil sigue funcionando como
-   sheet por debajo de 980px. No tocamos HTML ni JS — solo CSS responsivo.
+   En pantallas grandes el sheet de orden se queda fijo a la derecha,
+   siempre visible. En móvil/tablet vertical sigue siendo sheet.
 ══════════════════════════════════════════════════════════════════════ */
 @media (min-width: 980px) {
-  /* El POS ahora es un layout split */
-  #screen-pos {
-    display: none;
-  }
-  #screen-pos.active {
-    display: grid !important;
-    grid-template-columns: 1fr 400px;
-    grid-template-rows: auto 1fr;
-    grid-template-areas:
-      "topbar topbar"
-      "main panel";
-    height: 100vh;
-  }
-  #topbar { grid-area: topbar; }
-  #cat-tabs { grid-column: 1 / 2; }
-  #products-area { grid-column: 1 / 2; grid-row: 2; padding-bottom: 20px !important; }
+  /* Reservar 400px a la derecha en TODA la pantalla del POS */
+  #screen-pos.active { padding-right: 400px; }
+
+  /* Botón VER ORDEN en topbar — ya no se necesita */
+  #tb-order-btn { display: none !important; }
+  /* El bottom bar tampoco */
   #order-bar { display: none !important; }
 
-  /* El sheet de orden se transforma en panel lateral */
+  /* Overlay del sheet de orden: invisible (panel siempre abierto) */
   #ov-order { display: none !important; }
+
+  /* El sheet de orden ahora vive fijo a la derecha, siempre abierto */
   #sheet-order {
-    position: relative !important;
-    grid-area: panel;
+    position: fixed !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: auto !important;
+    width: 400px !important;
+    max-width: 400px !important;
+    max-height: 100vh !important;
+    height: 100vh !important;
     transform: none !important;
-    width: auto !important;
-    max-width: none !important;
-    max-height: none !important;
-    height: 100% !important;
     border-radius: 0 !important;
     border-left: 1px solid var(--border);
     box-shadow: -8px 0 24px rgba(31,10,16,0.04) !important;
     background: var(--surface, #fff) !important;
     display: flex !important;
     flex-direction: column;
-    margin: 0 !important;
-    left: auto !important;
-    right: auto !important;
-    bottom: auto !important;
-    top: auto !important;
     z-index: 5 !important;
+    padding-bottom: 0 !important;
   }
-  #sheet-order .sheet-drag { display: none; }
-  /* En el header, el botón de "‹" cerrar ya no tiene sentido */
+  /* Ocultar el handle de arrastrar */
+  #sheet-order .sheet-drag { display: none !important; }
+  /* Ocultar el botón "‹" de cerrar */
   #sheet-order .sheet-header > div > div:first-child > button:first-child {
     display: none !important;
   }
-  /* El botón "✕ Cancelar" se queda — sirve para vaciar la orden */
   #sheet-order .sheet-header {
     padding: 16px 18px !important;
     border-bottom: 1px solid var(--border);
@@ -506,23 +496,16 @@ html, body {
     padding: 14px 18px calc(14px + var(--safe-bottom)) !important;
     flex-shrink: 0;
   }
-  /* Botón VER ORDEN en topbar — ya no se necesita */
-  #tb-order-btn { display: none !important; }
-}
-
-/* ── Pulido visual ligero, manteniendo identidad ── */
-@media (min-width: 980px) {
   /* Topbar más limpia en desktop */
-  #topbar {
-    padding: 0 24px !important;
-    height: 62px;
-  }
+  #topbar { padding: 0 24px !important; height: 62px; }
   /* Grid de productos: aprovechar el espacio */
   #products-grid {
     display: grid !important;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
     gap: 12px !important;
   }
+  /* Otros sheets (custom, cobro, hist, etc.) deben seguir siendo modales */
+  /* Ya tienen reglas propias — no las tocamos */
 }
 
 /* Mejora general: dot indicador de impresora */
