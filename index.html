@@ -874,7 +874,23 @@ async function abrirTurnoDB(user) {
   const hoyISO = new Date().toISOString().slice(0,10);
   const key = 'lf_turno_' + hoyISO + '_' + user.id;
   const cached = localStorage.getItem(key);
-  if (cached) { turnoId = parseInt(cached); return; }
+  // CAMBIO v3: validar que el turno cacheado siga abierto
+  if (cached) {
+    try {
+      const verify = await sbGet('turnos', 'id=eq.'+parseInt(cached)+'&select=id,cerrado_at,created_at&limit=1');
+      if (Array.isArray(verify) && verify.length && !verify[0].cerrado_at) {
+        turnoId = verify[0].id;
+        turnoStartTime = new Date(verify[0].created_at);
+        return;
+      }
+      // El turno está cerrado o ya no existe — limpiar cache
+      localStorage.removeItem(key);
+    } catch(e) {
+      // Si no hay conexión, confiar en el cache (mejor cobrar que no cobrar)
+      turnoId = parseInt(cached);
+      return;
+    }
+  }
   try {
     const rows = await sbGet('turnos', 'cajero_id=eq.'+user.id+'&cerrado_at=is.null&created_at=gte.'+hoyISO+'T00:00:00Z&select=id,created_at&limit=1');
     if (Array.isArray(rows) && rows.length) {
@@ -891,6 +907,20 @@ async function abrirTurnoDB(user) {
       localStorage.setItem(key, turnoId);
     }
   } catch(e) { console.warn('[Turno]', e); }
+}
+
+// CAMBIO v3: verifica antes de cada cobro que el turno siga abierto
+async function verificarTurnoAbierto(){
+  if(!turnoId) return {ok:false,reason:'no_turno'};
+  if(!navigator.onLine) return {ok:true}; // confiar en cache si offline
+  try{
+    const rows=await sbGet('turnos','id=eq.'+turnoId+'&select=cerrado_at&limit=1');
+    if(!Array.isArray(rows)||!rows.length) return {ok:false,reason:'no_existe'};
+    if(rows[0].cerrado_at) return {ok:false,reason:'cerrado'};
+    return {ok:true};
+  }catch(e){
+    return {ok:true}; // error de red, confiar
+  }
 }
 
 async function reconstruirTurnoDesdeDB() {
@@ -998,8 +1028,15 @@ function showPOS() {
   }
 }
 
-function logout() {
-  if (!confirm('¿Cerrar sesión?')) return;
+async function logout() {
+  const ok=await lfConfirm({
+    title:'Cerrar sesión',
+    message:'¿Seguro que deseas salir? Las ventas del turno se mantienen registradas.',
+    okText:'Cerrar sesión',
+    cancelText:'Quedarme',
+    icon:'🚪',
+  });
+  if (!ok) return;
   currentUser = null; pinBuffer=''; updateDots();
   localStorage.removeItem('lf_session');
   document.getElementById('screen-pos').classList.remove('active');
@@ -1543,8 +1580,16 @@ function aplicarDescuentoMonto(){
   renderOrderItems(); renderOrderBar();
 }
 
-function cancelOrder(){
-  if(!confirm('¿Cancelar esta orden?')) return;
+async function cancelOrder(){
+  const ok=await lfConfirm({
+    title:'Cancelar orden',
+    message:'Se perderán los productos y modificadores ya seleccionados. Esta acción no se puede deshacer.',
+    okText:'Sí, cancelar',
+    cancelText:'No, seguir',
+    icon:'🗑️',
+    danger:true,
+  });
+  if(!ok) return;
   order=[]; discount=0; discountMonto=0; promoActiva=null; payMethod='efectivo'; svcType='mostrador';
   document.getElementById('promo-applied-bar').classList.add('hidden');
   document.getElementById('disc-row').style.display='flex';
@@ -1607,6 +1652,23 @@ async function confirmarPago(){
   btn.classList.add('loading');
   btn.textContent='Procesando...';
   document.getElementById('cobro-error-banner').classList.remove('show');
+
+  // CAMBIO v3: verificar que el turno siga abierto antes de cobrar
+  const tv=await verificarTurnoAbierto();
+  if(!tv.ok){
+    const errBanner=document.getElementById('cobro-error-banner');
+    let msg='No se puede cobrar.';
+    if(tv.reason==='cerrado') msg='El turno está cerrado. Cierra sesión e inicia otro turno para continuar cobrando.';
+    else if(tv.reason==='no_turno') msg='No hay turno activo. Cierra sesión y vuelve a entrar.';
+    else if(tv.reason==='no_existe') msg='El turno no existe. Cierra sesión y vuelve a entrar.';
+    document.getElementById('cobro-error-msg').textContent=msg;
+    errBanner.classList.add('show');
+    btn.textContent='CONFIRMAR PAGO';
+    btn.classList.remove('loading');
+    btn.disabled=false;
+    _cobroPending=false;
+    return;
+  }
 
   const{total,sub,desc,iva}=calcTotals();
   const con=parseFloat(document.getElementById('efec-input').value)||total;
@@ -1684,7 +1746,19 @@ function cerrarSuccessFlash(){
 // ═══════════════════════════════
 let offlineQueue=JSON.parse(localStorage.getItem('lf_offline_queue')||'[]');
 
+// Helper: genera un UUID v4 (idempotency key)
+function _lfUuid(){
+  // crypto.randomUUID si está disponible, fallback manual
+  if(window.crypto&&window.crypto.randomUUID) return window.crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{
+    const r=Math.random()*16|0; return (c==='x'?r:(r&0x3|0x8)).toString(16);
+  });
+}
+
 async function saveToSupabase(saleData){
+  // CAMBIO v3: asignar idempotency_key si no existe (mismo en cada reintento)
+  if(!saleData.idempotency_key) saleData.idempotency_key=_lfUuid();
+
   // Si offline, encolar
   if(!navigator.onLine){
     offlineQueue.push(saleData);
@@ -1693,8 +1767,28 @@ async function saveToSupabase(saleData){
     return true; // No es un error, se re-intentará al reconectar
   }
   try {
+    // CAMBIO v3: si ya tiene server_id (re-intento), verificar si ya está en DB
+    if(saleData._server_id){
+      return true; // ya guardada previamente
+    }
+    // Verificar duplicado por idempotency_key antes de insertar (defensa anti doble-insert)
+    try{
+      const exists=await sbGet('orders','idempotency_key=eq.'+saleData.idempotency_key+'&select=id,order_number&limit=1');
+      if(Array.isArray(exists)&&exists.length){
+        saleData._server_id=exists[0].id;
+        // Si Supabase ya tiene la orden, actualizar orderN local con el real
+        if(exists[0].order_number) saleData.id=exists[0].order_number;
+        return true;
+      }
+    }catch(e){/* si falla la verificación, intentamos insertar igual */}
+
     const orderPayload={
-      order_number:saleData.id, sucursal:currentUser?.sucursal||'Principal',
+      idempotency_key:saleData.idempotency_key,
+      // CAMBIO v3: NO mandamos order_number — Supabase lo asigna por sucursal
+      // (si tu schema todavía requiere order_number, lo dejamos como hint pero
+      //  la fuente de verdad es lo que devuelve Supabase)
+      order_number:saleData.id,
+      sucursal:currentUser?.sucursal||'Principal',
       cajero_id:currentUser?.id||null, cajero_name:currentUser?.name||'',
       turno_id:turnoId||null,
       subtotal:saleData.sub, discount_pct:saleData.discount||0, discount_amt:saleData.desc||0, iva:saleData.iva, total:saleData.total,
@@ -1708,11 +1802,29 @@ async function saveToSupabase(saleData){
     if(!res.ok){
       const errBody=await res.json().catch(()=>({}));
       console.error('[orders POST]',res.status, errBody);
-      // Mostrar error específico en el banner para diagnóstico
+      // Si fue un conflicto de unique key (idempotency_key duplicado), lo tratamos como éxito
+      if(res.status===409||(errBody.code==='23505')){
+        console.log('[orders POST] duplicado por idempotency_key, OK');
+        return true;
+      }
       throw new Error(`Error ${res.status}: ${errBody.message||errBody.hint||errBody.details||'revisa consola'}`);
     }
     const [savedOrder]=await res.json();
     const orderId=savedOrder.id;
+    saleData._server_id=orderId;
+    // CAMBIO v3: usar el order_number REAL que devolvió Supabase (no el local)
+    if(savedOrder.order_number&&savedOrder.order_number!==saleData.id){
+      saleData.id=savedOrder.order_number;
+      // Sincronizar el contador local
+      orderN=Math.max(orderN,savedOrder.order_number+1);
+      localStorage.setItem('lf_order_n_'+(currentUser?.sucursal||'x'),orderN);
+      // Refrescar el display si está visible
+      const elNum=document.getElementById('order-num');
+      if(elNum) elNum.textContent=String(orderN).padStart(3,'0');
+      const elNum2=document.getElementById('order-num-2');
+      if(elNum2) elNum2.textContent=String(orderN).padStart(3,'0');
+    }
+
     if(saleData.items.length){
       const itemsPayload=saleData.items.flatMap(item=>{
         const rows=[{order_id:orderId,product_id:item.productId||null,product_name:item.name,qty:item.qty,unit_price:item.unitPrice,subtotal:item.unitPrice*item.qty}];
@@ -2071,7 +2183,15 @@ async function confirmarCierre(){
   const notas=document.getElementById('cierre-notas')?.value.trim()||'';
 
   if(conteo===0 && !document.getElementById('cierre-conteo')?.value){
-    if(!confirm('No ingresaste el conteo físico de caja. ¿Confirmar cierre de todas formas?')) return;
+    const ok=await lfConfirm({
+      title:'Sin conteo físico',
+      message:'No ingresaste el dinero contado en la caja. Sin este dato no se podrá calcular la diferencia con lo esperado.',
+      okText:'Cerrar igual',
+      cancelText:'Volver',
+      icon:'⚠️',
+      danger:true,
+    });
+    if(!ok) return;
   }
 
   cierreData.notas=notas;
@@ -2133,6 +2253,12 @@ async function confirmarCierre(){
       </div>`;
     document.getElementById('cierre-footer-btns').innerHTML=
       '<button onclick="finalizarCierre()" style="flex:1;height:50px;background:var(--red);color:#fff;border:none;border-radius:14px;font-family:\'Bebas Neue\',serif;font-size:18px;letter-spacing:2px;cursor:pointer;">CERRAR SESIÓN</button>';
+    // CAMBIO v3: bloquear cualquier escape del sheet — solo se sale por "CERRAR SESIÓN"
+    window._cierreFinalizado=true;
+    const ov=document.getElementById('ov-cierre');
+    if(ov) ov.onclick=null; // desactivar cerrar al tocar fuera
+    const sheet=document.getElementById('sheet-cierre');
+    if(sheet) sheet._swipeSetup=true; // desactivar swipe-down
   } catch(e){
     btn.disabled=false; btn.textContent='✓ CONFIRMAR CIERRE';
     showToast('❌ Error al guardar el turno. Intenta de nuevo.');
@@ -2152,6 +2278,7 @@ function finalizarCierre(){
   currentUser=null; pinBuffer=''; updateDots();
   document.getElementById('screen-pos').classList.remove('active');
   document.getElementById('screen-login').classList.add('active');
+  document.body.classList.remove('pos-active');
   document.getElementById('login-error').textContent='';
 }
 
@@ -2691,6 +2818,49 @@ function showToast(msg){
   t.style.opacity='1'; t.style.transform='translateX(-50%) translateY(0)';
   clearTimeout(t._to);
   t._to=setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(-50%) translateY(20px)';},2500);
+}
+
+// CAMBIO v3: Modal de confirmación bonito (reemplaza confirm() nativo)
+function lfConfirm(opts){
+  if(typeof opts==='string') opts={message:opts};
+  const title=opts.title||'¿Estás seguro?';
+  const message=opts.message||'';
+  const okText=opts.okText||'Confirmar';
+  const cancelText=opts.cancelText||'Cancelar';
+  const danger=opts.danger||false;
+  const icon=opts.icon||(danger?'⚠️':'❓');
+
+  return new Promise((resolve)=>{
+    const ov=document.createElement('div');
+    ov.style.cssText='position:fixed;inset:0;background:rgba(26,5,8,0.55);backdrop-filter:blur(4px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;transition:opacity 0.2s;';
+    const box=document.createElement('div');
+    box.style.cssText='background:#fff;border-radius:22px;padding:24px 22px 18px;max-width:380px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,0.4);transform:scale(0.92);transition:transform 0.22s cubic-bezier(0.34,1.56,0.64,1);';
+    const okBg=danger?'#A6182E':'#A6182E';
+    box.innerHTML=`
+      <div style="text-align:center;font-size:44px;margin-bottom:10px;">${icon}</div>
+      <div style="text-align:center;font-family:'Bebas Neue',serif;font-size:22px;color:#1a0508;letter-spacing:1px;margin-bottom:6px;">${title}</div>
+      ${message?`<div style="text-align:center;font-size:14px;color:#5a2830;line-height:1.45;margin-bottom:20px;font-family:'DM Sans',sans-serif;">${message}</div>`:'<div style="height:8px;"></div>'}
+      <div style="display:flex;gap:8px;">
+        <button id="_lfc-cancel" style="flex:1;height:48px;background:#FDF6F7;border:1.5px solid #FAD8DE;border-radius:14px;color:#5a2830;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">${cancelText}</button>
+        <button id="_lfc-ok" style="flex:1;height:48px;background:${okBg};border:none;border-radius:14px;color:#fff;font-family:'Bebas Neue',serif;font-size:16px;letter-spacing:1.5px;cursor:pointer;">${okText}</button>
+      </div>
+    `;
+    ov.appendChild(box);
+    document.body.appendChild(ov);
+    requestAnimationFrame(()=>{ ov.style.opacity='1'; box.style.transform='scale(1)'; });
+
+    const cleanup=(result)=>{
+      ov.style.opacity='0'; box.style.transform='scale(0.92)';
+      setTimeout(()=>{ if(ov.parentNode) ov.parentNode.removeChild(ov); }, 200);
+      resolve(result);
+    };
+    box.querySelector('#_lfc-ok').onclick=()=>cleanup(true);
+    box.querySelector('#_lfc-cancel').onclick=()=>cleanup(false);
+    ov.onclick=(e)=>{ if(e.target===ov) cleanup(false); };
+    // ESC para cancelar
+    const escHandler=(e)=>{ if(e.key==='Escape'){ cleanup(false); document.removeEventListener('keydown',escHandler); } };
+    document.addEventListener('keydown',escHandler);
+  });
 }
 </script>
 </body>
