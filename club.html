@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Club Lady Fresa">
+<meta name="theme-color" content="#A6182E">
+<title>Club Lady Fresa</title>
+<link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkNsdWIgTGFkeSBGcmVzYSIsCiAgInNob3J0X25hbWUiOiAiQ2x1YiBMRiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgInRoZW1lX2NvbG9yIjogIiNBNjE4MkUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiNGREY2RjciCn0=">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+:root {
+  --red: #A6182E;
+  --red-dark: #672626;
+  --red-light: #FDEEF1;
+  --red-mid: #FD9CB3;
+  --green: #053A0A;
+  --green-light: #E6F0E7;
+  --amber: #B5860D;
+  --text: #1a0508;
+  --text-2: #5a2830;
+  --text-3: #9a7075;
+  --bg: #FDF6F7;
+  --surface: #fff;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+html, body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+
+.wrap { max-width: 440px; margin: 0 auto; min-height: 100vh; padding-bottom: calc(20px + var(--safe-bottom)); }
+
+/* HERO */
+.hero {
+  background: linear-gradient(160deg, #672626 0%, #A6182E 50%, #c41f38 100%);
+  padding: calc(32px + var(--safe-top)) 24px 32px;
+  text-align: center; color: #fff;
+}
+.hero-logo { font-family: 'Bebas Neue', serif; font-size: 42px; letter-spacing: 5px; line-height: 1; }
+.hero-club { font-size: 11px; letter-spacing: 4px; opacity: 0.7; margin-top: 6px; }
+.hero-name { font-size: 22px; font-weight: 500; margin-top: 22px; }
+.hero-phone { font-size: 12px; opacity: 0.7; margin-top: 3px; letter-spacing: 0.5px; }
+.hero-since { font-size: 10px; letter-spacing: 2px; opacity: 0.55; text-transform: uppercase; margin-top: 14px; }
+
+/* PROGRESS CARD */
+.card {
+  background: var(--surface);
+  margin: -22px 18px 14px;
+  border-radius: 22px;
+  padding: 24px 20px 20px;
+  box-shadow: 0 6px 22px rgba(166,24,46,0.10);
+}
+.prog-num {
+  text-align: center;
+  font-family: 'Bebas Neue', serif;
+  font-size: 64px;
+  color: var(--red);
+  line-height: 1;
+}
+.prog-label {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 1.8px;
+  margin-top: 4px;
+}
+.stamps-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin: 20px 4px 12px;
+}
+.stamp {
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 2.5px solid var(--red-mid);
+  background: var(--red-light);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+}
+.stamp.filled { background: var(--red); border-color: var(--red); }
+.stamp.filled::after { content: '🍓'; }
+
+.faltan {
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-2);
+  margin-top: 14px;
+}
+.faltan b { color: var(--red); font-weight: 600; }
+.banner-canje {
+  background: var(--green);
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 14px;
+  margin-top: 14px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.banner-canje .sub {
+  display: block;
+  font-weight: 400;
+  font-size: 12px;
+  opacity: 0.85;
+  margin-top: 2px;
+}
+
+/* QR */
+.qr-card {
+  background: var(--surface);
+  margin: 0 18px 14px;
+  border-radius: 18px;
+  padding: 20px;
+  text-align: center;
+}
+.qr-title {
+  font-size: 11px;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 1.8px;
+  margin-bottom: 14px;
+}
+#qrcode {
+  display: inline-block;
+  padding: 14px;
+  background: #fff;
+  border-radius: 14px;
+}
+#qrcode img, #qrcode canvas { display: block; }
+.qr-code-text {
+  font-family: 'DM Sans', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 4px;
+  color: var(--red-dark);
+  margin-top: 12px;
+}
+.qr-hint {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 6px;
+  padding: 0 10px;
+}
+
+/* SECTION TITLE */
+.section-title {
+  padding: 10px 24px 8px;
+  font-size: 11px;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+/* HISTORY */
+.history {
+  padding: 0 18px;
+}
+.h-row {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.h-l { color: var(--text-2); font-size: 13px; }
+.h-r { color: var(--text-3); font-size: 11px; }
+.h-icon { font-size: 16px; margin-right: 4px; }
+
+/* STATS */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 0 18px 14px;
+}
+.stat {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 12px 8px;
+  text-align: center;
+}
+.stat-v { font-family: 'Bebas Neue', serif; font-size: 22px; color: var(--red); line-height: 1; }
+.stat-l { font-size: 9px; color: var(--text-3); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+
+/* CTA */
+.cta {
+  padding: 16px 18px 24px;
+}
+.cta-btn {
+  width: 100%;
+  height: 50px;
+  background: var(--text);
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.cta-btn:active { background: #333; }
+.cta-btn.share {
+  background: var(--red);
+}
+.cta-btn.share:active { background: var(--red-dark); }
+.cta-hint {
+  font-size: 10px;
+  color: var(--text-3);
+  text-align: center;
+  margin-top: 8px;
+}
+
+/* STATES */
+.state {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  text-align: center;
+}
+.state-icon { font-size: 56px; margin-bottom: 18px; }
+.state-title { font-family: 'Bebas Neue', serif; font-size: 28px; color: var(--red); letter-spacing: 2px; line-height: 1.1; }
+.state-sub { font-size: 14px; color: var(--text-2); margin-top: 10px; max-width: 280px; line-height: 1.5; }
+
+/* HIDE / SHOW */
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div id="loading" class="state">
+  <div class="state-icon">🍓</div>
+  <div class="state-title">CARGANDO TU TARJETA…</div>
+</div>
+
+<div id="error" class="state hidden">
+  <div class="state-icon">😔</div>
+  <div class="state-title">TARJETA NO ENCONTRADA</div>
+  <div class="state-sub">El código del Club no es válido o el cliente fue dado de baja. Pide al cajero que te genere una nueva tarjeta en tu próxima visita.</div>
+</div>
+
+<div id="content" class="wrap hidden">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-logo">LADY FRESA</div>
+    <div class="hero-club">CLUB · MIEMBRO</div>
+    <div class="hero-name" id="name">—</div>
+    <div class="hero-phone" id="phone">—</div>
+    <div class="hero-since" id="since">—</div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="card">
+    <div class="prog-num" id="prog-num">0/10</div>
+    <div class="prog-label" id="prog-label">Sellos</div>
+    <div class="stamps-grid" id="stamps"></div>
+    <div class="faltan" id="faltan">—</div>
+    <div class="banner-canje hidden" id="canje-banner">
+      🎁 ¡PUEDES CANJEAR TU REGALO!
+      <span class="sub" id="canje-sub">Muestra esta pantalla en la sucursal</span>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat">
+      <div class="stat-v" id="stat-total">0</div>
+      <div class="stat-l">Sellos de por vida</div>
+    </div>
+    <div class="stat">
+      <div class="stat-v" id="stat-canjes">0</div>
+      <div class="stat-l">Premios canjeados</div>
+    </div>
+    <div class="stat">
+      <div class="stat-v" id="stat-falta">10</div>
+      <div class="stat-l">Faltan</div>
+    </div>
+  </div>
+
+  <!-- QR -->
+  <div class="qr-card">
+    <div class="qr-title">Muestra este código al cobrar</div>
+    <div id="qrcode"></div>
+    <div class="qr-code-text" id="qr-text">—</div>
+    <div class="qr-hint">El cajero lo escaneará o escribirá tu código para sumar el sello automáticamente.</div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="section-title">Tus últimas visitas</div>
+  <div class="history" id="history"></div>
+
+  <!-- CTA -->
+  <div class="cta">
+    <button class="cta-btn share" onclick="shareTarjeta()">
+      📤 Compartir mi tarjeta
+    </button>
+    <div class="cta-hint">Agrega esta página a tu pantalla de inicio para acceso rápido</div>
+  </div>
+
+</div>
+
+<script>
+const SB_URL = 'https://ngpumyxxxlafuzcsaepy.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ncHVteXh4eGxhZnV6Y3NhZXB5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyNjkzNzYsImV4cCI6MjA4OTg0NTM3Nn0.u4WHkOXLrNn4WSKHJedXXNDYrCMdfaDNK8KlvJNfXLg';
+const SB_H = { 'apikey':SB_KEY, 'Authorization':'Bearer '+SB_KEY };
+
+function sanitize(s){return String(s||'').replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]));}
+
+function fmtFecha(d){
+  if(!d) return '—';
+  const dt=new Date(d);
+  const ahora=new Date();
+  const diff=(ahora-dt)/(1000*60*60*24);
+  if(diff<1) return 'hoy '+dt.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',hour12:false});
+  if(diff<2) return 'ayer';
+  if(diff<7) return Math.floor(diff)+' días';
+  return dt.toLocaleDateString('es-MX',{day:'2-digit',month:'short'});
+}
+
+function showState(which){
+  document.getElementById('loading').classList.add('hidden');
+  document.getElementById('error').classList.add('hidden');
+  document.getElementById('content').classList.add('hidden');
+  document.getElementById(which).classList.remove('hidden');
+}
+
+async function init(){
+  const params=new URLSearchParams(window.location.search);
+  const qr=(params.get('qr')||'').toUpperCase().trim();
+  if(!qr||!/^[A-Z0-9]{4,16}$/.test(qr)){ showState('error'); return; }
+  try {
+    // 1. Datos del cliente
+    const r1=await fetch(`${SB_URL}/rest/v1/lf_loyalty_cliente_resumen?qr_code=eq.${encodeURIComponent(qr)}&select=*&limit=1`,{headers:SB_H});
+    const cli=await r1.json();
+    if(!cli||!cli[0]){ showState('error'); return; }
+    const c=cli[0];
+    // 2. Movimientos recientes
+    const r2=await fetch(`${SB_URL}/rest/v1/lf_loyalty_sellos?cliente_id=eq.${c.id}&select=*&order=created_at.desc&limit=8`,{headers:SB_H});
+    const movs=await r2.json();
+    // 3. Config (para saber el número de sellos requeridos)
+    const r3=await fetch(`${SB_URL}/rest/v1/lf_loyalty_config?id=eq.1&select=sellos_requeridos`,{headers:SB_H});
+    const cfg=(await r3.json())[0]||{sellos_requeridos:10};
+    render(c,movs||[],cfg);
+  } catch(e){
+    console.error(e);
+    showState('error');
+  }
+}
+
+function render(c,movs,cfg){
+  const req=cfg.sellos_requeridos||10;
+  // Hero
+  document.getElementById('name').textContent=c.nombre||'—';
+  document.getElementById('phone').textContent=c.telefono||'';
+  const since=c.fecha_alta?new Date(c.fecha_alta).toLocaleDateString('es-MX',{month:'long',year:'numeric'}):'';
+  document.getElementById('since').textContent=since?('MIEMBRO DESDE '+since.toUpperCase()):'MIEMBRO DEL CLUB';
+  // Progreso
+  document.getElementById('prog-num').textContent=(c.sellos_actuales||0)+'/'+req;
+  // Sellos visuales
+  const stampsEl=document.getElementById('stamps');
+  let html='';
+  for(let i=0;i<req;i++){
+    html+=`<div class="stamp${i<c.sellos_actuales?' filled':''}"></div>`;
+  }
+  stampsEl.innerHTML=html;
+  // Mensaje "faltan"
+  const faltan=Math.max(0,req-(c.sellos_actuales||0));
+  if(c.puede_canjear){
+    document.getElementById('faltan').classList.add('hidden');
+    document.getElementById('canje-banner').classList.remove('hidden');
+  } else {
+    document.getElementById('faltan').innerHTML=faltan===1
+      ? `¡Solo <b>1 visita</b> más para tu regalo! 🍓`
+      : `Faltan <b>${faltan} visitas</b> para tu fresa de regalo 🍓`;
+  }
+  // Stats
+  document.getElementById('stat-total').textContent=c.sellos_ganados_total||0;
+  document.getElementById('stat-canjes').textContent=c.canjes_hechos||0;
+  document.getElementById('stat-falta').textContent=faltan;
+  // QR
+  const qrText=c.qr_code||'';
+  document.getElementById('qr-text').textContent=qrText;
+  if(window.QRCode){
+    try {
+      new QRCode(document.getElementById('qrcode'),{
+        text:window.location.href,
+        width:160, height:160,
+        colorDark:'#A6182E', colorLight:'#FFFFFF',
+        correctLevel:QRCode.CorrectLevel.M
+      });
+    } catch(e){ console.warn('QR error',e); }
+  }
+  // Historial
+  const histEl=document.getElementById('history');
+  if(!movs.length){
+    histEl.innerHTML='<div class="h-row"><span class="h-l">Aún sin visitas registradas</span></div>';
+  } else {
+    histEl.innerHTML=movs.map(m=>{
+      const icon={gana:'➕',canje:'🎁',ajuste:'⚙️',regalo:'🎀',expira:'⏱'}[m.tipo]||'•';
+      const txt={gana:'+1 sello',canje:'Premio canjeado',ajuste:m.cantidad>0?'+'+m.cantidad+' sellos':m.cantidad+' sellos',regalo:'+'+m.cantidad+' de regalo',expira:'Sellos expirados'}[m.tipo]||m.tipo;
+      return `<div class="h-row">
+        <span class="h-l"><span class="h-icon">${icon}</span>${sanitize(txt)} · ${sanitize(m.sucursal||'')}</span>
+        <span class="h-r">${fmtFecha(m.created_at)}</span>
+      </div>`;
+    }).join('');
+  }
+  showState('content');
+}
+
+async function shareTarjeta(){
+  const url=window.location.href;
+  const nombre=document.getElementById('name').textContent;
+  const sellos=document.getElementById('prog-num').textContent;
+  const text=`🍓 Mi tarjeta Lady Fresa\n${nombre} · ${sellos} sellos\n${url}`;
+  if(navigator.share){
+    try { await navigator.share({title:'Mi tarjeta Lady Fresa',text,url}); return; } catch{}
+  }
+  // Fallback: copiar al clipboard
+  try {
+    await navigator.clipboard.writeText(url);
+    alert('Link copiado al portapapeles');
+  } catch {
+    prompt('Copia este link:', url);
+  }
+}
+
+init();
+</script>
+</body>
+</html>
