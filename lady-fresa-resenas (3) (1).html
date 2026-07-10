@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lady Fresa · Tablero de Reseñas</title>
+<style>
+  :root{
+    --passion:#E8294B;--passion-dark:#B81D3A;--cream:#FFF6F3;--ink:#2A1216;
+    --gold:#E8A628;--silver:#9AA0A6;--bronze:#C77B3B;
+    --line:rgba(232,41,75,.14);--shadow:0 8px 30px rgba(184,29,58,.10);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    background:radial-gradient(1200px 500px at 80% -10%, rgba(232,166,40,.10), transparent),linear-gradient(180deg,#FFFBF9,#FFF1EC);
+    color:var(--ink);min-height:100vh;padding:20px 16px 60px}
+  .wrap{max-width:960px;margin:0 auto}
+  header{text-align:center;padding:24px 0 8px}
+  .brand{font-size:clamp(30px,7vw,48px);font-weight:800;letter-spacing:-1px;color:var(--passion);display:flex;align-items:center;justify-content:center;gap:10px}
+  .tagline{color:var(--passion-dark);font-style:italic;opacity:.75;margin-top:2px;font-size:15px}
+  .subtitle{margin-top:14px;font-size:13px;letter-spacing:3px;text-transform:uppercase;color:var(--ink);opacity:.55;font-weight:600}
+  .cloud-badge{display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;background:#E7F6ED;color:#1a8f4a;padding:5px 12px;border-radius:20px}
+  .cloud-badge.off{background:#FDEBEE;color:var(--passion-dark)}
+  .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+  .champion{margin:22px auto 8px;max-width:560px;background:linear-gradient(135deg,var(--passion),var(--passion-dark));color:#fff;border-radius:20px;padding:22px 24px;text-align:center;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .champion::after{content:"🍓";position:absolute;right:-10px;bottom:-18px;font-size:90px;opacity:.15}
+  .champion .lead{font-size:12px;letter-spacing:2px;text-transform:uppercase;opacity:.85}
+  .champion .name{font-size:30px;font-weight:800;margin:4px 0}
+  .champion .score{font-size:14px;opacity:.9}
+  .grid{display:grid;grid-template-columns:1fr;gap:16px;margin-top:22px}
+  @media(min-width:720px){.grid{grid-template-columns:repeat(3,1fr)}}
+  .card{background:#fff;border-radius:18px;padding:20px;border:1px solid var(--line);box-shadow:var(--shadow);position:relative;transition:transform .18s ease}
+  .card:hover{transform:translateY(-3px)}
+  .rank-badge{position:absolute;top:-12px;left:20px;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:15px;box-shadow:0 4px 10px rgba(0,0,0,.15)}
+  .r1{background:linear-gradient(135deg,#F4C542,var(--gold))}
+  .r2{background:linear-gradient(135deg,#C4C9CF,var(--silver))}
+  .r3{background:linear-gradient(135deg,#DD9A5C,var(--bronze))}
+  .suc-name{font-size:22px;font-weight:800;margin-bottom:2px}
+  .stars{color:var(--gold);font-size:20px;letter-spacing:2px;margin:6px 0 2px}
+  .rating-num{font-size:32px;font-weight:800;line-height:1}
+  .rating-num span{font-size:15px;font-weight:600;opacity:.5}
+  .stat-row{display:flex;justify-content:space-between;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)}
+  .stat{text-align:center;flex:1}
+  .stat .big{font-size:20px;font-weight:800;color:var(--ink)}
+  .stat .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.5px;opacity:.55;margin-top:2px}
+  .stat .new{color:var(--passion)}
+  .score-pill{margin-top:14px;text-align:center;background:var(--cream);border-radius:12px;padding:8px;font-weight:700;color:var(--passion-dark);font-size:14px}
+  .review-link{display:block;text-align:center;margin-top:12px;background:var(--passion);color:#fff;text-decoration:none;padding:11px;border-radius:12px;font-weight:700;font-size:14px;transition:background .15s}
+  .review-link:hover{filter:brightness(.92)}
+  .review-link.empty{background:#E9DDD8;color:var(--passion-dark);opacity:.9}
+  .panel{margin-top:32px;background:#fff;border-radius:18px;padding:22px;border:1px solid var(--line);box-shadow:var(--shadow)}
+  .panel h2{font-size:16px;color:var(--passion);margin-bottom:4px}
+  .panel .hint{font-size:13px;opacity:.6;margin-bottom:16px}
+  .edit-row{display:grid;grid-template-columns:1fr;gap:10px;padding:14px;border-radius:12px;background:var(--cream);margin-bottom:12px}
+  @media(min-width:640px){.edit-row{grid-template-columns:1.3fr 1fr 1fr 1fr 1.8fr;align-items:end}}
+  .field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.5px;opacity:.6;margin-bottom:4px;font-weight:600}
+  .field input{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;background:#fff}
+  .field input:focus{outline:2px solid var(--passion);border-color:transparent}
+  .suc-label{font-weight:800;align-self:end;padding-bottom:9px}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+  button{font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;border:none;border-radius:11px;padding:12px 20px;transition:opacity .15s,transform .1s}
+  button:active{transform:scale(.97)}
+  button:disabled{opacity:.5;cursor:default}
+  .btn-save{background:var(--passion);color:#fff}
+  .btn-save:hover{background:var(--passion-dark)}
+  .btn-reset{background:transparent;color:var(--passion-dark);border:1px solid var(--line)}
+  .btn-google{background:#1a73e8;color:#fff}
+  .btn-google:hover{background:#1557b0}
+  .saved-toast{text-align:center;color:#1a8f4a;font-weight:700;font-size:14px;margin-top:10px;min-height:18px;opacity:0;transition:opacity .3s}
+  .saved-toast.show{opacity:1}
+  .saved-toast.err{color:var(--passion-dark)}
+  .updated{text-align:center;font-size:12px;opacity:.5;margin-top:24px}
+  .method-note{max-width:640px;margin:20px auto 0;font-size:12.5px;line-height:1.5;opacity:.6;text-align:center}
+  .loading{text-align:center;padding:40px;opacity:.6;font-weight:600;grid-column:1/-1}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">🍓 LADY FRESA</div>
+    <div class="tagline">Date el gusto</div>
+    <div class="subtitle">Tablero de Reseñas · Quién va ganando</div>
+    <div><span id="cloudBadge" class="cloud-badge off"><span class="dot"></span><span id="cloudTxt">Conectando…</span></span></div>
+  </header>
+  <div id="champion" class="champion" style="display:none"></div>
+  <div id="grid" class="grid"><div class="loading">Cargando datos de la nube…</div></div>
+  <div class="panel">
+    <h2>Actualizar reseñas</h2>
+    <p class="hint">Mete el rating y el número de reseñas de cada sucursal (los ves en el perfil de Google Maps). El campo <strong>nuevas del mes</strong> es cuántas reseñas nuevas llevan este mes. Guarda y se actualiza para todos al instante.</p>
+    <div id="editRows"></div>
+    <div class="actions">
+      <button class="btn-save" id="saveBtn" onclick="save()">Guardar cambios</button>
+      <button class="btn-reset" onclick="resetMonth()">Reiniciar contador del mes</button>
+      <button class="btn-google" id="googleBtn" onclick="refreshGoogle()">🔄 Actualizar desde Google</button>
+    </div>
+    <div id="toast" class="saved-toast"></div>
+  </div>
+  <p class="method-note">El "score" combina las tres cosas: rating (estrellas), total de reseñas acumuladas y reseñas nuevas del mes. Así gana quien tiene buena calificación <em>y</em> está juntando reseñas activamente, no solo quien lleva más tiempo abierto.</p>
+  <p id="updated" class="updated"></p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+"use strict";
+var SUPABASE_URL="https://tnspshptvqvhhwwckzcc.supabase.co";
+var SUPABASE_KEY="sb_publishable_Wtlo8ZXzThIwDRO_ZSWZ1g_He5on82l";
+var sb=null, data=[];
+
+function errMsg(e){
+  if(!e) return "error desconocido";
+  if(typeof e==="string") return e;
+  return e.message || e.error_description || e.hint || e.details || e.code || JSON.stringify(e);
+}
+function scoreOf(s){
+  var rating=Number(s.rating)||0,total=Number(s.total)||0,mn=Number(s.month_new)||0;
+  var rp=(rating/5)*60, tp=total>0?Math.min(25,Math.log10(total+1)*12):0, np=mn*3;
+  return Math.round(rp+tp+np);
+}
+function starStr(r){
+  var full=Math.floor(r),half=r-full>=.25&&r-full<.75,up=r-full>=.75;
+  var s="★".repeat(full+(up?1:0)); if(half)s+="⯨";
+  return (s+"☆☆☆☆☆").slice(0,5);
+}
+function setCloud(ok,txt){
+  var b=document.getElementById("cloudBadge");
+  b.className="cloud-badge"+(ok?"":" off");
+  document.getElementById("cloudTxt").textContent=txt;
+}
+function toast(msg,err){
+  var t=document.getElementById("toast");
+  t.textContent=msg; t.className="saved-toast show"+(err?" err":"");
+  setTimeout(function(){t.classList.remove("show");},2800);
+}
+
+function fetchData(){
+  return sb.from("resenas_google")
+    .select("id,sucursal_id,rating,total,month_new,link,place_id,updated_at,sucursales(nombre,color,orden)")
+    .order("sucursal_id")
+    .then(function(res){
+      if(res.error) throw res.error;
+      data=(res.data||[]).map(function(r){
+        var suc=r.sucursales||{};
+        return {id:r.id,sucursal_id:r.sucursal_id,name:suc.nombre||"Sucursal",color:suc.color||"#E8294B",
+          orden:suc.orden||0,rating:Number(r.rating)||0,total:r.total||0,month_new:r.month_new||0,
+          link:r.link||"",place_id:r.place_id||"",updated_at:r.updated_at};
+      });
+      setCloud(true,"En la nube · sincronizado");
+    });
+}
+
+function render(){
+  var ranked=data.map(function(s){var c=Object.assign({},s);c.score=scoreOf(s);return c;})
+                 .sort(function(a,b){return b.score-a.score;});
+  var top=ranked[0],champ=document.getElementById("champion");
+  if(top&&top.score>0){
+    champ.innerHTML='<div class="lead">🏆 Sucursal líder</div><div class="name">'+top.name+'</div>'+
+      '<div class="score">'+top.rating.toFixed(1)+' ★ · '+top.total+' reseñas · '+top.month_new+' nuevas este mes · '+top.score+' pts</div>';
+    champ.style.display="block";
+  } else champ.style.display="none";
+  var rc=["r1","r2","r3"];
+  document.getElementById("grid").innerHTML=ranked.map(function(s,i){
+    return '<div class="card"><div class="rank-badge '+(rc[i]||'')+'">'+(i+1)+'</div>'+
+      '<div class="suc-name" style="color:'+s.color+'">'+s.name+'</div>'+
+      '<div class="stars">'+starStr(s.rating)+'</div>'+
+      '<div class="rating-num">'+(s.rating?s.rating.toFixed(1):"—")+'<span> / 5</span></div>'+
+      '<div class="stat-row"><div class="stat"><div class="big">'+(s.total||0)+'</div><div class="lbl">Reseñas</div></div>'+
+      '<div class="stat"><div class="big new">+'+(s.month_new||0)+'</div><div class="lbl">Este mes</div></div></div>'+
+      '<div class="score-pill">'+s.score+' pts</div>'+
+      (s.link
+        ?'<a class="review-link" href="'+s.link+'" target="_blank" rel="noopener" style="background:'+s.color+'">Ver / dejar reseña ↗</a>'
+        :'<a class="review-link empty" href="#" onclick="return false">Falta el link ↓</a>')+
+      '</div>';
+  }).join("");
+  var stamps=data.map(function(d){return d.updated_at;}).filter(Boolean).sort();
+  if(stamps.length){
+    var d=new Date(stamps[stamps.length-1]);
+    document.getElementById("updated").textContent="Última actualización: "+d.toLocaleString("es-MX",{dateStyle:"long",timeStyle:"short"});
+  }
+}
+
+function renderEdit(){
+  var rows=data.slice().sort(function(a,b){return a.orden-b.orden;});
+  document.getElementById("editRows").innerHTML=rows.map(function(s){
+    return '<div class="edit-row"><div class="suc-label" style="color:'+s.color+'">'+s.name+'</div>'+
+      '<div class="field"><label>Rating</label><input type="number" step="0.1" min="0" max="5" value="'+(s.rating||'')+'" data-id="'+s.id+'" data-k="rating" placeholder="4.8"></div>'+
+      '<div class="field"><label>Total reseñas</label><input type="number" min="0" value="'+(s.total||'')+'" data-id="'+s.id+'" data-k="total" placeholder="120"></div>'+
+      '<div class="field"><label>Nuevas / mes</label><input type="number" min="0" value="'+(s.month_new||'')+'" data-id="'+s.id+'" data-k="month_new" placeholder="8"></div>'+
+      '<div class="field"><label>Link de Google</label><input type="url" value="'+(s.link||'')+'" data-id="'+s.id+'" data-k="link" placeholder="https://g.page/..."></div>'+
+      '</div>';
+  }).join("");
+}
+
+function collect(){
+  var inputs=document.querySelectorAll("#editRows input");
+  inputs.forEach(function(inp){
+    var id=Number(inp.dataset.id),k=inp.dataset.k;
+    var row=data.filter(function(d){return d.id===id;})[0]; if(!row)return;
+    row[k]=(k==="link")?inp.value.trim():(parseFloat(inp.value)||0);
+  });
+}
+
+function save(){
+  if(!sb){toast("La librería no cargó. Revisa tu internet y recarga.",true);return;}
+  collect();
+  var btn=document.getElementById("saveBtn"); btn.disabled=true; btn.textContent="Guardando…";
+  var chain=Promise.resolve();
+  data.forEach(function(s){
+    chain=chain.then(function(){
+      return sb.from("resenas_google").update({
+        rating:s.rating,total:s.total,month_new:s.month_new,link:s.link,updated_at:new Date().toISOString()
+      }).eq("id",s.id).then(function(res){ if(res.error) throw res.error; });
+    });
+  });
+  chain.then(fetchData).then(function(){render();renderEdit();toast("✓ Guardado en la nube");})
+    .catch(function(e){console.error(e);toast("No se pudo guardar: "+errMsg(e),true);})
+    .then(function(){btn.disabled=false;btn.textContent="Guardar cambios";});
+}
+
+function resetMonth(){
+  collect(); data.forEach(function(s){s.month_new=0;}); renderEdit(); save();
+}
+
+var FUNC_URL="https://tnspshptvqvhhwwckzcc.supabase.co/functions/v1/actualizar-resenas-google";
+function refreshGoogle(){
+  var btn=document.getElementById("googleBtn"); btn.disabled=true; btn.textContent="Consultando Google…";
+  fetch(FUNC_URL,{method:"POST",headers:{"apikey":SUPABASE_KEY,"Content-Type":"application/json"}})
+    .then(function(r){return r.json();})
+    .then(function(j){
+      if(!j.ok){ toast("Google: "+(j.error||"error"),true); return; }
+      var okc=(j.updated||[]).filter(function(x){return x.ok;}).length;
+      var bad=(j.updated||[]).filter(function(x){return !x.ok;});
+      if(okc===0 && bad.length===0){ toast("Aún no hay Place IDs cargados.",true); }
+      else if(bad.length){ toast("Actualicé "+okc+"; falló "+bad.length+" ("+(bad[0].error||"")+")",true); }
+      else { toast("✓ "+okc+" sucursales actualizadas desde Google"); }
+      return fetchData().then(function(){render();renderEdit();});
+    })
+    .catch(function(e){toast("No se pudo llamar a Google: "+errMsg(e),true);})
+    .then(function(){btn.disabled=false;btn.textContent="🔄 Actualizar desde Google";});
+}
+
+window.save=save; window.resetMonth=resetMonth; window.refreshGoogle=refreshGoogle;
+
+(function init(){
+  if(!(window.supabase&&window.supabase.createClient)){
+    setCloud(false,"Sin librería");
+    document.getElementById("grid").innerHTML='<div class="loading">No cargó la librería de Supabase. Revisa tu conexión a internet y recarga la página.</div>';
+    return;
+  }
+  sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+  fetchData().then(function(){
+    render(); renderEdit();
+    try{
+      sb.channel("resenas-live").on("postgres_changes",
+        {event:"*",schema:"public",table:"resenas_google"},
+        function(){ fetchData().then(function(){render();renderEdit();}).catch(function(){}); }
+      ).subscribe();
+    }catch(e){ /* tiempo real opcional; no bloquea */ }
+  }).catch(function(e){
+    console.error(e); setCloud(false,"Error de conexión");
+    document.getElementById("grid").innerHTML='<div class="loading">No se pudo conectar a la nube: '+errMsg(e)+'</div>';
+  });
+})();
+</script>
+</body>
+</html>
