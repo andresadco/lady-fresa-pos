@@ -414,16 +414,20 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
       <div class="nav-section-label">Inventario</div>
       <a class="nav-item" href="https://andresadco.github.io/inventario/" target="_blank" rel="noopener" style="text-decoration:none;"><span class="nav-icon">📦</span>App de inventario ↗</a>
       <button class="nav-item" onclick="goPage('recinv',this)"><span class="nav-icon">🧾</span>Recetas → inventario</button>
-      <button class="nav-item" onclick="goPage('recetas',this)"><span class="nav-icon">📋</span>Recetas y costos (viejo)</button>
-      <button class="nav-item" onclick="goPage('inventario',this)"><span class="nav-icon">🧂</span>Insumos (costos)</button>
-      <button class="nav-item" onclick="goPage('movimientos',this)"><span class="nav-icon">↕️</span>Movimientos</button>
-      <button class="nav-item" id="nav-entradas" onclick="goPage('entradas',this)"><span class="nav-icon">📥</span>Entradas pendientes</button>
     </div>
 
     <div class="nav-section">
       <div class="nav-section-label">Finanzas</div>
-      <button class="nav-item" onclick="goPage('gastos',this)"><span class="nav-icon">💸</span>Gastos operativos</button>
+      <button class="nav-item" onclick="goPage('gastos',this)"><span class="nav-icon">💸</span>Retiros y gastos de caja</button>
     </div>
+
+    <details class="nav-section nav-archivo">
+      <summary class="nav-section-label" style="cursor:pointer;">Archivo · sistema anterior ▾</summary>
+      <button class="nav-item" onclick="goPage('recetas',this)"><span class="nav-icon">📋</span>Recetas y costos</button>
+      <button class="nav-item" onclick="goPage('inventario',this)"><span class="nav-icon">🧂</span>Insumos</button>
+      <button class="nav-item" onclick="goPage('movimientos',this)"><span class="nav-icon">↕️</span>Movimientos</button>
+      <button class="nav-item" id="nav-entradas" onclick="goPage('entradas',this)"><span class="nav-icon">📥</span>Entradas pendientes</button>
+    </details>
 
     <div class="nav-section">
       <div class="nav-section-label">Ajustes</div>
@@ -438,8 +442,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
       <button class="btn-logout" onclick="logout()">Cerrar sesión</button>
       <div style="display:flex;gap:6px;margin-top:8px;">
         <a href="index.html" style="flex:1;display:block;padding:6px;border:1px solid var(--border-2);border-radius:var(--radius-sm);font-size:11px;color:var(--text-3);text-decoration:none;text-align:center;transition:all 0.15s;" onmouseover="this.style.color='#D4537E'" onmouseout="this.style.color=''">🏪 POS</a>
-        <a href="dashboard.html" style="flex:1;display:block;padding:6px;border:1px solid var(--border-2);border-radius:var(--radius-sm);font-size:11px;color:var(--text-3);text-decoration:none;text-align:center;transition:all 0.15s;" onmouseover="this.style.color='#D4537E'" onmouseout="this.style.color=''">📊 Dashboard</a>
-        <a href="dashboard-live.html" target="_blank" style="flex:1;display:block;padding:6px;border:1px solid var(--border-2);border-radius:var(--radius-sm);font-size:11px;color:var(--text-3);text-decoration:none;text-align:center;transition:all 0.15s;" onmouseover="this.style.color='#D4537E'" onmouseout="this.style.color=''">📡 Live</a>
+        
       </div>
     </div>
   </div>
@@ -449,54 +452,19 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 
     <!-- OVERVIEW -->
     <div class="page active" id="page-overview">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
-        <div>
-          <div class="page-title" style="margin-bottom:2px;">Dashboard</div>
-          <div class="page-sub" id="dash-fecha">Cargando...</div>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <select class="form-select" id="dash-mes-sel" onchange="loadOverview()" style="font-size:13px;padding:6px 10px;max-width:180px;"></select>
-          <button class="btn btn-ghost btn-sm" onclick="loadOverview()">↻</button>
-        </div>
+      <div class="pg-head">
+        <div><div class="page-title">Resumen</div><div class="page-sub" id="dash-fecha">Cargando…</div></div>
+        <div class="pg-actions"><select class="form-select" id="dash-mes-sel" onchange="loadOverview()" style="max-width:200px;"></select><button class="btn btn-secondary" onclick="loadOverview()">↻</button></div>
       </div>
-
-      <!-- BLOQUE 1: KPIs operativos -->
-      <div id="dash-kpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;"></div>
-
-      <!-- BLOQUE 2: Ventas + Gastos del mes -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
-        <div class="card">
-          <div class="card-title">💰 Ventas del mes</div>
-          <div id="dash-ventas-mes"></div>
-        </div>
-        <div class="card">
-          <div class="card-title">💸 Gastos del mes</div>
-          <div id="dash-gastos-mes"></div>
-        </div>
-      </div>
-
-      <!-- BLOQUE 3: Inventario -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
-        <div class="card">
-          <div class="card-title">⚠️ Stock bajo</div>
-          <div id="dash-stock-bajo"></div>
-        </div>
-        <div class="card">
-          <div class="card-title">📦 Top consumo este mes</div>
-          <div id="dash-top-consumo"></div>
-        </div>
-      </div>
-
-      <!-- BLOQUE 4: Costos por producto -->
-      <div class="card" style="margin-bottom:20px;">
-        <div class="card-title">🍓 Margen estimado por producto</div>
-        <div id="dash-margenes"></div>
-      </div>
-
-      <!-- BLOQUE 5: Últimos turnos -->
-      <div class="card">
-        <div class="card-title">🔒 Últimos turnos cerrados</div>
-        <div id="overview-turnos"></div>
+      <div id="ov-alertas"></div>
+      <div id="dash-kpis" class="kpi-row"></div>
+      <div class="rep-grid">
+        <div class="card"><div class="card-title">Ventas por sucursal</div><div id="ov-suc"></div></div>
+        <div class="card"><div class="card-title">Ventas por día</div><div id="ov-dias"></div></div>
+        <div class="card"><div class="card-title"><span>Gastos del mes <small style="color:var(--text-3);font-weight:400;">· app de gastos</small></span></div><div id="ov-gastos"></div></div>
+        <div class="card"><div class="card-title"><span>Stock bajo hoy</span><a href="https://andresadco.github.io/inventario/" target="_blank" rel="noopener" style="font-size:12px;color:#A6182E;">Inventario ↗</a></div><div id="ov-stock"></div></div>
+        <div class="card"><div class="card-title"><span>💖 Lady Lovers</span><a href="#" onclick="event.preventDefault();goPage('lovers',[...document.querySelectorAll('.nav-item')].find(b=>(b.getAttribute('onclick')||'').includes('lovers')))" style="font-size:12px;color:#A6182E;">Ver →</a></div><div id="ov-ll"></div></div>
+        <div class="card"><div class="card-title"><span>Últimos cortes</span><a href="#" onclick="event.preventDefault();goPage('turnos',[...document.querySelectorAll('.nav-item')].find(b=>(b.getAttribute('onclick')||'').includes('turnos')))" style="font-size:12px;color:#A6182E;">Ver todos →</a></div><div id="overview-turnos"></div></div>
       </div>
     </div>
 
@@ -515,7 +483,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
         <div class="roles-help">
           <div><span class="badge badge-cajero">cajero</span> Cobra y abre/usa su turno.</div>
           <div><span class="badge badge-encargado">encargado</span> Además: descuentos y corte de caja.</div>
-          <div><span class="badge badge-gerente">gerente</span> Además: pantalla Hoy, Club, cambiar de sucursal y entrar a este panel.</div>
+          <div><span class="badge badge-gerente">gerente</span> Además: pantalla Hoy, Lady Lovers, cambiar de sucursal y entrar a este panel.</div>
           <div><span class="badge badge-admin">admin</span> Todo lo anterior.</div>
         </div>
       </div>
@@ -555,6 +523,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 
     <!-- INVENTARIO - INSUMOS -->
     <div class="page" id="page-inventario">
+      <div class="alert">🗄️ Esto es del sistema de inventario anterior. El inventario que se usa hoy es el <a href="https://andresadco.github.io/inventario/" target="_blank" rel="noopener">app de inventario</a> y lo que descuenta cada venta se configura en <b>Recetas → inventario</b>.</div>
       <div class="page-title">Insumos</div>
       <div class="page-sub">Ingredientes, empaques y desechables</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
@@ -576,6 +545,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 
     <!-- INVENTARIO - RECETAS -->
     <div class="page" id="page-recetas">
+      <div class="alert">🗄️ Esto es del sistema de inventario anterior. El inventario que se usa hoy es el <a href="https://andresadco.github.io/inventario/" target="_blank" rel="noopener">app de inventario</a> y lo que descuenta cada venta se configura en <b>Recetas → inventario</b>.</div>
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
         <div>
           <div class="page-title" style="margin-bottom:2px;">Recetas</div>
@@ -629,6 +599,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 
     <!-- INVENTARIO - ENTRADAS PENDIENTES -->
     <div class="page" id="page-entradas">
+      <div class="alert">🗄️ Esto es del sistema de inventario anterior. El inventario que se usa hoy es el <a href="https://andresadco.github.io/inventario/" target="_blank" rel="noopener">app de inventario</a> y lo que descuenta cada venta se configura en <b>Recetas → inventario</b>.</div>
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;gap:10px;flex-wrap:wrap;">
         <div>
           <div class="page-title" style="margin-bottom:2px;">Entradas pendientes</div>
@@ -661,6 +632,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 
     <!-- INVENTARIO - MOVIMIENTOS -->
     <div class="page" id="page-movimientos">
+      <div class="alert">🗄️ Esto es del sistema de inventario anterior. El inventario que se usa hoy es el <a href="https://andresadco.github.io/inventario/" target="_blank" rel="noopener">app de inventario</a> y lo que descuenta cada venta se configura en <b>Recetas → inventario</b>.</div>
       <div class="page-title">Movimientos</div>
       <div class="page-sub">Entradas, salidas, mermas y ajustes</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
@@ -735,6 +707,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
       <div class="m-toolbar">
         <div class="chips" id="turnos-suc"></div>
         <div class="chips" id="turnos-estado"></div>
+        <div class="chips" id="turnos-rango"></div>
       </div>
       <div id="turnos-kpis" class="kpi-row"></div>
       <div id="tbody-turnos" class="t-list"><div class="empty">Cargando…</div></div>
@@ -1169,13 +1142,12 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
       </div>
       <div class="form-group"><label class="form-label">Tipo</label>
         <select class="form-select" id="promo-tipo" onchange="onPromoTipoChange()">
-          <option value="porcentaje">% Porcentaje</option>
-          <option value="monto_fijo">$ Monto fijo</option>
-          <option value="codigo">🔑 Código de descuento</option>
-          <option value="2x1">2×1 Producto</option>
-          <option value="hora">⏰ Por hora (happy hour)</option>
-          <option value="cumpleanos">🎂 Cumpleaños</option>
+          <option value="codigo">🔑 Código (el cajero lo escribe)</option>
+          <option value="hora">⏰ Happy hour (se aplica sola en ese horario)</option>
         </select>
+      </div>
+      <div class="form-group"><label class="form-label">Descuento en</label>
+        <select class="form-select" id="promo-es-monto" onchange="onPromoTipoChange()"><option value="false">% porcentaje</option><option value="true">$ pesos</option></select>
       </div>
       <div class="form-group" id="promo-valor-wrap"><label class="form-label" id="promo-valor-label">Valor (%)</label>
         <input class="form-input" id="promo-valor" type="number" placeholder="0" step="0.5">
@@ -1198,12 +1170,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
       <div class="form-group"><label class="form-label">Usos máximos</label>
         <input class="form-input" id="promo-usos" type="number" placeholder="Vacío = ilimitado">
       </div>
-      <div class="form-group"><label class="form-label">Aplica a</label>
-        <select class="form-select" id="promo-aplica">
-          <option value="todo">Todo el ticket</option>
-          <option value="categoria">Categoría específica</option>
-        </select>
-      </div>
+      <input type="hidden" id="promo-aplica" value="todo">
       <div class="form-group full"><label class="form-label">Descripción interna</label>
         <input class="form-input" id="promo-desc" placeholder="Nota interna para el equipo...">
       </div>
@@ -1374,13 +1341,15 @@ function updateDots() {
 async function pinEnter() {
   if (pinBuffer.length < 4) return;
   try {
-    const res = await fetch(`${SB_URL}/rest/v1/users?pin=eq.${pinBuffer}&active=eq.true&select=*`, { headers: { apikey:SB_KEY, Authorization:'Bearer '+SB_KEY } });
-    const users = await res.json();
+    const res = await fetch(`${SB_URL}/rest/v1/rpc/pos_login`, { method:'POST', headers:SB_H, body:JSON.stringify({p_pin:pinBuffer,p_origen:'admin'}) });
+    const j = await res.json();
+    const users = j&&j.ok ? [j.user] : [];
     if (!users.length || !['admin','gerente'].includes(users[0].role)) {
-      document.getElementById('login-error').textContent = 'Acceso denegado — solo admin/gerente';
+      document.getElementById('login-error').textContent = j&&j.error==='bloqueado' ? 'Demasiados intentos. Espera 5 minutos.' : (users.length ? 'Acceso denegado — solo admin/gerente' : 'PIN incorrecto');
       pinBuffer=''; updateDots(); return;
     }
-    currentUser = users[0];
+    currentUser = users[0]; currentUser._pin = pinBuffer; pinBuffer=''; updateDots();
+    document.body.classList.toggle('rol-gerente', currentUser.role!=='admin');
     document.getElementById('sb-avatar').textContent = currentUser.name.charAt(0).toUpperCase();
     document.getElementById('sb-name').textContent = currentUser.name;
     document.getElementById('login-screen').style.display = 'none';
@@ -1594,344 +1563,99 @@ async function sbPost(table, data) {
   const res = await fetch(`${SB_URL}/rest/v1/${table}`, { method:'POST', headers:SB_H, body:JSON.stringify(data) });
   return res;
 }
+async function sbUpsertConfig(pares){
+  const r = await fetch(`${SB_URL}/rest/v1/config?on_conflict=key`, { method:'POST', headers:Object.assign({}, SB_H, {Prefer:'resolution=merge-duplicates,return=minimal'}), body: JSON.stringify(pares) });
+  return r.ok;
+}
 async function sbPatch(table, id, data) {
   const res = await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`, { method:'PATCH', headers:SB_H, body:JSON.stringify(data) });
   return res;
 }
 
+function showToast(msg){ toast(msg); }
 function toast(msg) {
   const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'), 2500);
 }
-function fmt(n) { return '$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2}); }
+function fmt(n) { return '$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
 // ── OVERVIEW ──
+function rangoMX(a,b){ return `created_at=gte.${encodeURIComponent(a+'T00:00:00-06:00')}&created_at=lte.${encodeURIComponent(b+'T23:59:59.999-06:00')}`; }
+function pctCambio(a,b){ if(!b) return ''; const p=Math.round((a-b)/b*100); return `<span style="color:${p>=0?'#1f7a45':'#b3261e'};font-weight:600;">${p>=0?'▲':'▼'} ${Math.abs(p)}%</span>`; }
 async function loadOverview() {
-  var hoy = new Date(new Date().toLocaleString('en-US', {timeZone:'America/Mexico_City'}));
-  var todayISO = hoy.getFullYear() + '-' + String(hoy.getMonth()+1).padStart(2,'0') + '-' + String(hoy.getDate()).padStart(2,'0');
-
-  // Build month selector if empty
-  var mesSel = document.getElementById('dash-mes-sel');
-  if (!mesSel.options.length) {
-    for (var i = 0; i < 12; i++) {
-      var d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
-      var key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
-      var label = d.toLocaleDateString('es-MX', {month:'long', year:'numeric'});
-      var opt = document.createElement('option');
-      opt.value = key;
-      opt.textContent = label.charAt(0).toUpperCase() + label.slice(1);
-      if (i === 0) opt.selected = true;
-      mesSel.appendChild(opt);
-    }
+  const hoy=hoyMX();
+  const sel=document.getElementById('dash-mes-sel');
+  if(!sel.options.length){
+    const [y0,m0]=hoy.split('-').map(Number);
+    for(let i=0;i<12;i++){ let mm=m0-i, yy=y0; while(mm<=0){mm+=12;yy--;}
+      const lbl=new Date(yy,mm-1,15).toLocaleDateString('es-MX',{month:'long',year:'numeric'});
+      sel.add(new Option(lbl.charAt(0).toUpperCase()+lbl.slice(1), yy+'-'+String(mm).padStart(2,'0'))); }
   }
-  var mesISO = mesSel.value || todayISO.slice(0,7);
-  var mesInicio = mesISO + '-01';
-  var _mp = mesISO.split('-').map(Number);
-  var ultimoDia = new Date(_mp[0], _mp[1], 0).getDate();
-  var mesFin = mesISO + '-' + String(ultimoDia).padStart(2, '0');
-  var esHoy = mesISO === todayISO.slice(0,7);
-
-  var mesLabel = new Date(_mp[0], _mp[1] - 1, 1).toLocaleDateString('es-MX', {month:'long', year:'numeric'});
-  mesLabel = mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1);
-  // Always show the selected month as subtitle
-  document.getElementById('dash-fecha').textContent = mesLabel;
-
-  // Load all data in parallel
-  var [ordersHoy, ordensMes, turnos, insumos, movsMes, gastosMes, recetas, entradasConf, itemsMes] = await Promise.all([
-    sbGet('orders', 'created_at=gte.' + todayISO + 'T06:00:00&select=total,sucursal,discount_amt'),
-    sbGet('orders', 'created_at=gte.' + mesInicio + 'T06:00:00&created_at=lt.' + (function(){ var p=mesISO.split('-'); var nx=new Date(parseInt(p[0]),parseInt(p[1]),1); return nx.getFullYear()+'-'+String(nx.getMonth()+1).padStart(2,'0')+'-01'; })() + 'T06:00:00&select=id,total,sucursal,discount_amt,pay_method'),
-    sbGet('turnos', 'order=created_at.desc&limit=5&select=*'),
-    sbGet('insumos', 'activo=eq.true&select=*'),
-    sbGet('inv_movimientos', 'tipo=eq.salida&fecha=gte.' + mesInicio + '&fecha=lte.' + mesFin + '&select=insumo_id,cantidad,fecha'),
-    sbGet('gastos_operativos', 'fecha=gte.' + mesInicio + '&fecha=lte.' + mesFin + '&select=*'),
-    sbGet('recetas', 'select=producto_nombre,tipo_componente,insumo_id,cantidad,unidad_uso,modificador_opcion'),
-    appGet('gastos', 'fecha=gte.' + mesInicio + '&fecha=lte.' + mesFin + '&select=monto,concepto,cat,fecha,quien'),
-    sbGet('order_items', 'select=product_name,size,base,unit_price,qty,subtotal&order=id.desc&limit=2000'),
+  const mes=sel.value||hoy.slice(0,7), [y,m]=mes.split('-').map(Number);
+  const last=new Date(y,m,0).getDate(), ini=mes+'-01', fin=mes+'-'+String(last).padStart(2,'0');
+  const esActual=mes===hoy.slice(0,7), diaCorte=esActual?Number(hoy.slice(8,10)):last;
+  let pm=m-1, py=y; if(pm===0){pm=12;py--;}
+  const pmes=py+'-'+String(pm).padStart(2,'0'), pfin=pmes+'-'+String(Math.min(diaCorte,new Date(py,pm,0).getDate())).padStart(2,'0');
+  document.getElementById('dash-fecha').textContent=sel.options[sel.selectedIndex].text+(esActual?' · al día '+diaCorte:'')+' · todas las sucursales';
+  ['dash-kpis','ov-suc','ov-dias','ov-gastos','ov-stock','ov-ll','overview-turnos'].forEach(id=>{ document.getElementById(id).innerHTML='<div class="empty">Cargando…</div>'; });
+  const [ord, ordPrev, turnos, gastos, cats, stock, niveles, insumos, llc, llm] = await Promise.all([
+    sbGetAll('orders','select=id,total,sucursal,discount_amt,canje_monto,pay_method,created_at,status&'+rangoMX(ini,fin)),
+    sbGetAll('orders','select=total,status&'+rangoMX(pmes+'-01',pfin)),
+    sbGet('turnos','cerrado_at=not.is.null&order=cerrado_at.desc&limit=6&select=*'),
+    appGet('gastos','fecha=gte.'+ini+'&fecha=lte.'+fin+'&select=monto,cat,sucursal_id,fecha'),
+    appGet('categorias','select=cat_key,nombre,emoji'),
+    sbGetAll('lfi_stock','select=sucursal,insumo_id,cantidad'),
+    sbGetAll('lfi_niveles','select=sucursal,insumo_id,min_nivel'),
+    sbGetAll('lfi_insumos','select=id,nombre,unidad,min_tienda,activo'),
+    sbGetAll('lf_loyalty_cliente_resumen','select=puede_canjear,activo,ultima_actividad,fecha_alta'),
+    sbGetAll('lf_loyalty_sellos','select=tipo,cantidad&'+rangoMX(ini,fin)),
   ]);
-
-  var insArr   = Array.isArray(insumos)      ? insumos      : [];
-  var movArr   = Array.isArray(movsMes)      ? movsMes      : [];
-  var gasArr   = Array.isArray(gastosMes)    ? gastosMes    : [];
-  var recArr   = Array.isArray(recetas)      ? recetas      : [];
-  var ordHoy   = Array.isArray(ordersHoy)    ? ordersHoy    : [];
-  var ordMes   = Array.isArray(ordensMes)    ? ordensMes    : [];
-  var turArr   = Array.isArray(turnos)       ? turnos       : [];
-  var gastosApp = Array.isArray(entradasConf) ? entradasConf : [];
-  var itmArr   = Array.isArray(itemsMes)     ? itemsMes     : [];
-
-  var ventasHoy = ordHoy.reduce(function(s,o){ return s+(+o.total||0); }, 0);
-  var ventasMes = ordMes.reduce(function(s,o){ return s+(+o.total||0); }, 0);
-  var descuentosMes = ordMes.reduce(function(s,o){ return s+(+o.discount_amt||0); }, 0);
-  var retirosMes = gasArr.filter(function(g){ return g.categoria==='Retiro de caja'; }).reduce(function(s,g){ return s+(+g.monto||0); }, 0);
-  var gastosMesTot = gasArr.filter(function(g){ return g.categoria!=='Retiro de caja'; }).reduce(function(s,g){ return s+(+g.monto||0); }, 0);
-  var pagosEfectivo = ordMes.filter(function(o){ return o.pay_method==='efectivo'; }).reduce(function(s,o){ return s+(+o.total||0); }, 0);
-  var pagosTarjeta = ordMes.filter(function(o){ return o.pay_method==='tarjeta'; }).reduce(function(s,o){ return s+(+o.total||0); }, 0);
-  var pagosTransfer = ordMes.filter(function(o){ return o.pay_method==='transferencia'; }).reduce(function(s,o){ return s+(+o.total||0); }, 0);
-
-  // Gastos del app de gastos (todos los del mes)
-  var gastosAppMes = gastosApp.reduce(function(s,e){ return s+(+e.monto||0); }, 0);
-  var totalEgresosMes = gastosMesTot + gastosAppMes;
-
-  var insMap = {};
-  insArr.forEach(function(i){ insMap[i.id] = i; });
-
-  // Costo real de insumos consumidos este mes (salidas × costo unitario)
-  var costoInsumosMes = movArr.reduce(function(s,m){
-    var ins = insMap[m.insumo_id];
-    return s + (ins ? (ins.costo_unitario||0) * (+m.cantidad||0) : 0);
-  }, 0);
-
-  // Margen real = Ventas - costo insumos - gastos operativos - gastos app
-  var utilidadMes = ventasMes - costoInsumosMes - totalEgresosMes;
-  var margenMes = ventasMes > 0 ? Math.round((utilidadMes / ventasMes) * 100) : 0;
-
-  // ── BLOQUE 1: KPIs ──
-  var ticketProm = ordHoy.length ? Math.round(ventasHoy / ordHoy.length) : 0;
-  var stockBajoCount = insArr.filter(function(i){ return (i.stock_actual||0) <= (i.stock_minimo||0); }).length;
-  var valorStock = insArr.reduce(function(s,i){ return s + ((i.stock_actual||0) * (i.costo_unitario||0)); }, 0);
-
-  document.getElementById('dash-kpis').innerHTML = [
-    { label:'Ventas hoy', val:'$'+ventasHoy.toLocaleString('es-MX'), sub: ordHoy.length+' órdenes · $'+ticketProm+' prom', color:'var(--pink)' },
-    { label:'Ventas del mes', val:'$'+ventasMes.toLocaleString('es-MX'), sub: ordMes.length+' órdenes', color:'var(--pink)' },
-    { label:'Descuentos mes', val:descuentosMes>0?'-$'+descuentosMes.toLocaleString('es-MX'):'$0', sub: ventasMes>0?Math.round((descuentosMes/ventasMes)*100)+'% de ventas':'sin descuentos', color: descuentosMes>0?'#B45309':'var(--green)' },
-    { label:'Retiros mes', val:retirosMes>0?'$'+retirosMes.toLocaleString('es-MX'):'$0', sub:'Salidas de caja', color: retirosMes>0?'#B45309':'var(--text-3)' },
-    { label:'Margen real', val: margenMes+'%', sub:'Ventas - insumos - egresos', color: margenMes >= 30 ? 'var(--green)' : margenMes >= 0 ? '#BA7517' : '#A32D2D' },
-    { label:'⚠️ Stock bajo', val: stockBajoCount+' insumos', sub:'$'+Math.round(valorStock).toLocaleString('es-MX')+' valor total', color: stockBajoCount > 0 ? '#A32D2D' : 'var(--green)' },
-  ].map(function(k){
-    return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;">'
-      + '<div style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">' + k.label + '</div>'
-      + '<div style="font-size:24px;font-weight:700;color:' + k.color + ';line-height:1.1;">' + k.val + '</div>'
-      + '<div style="font-size:11px;color:var(--text-3);margin-top:4px;">' + k.sub + '</div>'
-      + '</div>';
-  }).join('')
-  + '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;grid-column:1/-1;">'
-  + '<div style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Métodos de pago — mes</div>'
-  + '<div style="display:flex;gap:16px;flex-wrap:wrap;">'
-  + '<span style="font-size:13px;">💵 Efectivo <strong>$'+pagosEfectivo.toLocaleString('es-MX')+'</strong></span>'
-  + '<span style="font-size:13px;">💳 Tarjeta <strong>$'+pagosTarjeta.toLocaleString('es-MX')+'</strong></span>'
-  + '<span style="font-size:13px;">📲 Transferencia <strong>$'+pagosTransfer.toLocaleString('es-MX')+'</strong></span>'
-  + '</div></div>';
-
-  // ── BLOQUE 2: Ventas por sucursal ──
-  var ventasPorSuc = {};
-  ordMes.forEach(function(o){ var s = o.sucursal||'Principal'; ventasPorSuc[s] = (ventasPorSuc[s]||0)+(+o.total||0); });
-  document.getElementById('dash-ventas-mes').innerHTML = Object.keys(ventasPorSuc).length
-    ? Object.entries(ventasPorSuc).sort(function(a,b){return b[1]-a[1];}).map(function(e){
-        var pct = ventasMes ? Math.round((e[1]/ventasMes)*100) : 0;
-        return '<div style="margin-bottom:10px;">'
-          + '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
-          +   '<span style="font-size:13px;font-weight:600;">🏪 '+e[0]+'</span>'
-          +   '<span style="font-size:13px;font-weight:700;color:var(--pink);">$'+e[1].toLocaleString('es-MX')+'</span>'
-          + '</div>'
-          + '<div style="height:6px;background:var(--bg);border-radius:3px;"><div style="height:100%;width:'+pct+'%;background:var(--pink);border-radius:3px;"></div></div>'
-          + '</div>';
-      }).join('')
-    + '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;">'
-    + '<span style="font-size:12px;color:var(--text-3);">Total mes</span>'
-    + '<span style="font-size:14px;font-weight:700;color:var(--pink);">$'+ventasMes.toLocaleString('es-MX')+'</span></div>'
-    : '<div style="text-align:center;padding:20px;color:var(--text-3);">Sin ventas este mes</div>';
-
-  // ── Gastos por categoría ──
-  var porCat = {};
-  gasArr.forEach(function(g){ porCat[g.categoria] = (porCat[g.categoria]||0)+(+g.monto||0); });
-  // Merge gastos operativos + gastos del app por categoría
-  // Map app categories to display names
-  var CAT_MAP_APP = {
-    'fruta':'Fruta Fresca','lacteos':'Lácteos y Cremas','chocolate':'Chocolate',
-    'toppings':'Toppings / Compl.','torani':'Jarabes Torani','azucar':'Azúcar / Endulz.',
-    'bebidas':'Bebidas y Varios','desechables':'Desechables','publicidad':'Publicidad',
-    'limpieza':'Limpieza','otros':'Otros'
-  };
-  var porCatApp = {};
-  gastosApp.forEach(function(e){
-    var cat = CAT_MAP_APP[e.cat] || e.cat || 'Otros';
-    porCatApp[cat] = (porCatApp[cat]||0)+(+e.monto||0);
-  });
-  var porCatMerged = Object.assign({}, porCat);
-  Object.keys(porCatApp).forEach(function(k){ porCatMerged[k] = (porCatMerged[k]||0) + porCatApp[k]; });
-
-  var costoInsumosStr = '$'+Math.round(costoInsumosMes).toLocaleString('es-MX');
-
-  document.getElementById('dash-gastos-mes').innerHTML = (Object.keys(porCatMerged).length || costoInsumosMes > 0)
-    ? Object.entries(porCatMerged).sort(function(a,b){return b[1]-a[1];}).slice(0,6).map(function(e){
-        var pct = totalEgresosMes ? Math.round((e[1]/totalEgresosMes)*100) : 0;
-        var emoji = CAT_EMOJI[e[0]] || '📦';
-        return '<div style="margin-bottom:8px;">'
-          + '<div style="display:flex;justify-content:space-between;margin-bottom:3px;">'
-          +   '<span style="font-size:12px;">'+emoji+' '+e[0]+'</span>'
-          +   '<span style="font-size:12px;font-weight:600;">$'+e[1].toLocaleString('es-MX')+'</span>'
-          + '</div>'
-          + '<div style="height:5px;background:var(--bg);border-radius:3px;"><div style="height:100%;width:'+pct+'%;background:#BA7517;border-radius:3px;"></div></div>'
-          + '</div>';
-      }).join('')
-    + '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">'
-    + '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
-    +   '<span style="font-size:11px;color:var(--text-3);">Insumos consumidos</span>'
-    +   '<span style="font-size:12px;font-weight:600;color:var(--pink);">'+costoInsumosStr+'</span>'
-    + '</div>'
-    + '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
-    +   '<span style="font-size:11px;color:var(--text-3);">Gastos operativos</span>'
-    +   '<span style="font-size:12px;font-weight:600;color:#BA7517;">$'+gastosMesTot.toLocaleString('es-MX')+'</span>'
-    + '</div>'
-    + '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
-    +   '<span style="font-size:11px;color:var(--text-3);">Compras / insumos</span>'
-    +   '<span style="font-size:12px;font-weight:600;color:#BA7517;">$'+gastosAppMes.toLocaleString('es-MX')+'</span>'
-    + '</div>'
-    + (retirosMes>0?'<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
-    +   '<span style="font-size:11px;color:var(--text-3);">Retiros de caja</span>'
-    +   '<span style="font-size:12px;font-weight:600;color:#B45309;">$'+retirosMes.toLocaleString('es-MX')+'</span>'
-    + '</div>':'')
-    + '<div style="display:flex;justify-content:space-between;padding-top:4px;border-top:1px solid var(--border);">'
-    +   '<span style="font-size:12px;font-weight:600;color:var(--text-2);">Total egresos</span>'
-    +   '<span style="font-size:14px;font-weight:700;color:#BA7517;">$'+(totalEgresosMes+costoInsumosMes).toLocaleString('es-MX')+'</span>'
-    + '</div></div>'
-    : '<div style="text-align:center;padding:20px;color:var(--text-3);">Sin egresos registrados</div>';
-
-  // ── BLOQUE 3: Stock bajo ──
-  var stockBajo = insArr.filter(function(i){ return (i.stock_actual||0) <= (i.stock_minimo||0); })
-    .sort(function(a,b){ return (a.stock_actual/Math.max(a.stock_minimo,1)) - (b.stock_actual/Math.max(b.stock_minimo,1)); });
-
-  document.getElementById('dash-stock-bajo').innerHTML = stockBajo.length
-    ? stockBajo.slice(0,8).map(function(i){
-        var pct = i.stock_minimo > 0 ? Math.min(100, Math.round((i.stock_actual/i.stock_minimo)*100)) : 0;
-        var color = pct === 0 ? '#A32D2D' : '#BA7517';
-        return '<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);">'
-          + '<div style="flex:1;min-width:0;">'
-          +   '<div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+i.nombre+'</div>'
-          +   '<div style="font-size:11px;color:'+color+';">'+i.stock_actual+' / '+i.stock_minimo+' '+i.unidad+'</div>'
-          + '</div>'
-          + '<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:'+(pct===0?'#FCEBEB':'#FAEEDA')+';color:'+color+';">'+(pct===0?'Agotado':'⚠️ Bajo')+'</span>'
-          + '</div>';
-      }).join('')
-    : '<div style="text-align:center;padding:20px;color:var(--green);font-weight:600;">✅ Todo en niveles correctos</div>';
-
-  // ── Top consumo del mes ──
-  var consumoPorIns = {};
-  movArr.forEach(function(m){ consumoPorIns[m.insumo_id] = (consumoPorIns[m.insumo_id]||0)+(+m.cantidad||0); });
-  var topConsumo = Object.entries(consumoPorIns)
-    .sort(function(a,b){return b[1]-a[1];}).slice(0,6)
-    .map(function(e){ return { ins: insMap[e[0]], cant: e[1] }; })
-    .filter(function(x){ return x.ins; });
-
-  document.getElementById('dash-top-consumo').innerHTML = topConsumo.length
-    ? topConsumo.map(function(x){
-        var costo = x.ins.costo_unitario * x.cant;
-        return '<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);">'
-          + '<div style="flex:1;">'
-          +   '<div style="font-size:13px;font-weight:600;">'+x.ins.nombre+'</div>'
-          +   '<div style="font-size:11px;color:var(--text-3);">'+x.cant.toFixed(1)+' '+x.ins.unidad+' consumidos</div>'
-          + '</div>'
-          + '<div style="text-align:right;font-size:12px;font-weight:600;color:var(--purple);">$'+costo.toFixed(2)+'</div>'
-          + '</div>';
-      }).join('')
-    : '<div style="text-align:center;padding:20px;color:var(--text-3);">Sin movimientos este mes</div>';
-
-  // ── BLOQUE 4: Márgenes reales por ventas del período ──
-  var insMapLocal = {};
-  insArr.forEach(function(i){ insMapLocal[i.id] = i; });
-
-  var recPorProd = {};
-  recArr.forEach(function(r){
-    if (!recPorProd[r.producto_nombre]) recPorProd[r.producto_nombre] = [];
-    recPorProd[r.producto_nombre].push(r);
-  });
-
-  // Calcular costo real de un item vendido usando su size y base exactos
-  function calcCostoItem(productName, size, base) {
-    var allLines = recPorProd[productName] || [];
-    if(!allLines.length) return 0;
-    var costoTotal = 0;
-
-    // Líneas de fruta: buscar modificador_opcion === size exacto
-    var frutaLines = allLines.filter(function(r){
-      return r.tipo_componente === 'fruta' && r.modificador_opcion === size;
-    });
-    // Si no hay fruta con ese size, intentar sin modificador
-    if(!frutaLines.length) frutaLines = allLines.filter(function(r){ return r.tipo_componente === 'fruta' && !r.modificador_opcion; });
-
-    // Líneas de base: buscar "size · base" exacto
-    var baseKey = size && base ? size + ' · ' + base : null;
-    var baseLines = baseKey ? allLines.filter(function(r){
-      return r.tipo_componente === 'base' && r.modificador_opcion === baseKey;
-    }) : [];
-
-    // Líneas de ingredientes generales (sin modificador)
-    var ingLines = allLines.filter(function(r){
-      return (r.tipo_componente === 'ingrediente' || !r.tipo_componente) && !r.modificador_opcion;
-    });
-
-    var toProcess = frutaLines.concat(baseLines).concat(ingLines);
-    toProcess.forEach(function(l){
-      var ins = insMapLocal[l.insumo_id];
-      if(!ins) return;
-      var uu = l.unidad_uso || ins.unidad;
-      var f = getConvFactor(uu, ins.unidad);
-      var cantBase = f ? l.cantidad * f : l.cantidad;
-      costoTotal += ins.costo_unitario * cantBase;
-    });
-    return costoTotal;
-  }
-
-  // Agrupar ventas reales por producto
-  var ventasPorProd = {};
-  itmArr.forEach(function(item){
-    var n = item.product_name;
-    if(!ventasPorProd[n]) ventasPorProd[n] = { ventas:0, costo:0, unidades:0 };
-    var costoItem = calcCostoItem(n, item.size, item.base);
-    ventasPorProd[n].ventas  += (+item.subtotal||0) * (+item.qty||1);
-    ventasPorProd[n].costo   += costoItem * (+item.qty||1);
-    ventasPorProd[n].unidades += (+item.qty||1);
-  });
-
-  var margenesHtml = Object.entries(ventasPorProd)
-    .filter(function(e){ return e[1].ventas > 0; })
-    .sort(function(a,b){ return b[1].ventas - a[1].ventas; })
-    .slice(0,10)
-    .map(function(e){
-      var nombre = e[0], d = e[1];
-      var ganancia = d.ventas - d.costo;
-      var margen = d.ventas > 0 ? Math.round((ganancia / d.ventas) * 100) : 0;
-      var margenColor = margen >= 60 ? 'var(--green)' : margen >= 40 ? '#BA7517' : '#A32D2D';
-      return '<tr>'
-        + '<td><strong>'+nombre+'</strong><div style="font-size:10px;color:var(--text-3);">'+d.unidades+' uds vendidas</div></td>'
-        + '<td style="color:var(--text-3);">$'+(d.costo/d.unidades).toFixed(2)+'</td>'
-        + '<td style="font-weight:600;">$'+d.ventas.toLocaleString('es-MX')+'</td>'
-        + '<td><span style="font-weight:700;color:'+margenColor+';">'+margen+'%</span></td>'
-        + '<td style="color:var(--green);">$'+ganancia.toLocaleString('es-MX')+'</td>'
-        + '</tr>';
-    }).join('');
-
-  document.getElementById('dash-margenes').innerHTML = margenesHtml
-    ? '<table class="data-table" style="font-size:12px;">'
-      + '<thead><tr><th>Producto</th><th>Costo prom/ud</th><th>Ventas período</th><th>Margen</th><th>Ganancia</th></tr></thead>'
-      + '<tbody>'+margenesHtml+'</tbody></table>'
-      + '<div style="font-size:11px;color:var(--text-3);margin-top:8px;">* Basado en ventas reales del período seleccionado · Costo = fruta + base vendida</div>'
-    : '<div style="text-align:center;padding:20px;color:var(--text-3);">Sin ventas en este período o sin recetas capturadas</div>';
-
-  // ── BLOQUE 5: Últimos turnos ──
-  document.getElementById('overview-turnos').innerHTML = !turArr.length
-    ? '<div style="text-align:center;padding:20px;color:var(--text-3);">Sin turnos cerrados aún</div>'
-    : turArr.map(function(t){
-        var dif = t.diferencia_caja||0;
-        var difColor = dif===0?'var(--green)':dif>0?'var(--blue)':'#A32D2D';
-        var difLabel = dif===0?'✅ Cuadre exacto':dif>0?'↑ Sobran $'+Math.abs(dif).toLocaleString('es-MX'):'↓ Faltan $'+Math.abs(dif).toLocaleString('es-MX');
-        return '<div style="padding:12px 0;border-bottom:1px solid var(--border);">'
-          + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">'
-          + '<div style="flex:1;">'
-          +   '<div style="font-size:13px;font-weight:500;">'+(t.cajero_name||'—')+' · '+(t.sucursal||'—')+'</div>'
-          +   '<div style="font-size:11px;color:var(--text-3);">'+new Date(t.cerrado_at||t.created_at).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})+'</div>'
-          + '</div>'
-          + '<div style="text-align:right;">'
-          +   '<div style="font-size:13px;font-weight:600;color:var(--pink);">$'+(+t.total_ventas||0).toLocaleString('es-MX')+'</div>'
-          +   '<div style="font-size:11px;color:var(--text-3);">'+(t.total_ordenes||0)+' órdenes</div>'
-          + '</div></div>'
-          + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
-          + (t.total_retiros>0?'<span style="font-size:11px;background:#FDF3DC;color:#B45309;padding:2px 8px;border-radius:6px;">💸 Retiros $'+Number(t.total_retiros).toLocaleString('es-MX')+'</span>':'')
-          + (t.diferencia_caja!=null?'<span style="font-size:11px;background:var(--bg);color:'+difColor+';padding:2px 8px;border-radius:6px;">'+difLabel+'</span>':'')
-          + '</div>'
-          + '</div>';
-      }).join('');
+  const O=(ord||[]).filter(o=>o.status!=='cancelada'), canc=(ord||[]).filter(o=>o.status==='cancelada');
+  const P=(ordPrev||[]).filter(o=>o.status!=='cancelada');
+  const sum=(a,k)=>a.reduce((s,o)=>s+(+o[k]||0),0);
+  const venta=sum(O,'total'), ventaPrev=sum(P,'total');
+  const hoyO=O.filter(o=>fechaMXde(o.created_at)===hoy);
+  const desc=sum(O,'discount_amt'), regalos=sum(O,'canje_monto');
+  const G=Array.isArray(gastos)?gastos:[], gastoTot=G.reduce((s,g)=>s+(+g.monto||0),0);
+  document.getElementById('dash-kpis').innerHTML=`
+    <div class="kpi"><div class="k-l">Ventas del mes</div><div class="k-v">${fmt(venta)}</div><div class="k-s">${ventaPrev?pctCambio(venta,ventaPrev)+' vs. mes pasado al día '+diaCorte:O.length+' órdenes'}</div></div>
+    ${esActual?`<div class="kpi"><div class="k-l">Hoy</div><div class="k-v">${fmt(sum(hoyO,'total'))}</div><div class="k-s">${hoyO.length} órdenes</div></div>`:''}
+    <div class="kpi"><div class="k-l">Ticket promedio</div><div class="k-v">${fmt(O.length?venta/O.length:0)}</div><div class="k-s">${O.length} órdenes</div></div>
+    <div class="kpi"><div class="k-l">Descuentos y regalos</div><div class="k-v">${fmt(desc+regalos)}</div><div class="k-s">${regalos?fmt(regalos)+' en regalos Lady Lovers':(venta?Math.round(desc/(venta+desc)*100)+'% de la venta':'')}</div></div>
+    <div class="kpi"><div class="k-l">Cancelaciones</div><div class="k-v" style="color:${canc.length?'#8a5a00':'inherit'}">${canc.length}</div><div class="k-s">${fmt(sum(canc,'total'))}</div></div>
+    <div class="kpi"><div class="k-l">Gastos del mes</div><div class="k-v">${fmt(gastoTot)}</div><div class="k-s">${venta?'Ventas − gastos: '+fmt(venta-gastoTot):'capturados en el app de gastos'}</div></div>`;
+  const porSuc={},nSuc={}; O.forEach(o=>{const k=o.sucursal||'—'; porSuc[k]=(porSuc[k]||0)+(+o.total||0); nSuc[k]=(nSuc[k]||0)+1;});
+  document.getElementById('ov-suc').innerHTML=Object.keys(porSuc).length?barras(Object.entries(porSuc).sort((a,b)=>b[1]-a[1]).map(([k,v])=>['🏪 '+escH(k),v,nSuc[k]+' órd.']),fmt):'<div class="empty">Sin ventas en el POS este mes</div>';
+  const porDia={}; O.forEach(o=>{const k=fechaMXde(o.created_at); porDia[k]=(porDia[k]||0)+(+o.total||0);});
+  const maxD=Math.max(1,...Object.values(porDia)); let dh='';
+  for(let d=1; d<=last; d++){ const k=mes+'-'+String(d).padStart(2,'0'), v=porDia[k]||0; dh+=`<div title="${d}: ${fmt(v)}"><i style="height:${(v/maxD*100).toFixed(1)}%;${k===hoy?'background:#A6182E;':''}"></i>${d%5===0||d===1?d:''}</div>`; }
+  document.getElementById('ov-dias').innerHTML=O.length?`<div class="hours">${dh}</div><div class="m-hint" style="margin-top:6px;">Mejor día: ${(()=>{const b=Object.entries(porDia).sort((a,b)=>b[1]-a[1])[0]; return b?fmtDia(b[0])+' · '+fmt(b[1]):'—';})()}</div>`:'<div class="empty">—</div>';
+  const catN={}; (Array.isArray(cats)?cats:[]).forEach(c=>catN[c.cat_key]=(c.emoji?c.emoji+' ':'')+c.nombre);
+  const porCat={}; G.forEach(g=>{const k=g.cat||'otros'; porCat[k]=(porCat[k]||0)+(+g.monto||0);});
+  document.getElementById('ov-gastos').innerHTML=G.length?barras(Object.entries(porCat).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([k,v])=>[escH(catN[k]||k),v,Math.round(v/gastoTot*100)+'%']),fmt):'<div class="empty">Sin gastos capturados este mes</div>';
+  const ins={}; (insumos||[]).forEach(i=>ins[i.id]=i);
+  const niv={}; (niveles||[]).forEach(n=>niv[n.sucursal+'|'+n.insumo_id]=+n.min_nivel);
+  const bajos=(stock||[]).filter(st=>st.sucursal!=='centro'&&ins[st.insumo_id]&&ins[st.insumo_id].activo!==false).map(st=>{
+    const min=niv[st.sucursal+'|'+st.insumo_id]??(+ins[st.insumo_id].min_tienda||0);
+    return {suc:st.sucursal, i:ins[st.insumo_id], c:+st.cantidad||0, min};
+  }).filter(x=>x.min>0&&x.c<x.min).sort((a,b)=>(a.c/a.min)-(b.c/b.min));
+  const cntSuc={}; bajos.forEach(b=>cntSuc[b.suc]=(cntSuc[b.suc]||0)+1);
+  document.getElementById('ov-stock').innerHTML=bajos.length?`<div class="chips" style="margin-bottom:8px;flex-wrap:wrap;">${Object.entries(cntSuc).map(([k,v])=>`<span class="tag warn">${escH(k)}: ${v}</span>`).join('')}</div>`+bajos.slice(0,8).map(b=>`<div class="kv"><span>${escH(b.i.nombre)} <small style="color:var(--text-3)">${escH(b.suc)}</small></span><b>${+b.c.toFixed(2)} / ${b.min} ${escH(b.i.unidad||'')}</b></div>`).join(''):'<div class="empty">Todo arriba del mínimo ✓</div>';
+  const L=(llc||[]).filter(c=>c.activo!==false);
+  const dorm=L.filter(c=>{const d=c.ultima_actividad||c.fecha_alta; return d&&(Date.now()-new Date(d))/864e5>=30;}).length;
+  const sMes=(llm||[]).filter(x=>x.tipo==='gana').reduce((s,x)=>s+x.cantidad,0), cMes=(llm||[]).filter(x=>x.tipo==='canje').length;
+  document.getElementById('ov-ll').innerHTML=`<div class="kv"><span>Clientas</span><b>${L.length}</b></div><div class="kv"><span>Con regalo listo</span><b>${L.filter(c=>c.puede_canjear).length}</b></div><div class="kv"><span>Dormidas (+30 días)</span><b>${dorm}</b></div><div class="kv"><span>Sellos / regalos este mes</span><b>${sMes} / ${cMes}</b></div>`;
+  const T=Array.isArray(turnos)?turnos:[];
+  document.getElementById('overview-turnos').innerHTML=!T.length?'<div class="empty">Sin cortes</div>':T.map(t=>{ const dif=+t.diferencia_caja||0;
+    return `<div class="kv" style="padding:8px 0;align-items:center;gap:8px;"><span style="flex:1;min-width:0;"><b>${escH(t.sucursal||'—')}</b> · ${fmtFecha(t.cerrado_at,{day:'numeric',month:'short'})}<br><small style="color:var(--text-3)">${escH(t.cerrado_por||t.cajero_name||'')} · ${t.total_ordenes||0} órd.</small></span>
+      <span style="text-align:right;"><b>${fmt(t.total_ventas)}</b><br><span class="tag ${Math.abs(dif)<1?'ok':dif<0?'bad':'warn'}">${Math.abs(dif)<1?'cuadrada':(dif<0?'faltan ':'sobran ')+fmt(Math.abs(dif))}</span></span></div>`; }).join('');
+  const al=[];
+  if(bajos.length) al.push(`📦 ${bajos.length} insumo${bajos.length>1?'s':''} abajo del mínimo en tiendas`);
+  const sinCorte=await sbGet('turnos','cerrado_at=is.null&select=sucursal,created_at');
+  (Array.isArray(sinCorte)?sinCorte:[]).forEach(t=>{ if(fechaMXde(t.created_at)!==hoy) al.push(`🔐 ${escH(t.sucursal)} tiene un turno abierto desde el ${fmtFecha(t.created_at,{day:'numeric',month:'short'})} sin corte`); });
+  document.getElementById('ov-alertas').innerHTML=al.map(a=>`<div class="alert">${a}</div>`).join('');
 }
+function fechaMXde(d){ return new Date(d).toLocaleDateString('en-CA',{timeZone:'America/Mexico_City'}); }
 
 // ── USUARIOS ──
 var usrFiltro='all', pinVisible={};
@@ -1940,9 +1664,17 @@ function pinDebil(pin){ pin=String(pin||''); if(PIN_DEBILES.includes(pin)) retur
   const d=pin.split('').map(Number); let up=true,dn=true; for(let i=1;i<d.length;i++){ if(d[i]!==d[i-1]+1) up=false; if(d[i]!==d[i-1]-1) dn=false; } return up||dn; }
 function pinRepetidos(){ const m={}; allUsuarios.filter(u=>u.active).forEach(u=>{ (m[u.pin]=m[u.pin]||[]).push(u.name); }); return m; }
 async function loadUsuarios() {
-  const users = await sbGet('users','order=created_at.asc&select=*');
-  allUsuarios = Array.isArray(users) ? users : [];
+  const r = await fetch(SB_URL+'/rest/v1/rpc/admin_listar_usuarios',{method:'POST',headers:SB_H,body:JSON.stringify({p_admin_pin:currentUser&&currentUser._pin})});
+  const j = r.ok ? await r.json() : null;
+  if(!j||!j.ok){ document.getElementById('tbody-usuarios').innerHTML='<div class="empty">No se pudieron cargar los usuarios. Vuelve a entrar con tu PIN.</div>'; return; }
+  allUsuarios = j.users||[];
   renderUsuarios();
+}
+async function guardarUsuarioRPC(id,data){
+  const r = await fetch(SB_URL+'/rest/v1/rpc/admin_guardar_usuario',{method:'POST',headers:SB_H,body:JSON.stringify({p_admin_pin:currentUser&&currentUser._pin,p_id:id||null,p_data:data})});
+  const j = r.ok ? await r.json() : null;
+  if(!j||!j.ok){ toast('⚠ '+((j&&j.error)||'No se guardó')); return false; }
+  return true;
 }
 function renderUsuarios(){
   const roleClr = { cajero:'badge-cajero', encargado:'badge-encargado', gerente:'badge-gerente', admin:'badge-admin' };
@@ -1970,7 +1702,7 @@ function renderUsuarios(){
         <button class="btn ${u.active?'btn-danger':'btn-secondary'} btn-sm" onclick="toggleUsuario(${u.id},${u.active})">${u.active?'Desactivar':'Activar'}</button></div>
     </div>`; }).join('');
 }
-const ROL_HELP={cajero:'Cobra y usa su turno.',encargado:'Cobra, aplica descuentos y hace el corte de caja.',gerente:'Todo lo del encargado + pantalla Hoy, Club, cambiar de sucursal y entrar a este panel.',admin:'Acceso completo, incluido este panel.'};
+const ROL_HELP={cajero:'Cobra y usa su turno.',encargado:'Cobra, aplica descuentos y hace el corte de caja.',gerente:'Todo lo del encargado + pantalla Hoy, Lady Lovers, cambiar de sucursal y entrar a este panel. No puede cambiar admins ni gerentes.',admin:'Acceso completo, incluido este panel.'};
 function pintarRolHelp(){ const r=document.getElementById('u-role').value; document.getElementById('u-role-help').textContent=ROL_HELP[r]||''; revisarPinModal(); }
 function revisarPinModal(){
   const pin=document.getElementById('u-pin').value, el=document.getElementById('u-pin-msg');
@@ -1996,8 +1728,12 @@ async function openModalUsuario(user) { if(user===undefined) user=null;
   pintarRolHelp();
 
   // Cargar sucursales en select
-  const suc = await sbGet('sucursales','active=eq.true&select=name');
-  document.getElementById('u-sucursal').innerHTML = suc.map(s=>`<option value="${s.name}" ${(user&&user.sucursal)===s.name?'selected':''}>${s.name}</option>`).join('');
+  const sucR = await sbGet('sucursales','select=name,active&order=name.asc');
+  const sucs = (Array.isArray(sucR)?sucR:[]).filter(s=>s.active!==false || (user&&user.sucursal===s.name)).map(s=>s.name);
+  if (user && user.sucursal && !sucs.includes(user.sucursal)) sucs.push(user.sucursal);
+  document.getElementById('u-sucursal').innerHTML = sucs.map(n=>`<option value="${escH(n)}" ${(user&&user.sucursal)===n?'selected':''}>${escH(n)}</option>`).join('');
+  const esAdmin = currentUser && currentUser.role === 'admin';
+  document.querySelectorAll('#u-role option').forEach(o=>{ o.disabled = !esAdmin && ['admin','gerente'].includes(o.value); });
 
   document.getElementById('modal-usuario').classList.add('open');
 }
@@ -2015,19 +1751,15 @@ async function saveUsuario() {
   if (revisarPinModal()==='dup') { toast('⚠ Ese PIN ya lo usa otra persona'); return; }
   if (editingUserId) { const prev=allUsuarios.find(u=>u.id===editingUserId); if(prev) data.active=prev.active; }
 
-  if (editingUserId) {
-    await sbPatch('users', editingUserId, data);
-    toast('✓ Usuario actualizado');
-  } else {
-    await sbPost('users', data);
-    toast('✓ Usuario creado');
-  }
+  if (!(await guardarUsuarioRPC(editingUserId, data))) return;
+  if (editingUserId && currentUser && editingUserId===currentUser.id && data.pin) currentUser._pin = data.pin;
+  toast(editingUserId ? '✓ Usuario actualizado' : '✓ Usuario creado');
   closeModal('modal-usuario');
   loadUsuarios();
 }
 
 async function toggleUsuario(id, active) {
-  await sbPatch('users', id, { active: !active });
+  if (!(await guardarUsuarioRPC(id, { active: !active }))) return;
   toast(active ? 'Usuario desactivado' : 'Usuario activado');
   loadUsuarios();
 }
@@ -2060,7 +1792,8 @@ function openModalSucursal(suc) { if(suc===undefined) suc=null;
 }
 
 async function saveSucursal() {
-  const data = { name: document.getElementById('s-name').value.trim(), direccion: document.getElementById('s-dir').value.trim(), telefono: document.getElementById('s-tel').value.trim(), active: true };
+  const data = { name: document.getElementById('s-name').value.trim(), direccion: document.getElementById('s-dir').value.trim(), telefono: document.getElementById('s-tel').value.trim() };
+  if (!editingSucId) data.active = true;
   if (!data.name) { toast('⚠ Nombre requerido'); return; }
   if (editingSucId) { await sbPatch('sucursales', editingSucId, data); toast('✓ Sucursal actualizada'); }
   else { await sbPost('sucursales', data); toast('✓ Sucursal creada'); }
@@ -2233,6 +1966,8 @@ async function openModalProducto(id) { if(id===undefined) id=null;
     }).join('');
     if (currentVal) catSel.value = currentVal;
   }
+  { const pp = id ? productsData.find(x=>x.id===id) : null;
+    if (pp && pp.cat && catSel && ![...catSel.options].some(o=>o.value===pp.cat)) catSel.add(new Option(pp.cat+' (inactiva)', pp.cat)); }
   const p = id ? productsData.find(x=>x.id===id) : null;
   editingProdId = id;
 
@@ -2357,10 +2092,15 @@ function pintarFotoPrev(){
 async function eliminarProducto(id, nombre) {
   if (!confirm(`¿Eliminar "${nombre}"? Esta acción no se puede deshacer.\n\nSi solo quieres dejar de venderlo, mejor usa "En venta" para ocultarlo.`)) return;
   try {
-    // Borrar modificadores del producto primero
-    await fetch(`${SB_URL}/rest/v1/productos_modificadores?producto_id=eq.${id}`, { method:'DELETE', headers:SB_H });
-    // Borrar producto
-    await fetch(`${SB_URL}/rest/v1/productos?id=eq.${id}`, { method:'DELETE', headers:SB_H });
+    // Si ya tiene ventas no se puede borrar (se perdería el historial): mejor ocultarlo
+    const usado = await sbGet('order_items', 'product_id=eq.'+id+'&select=id&limit=1');
+    if (Array.isArray(usado) && usado.length) {
+      if (confirm('Este producto ya tiene ventas registradas, así que no se puede borrar sin perder el historial.\n\n¿Lo oculto del POS?')) { await sbPatch('productos', id, { activo:false }); toast('Producto oculto'); closeModal('modal-producto'); renderMenu(); }
+      return;
+    }
+    const r1 = await fetch(`${SB_URL}/rest/v1/productos_modificadores?producto_id=eq.${id}`, { method:'DELETE', headers:SB_H });
+    const r2 = await fetch(`${SB_URL}/rest/v1/productos?id=eq.${id}`, { method:'DELETE', headers:SB_H });
+    if (!r1.ok || !r2.ok) { toast('⚠ No se pudo eliminar. Mejor ocúltalo con "En venta".'); return; }
     toast('✓ Producto eliminado');
     closeModal('modal-producto');
     renderMenu();
@@ -2370,9 +2110,11 @@ async function eliminarProducto(id, nombre) {
 }
 
 // ── TURNOS ──
-var turnosSuc='all', turnosEstado='cerrados', turnosData=[];
+var turnosSuc='all', turnosEstado='cerrados', turnosData=[], turnosRango='30';
 async function loadTurnos() {
-  const t = await sbGet('turnos','order=created_at.desc&limit=120&select=*');
+  let q='order=created_at.desc&select=*';
+  if(turnosRango!=='todo'){ const d=new Date(); if(turnosRango==='mes') q+='&created_at=gte.'+encodeURIComponent(hoyMX().slice(0,8)+'01T00:00:00-06:00'); else { d.setDate(d.getDate()-parseInt(turnosRango)); q+='&created_at=gte.'+encodeURIComponent(d.toISOString()); } }
+  const t = await sbGetAll('turnos',q);
   turnosData = Array.isArray(t)?t:[];
   renderTurnos();
 }
@@ -2380,6 +2122,7 @@ function fmtFecha(d,opt){ return new Date(d).toLocaleString('es-MX',Object.assig
 function renderTurnos(){
   const sucs=[...new Set(turnosData.map(t=>t.sucursal||'—'))].sort();
   document.getElementById('turnos-suc').innerHTML=['all',...sucs].map(s=>`<button class="chip ${turnosSuc===s?'on':''}" onclick="turnosSuc=${escH(JSON.stringify(s))};renderTurnos()">${s==='all'?'Todas':escH(s)}</button>`).join('');
+  document.getElementById('turnos-rango').innerHTML=[['7','7 días'],['30','30 días'],['mes','Este mes'],['todo','Todo']].map(([k,l])=>`<button class="chip ${turnosRango===k?'on':''}" onclick="turnosRango='${k}';loadTurnos()">${l}</button>`).join('');
   document.getElementById('turnos-estado').innerHTML=[['cerrados','Cerrados'],['abiertos','Abiertos'],['todos','Todos']].map(([k,l])=>`<button class="chip ${turnosEstado===k?'on':''}" onclick="turnosEstado='${k}';renderTurnos()">${l}</button>`).join('');
   const list=turnosData.filter(t=>(turnosSuc==='all'||(t.sucursal||'—')===turnosSuc)&&(turnosEstado==='todos'||(turnosEstado==='cerrados'?!!t.cerrado_at:!t.cerrado_at)));
   const cer=list.filter(t=>t.cerrado_at);
@@ -2405,7 +2148,7 @@ function renderTurnos(){
     const prods=Array.isArray(t.productos)?t.productos:[];
     return `<details class="t-card"><summary>
       <div><div class="t-when">${fmtFecha(t.cerrado_at||t.created_at,{weekday:'short',day:'2-digit',month:'short'})} · ${escH(t.sucursal||'—')}</div>
-      <div class="t-who">${escH(t.cajero_name||'—')} · ${fmtFecha(t.created_at,{hour:'2-digit',minute:'2-digit'})}${t.cerrado_at?' – '+fmtFecha(t.cerrado_at,{hour:'2-digit',minute:'2-digit'}):''}</div></div>
+      <div class="t-who">abrió ${escH(t.cajero_name||'—')}${t.cerrado_por?' · cerró '+escH(t.cerrado_por):''} · ${fmtFecha(t.created_at,{hour:'2-digit',minute:'2-digit'})}${t.cerrado_at?' – '+fmtFecha(t.cerrado_at,{hour:'2-digit',minute:'2-digit'}):''}</div></div>
       <div class="t-tot">${fmt(t.total_ventas)}</div>
       <div class="t-tags">${tags.join('')}</div></summary>
       ${abierto?`<div class="t-body"><div style="font-size:13px;color:var(--text-3);">Turno abierto desde ${fmtFecha(t.created_at,{hour:'2-digit',minute:'2-digit'})}. El corte aparece aquí cuando lo cierren en el POS.</div></div>`:`<div class="t-body">
@@ -2429,7 +2172,26 @@ function renderTurnos(){
 }
 
 // ───────── REPORTES DE VENTA ─────────
-var repRango='hoy', repSuc='all', repOrders=[], repItems=[];
+var repRango='hoy', repSuc='all', repOrders=[], repItems=[], repCanceladas=[], repPrev=[], _costos=null;
+// Costo de insumos por pieza vendida, con las recetas de inventario y el costo del app de inventario
+async function cargarCostos(){
+  if(_costos) return _costos;
+  const [r,i]=await Promise.all([sbGetAll('pos_recetas_venta','select=producto,opcion,insumo_id,cantidad'), sbGetAll('lfi_insumos','select=id,costo')]);
+  const c={}; (i||[]).forEach(x=>c[x.id]=+x.costo||0);
+  const k={}; (r||[]).forEach(x=>{ const key=x.producto+'|'+x.opcion; k[key]=(k[key]||0)+(+x.cantidad||0)*(c[x.insumo_id]||0); });
+  _costos=k; return k;
+}
+function costoItem(it){
+  if(!_costos) return 0;
+  const sel=it.toppings||{}, one=x=>Array.isArray(x)?x[0]:x, name=it.product_name||'';
+  let tam=one(sel['Tamaño'])||it.size||''; if(!tam){ if(/chic/i.test(name)) tam='Chico'; else if(/median/i.test(name)) tam='Mediano'; }
+  const base=one(sel['Bases'])||(sel['Tipo de Crema']?null:it.base), crema=one(sel['Tipo de Crema']);
+  const keys=[name+'|']; if(tam){ keys.push('*vaso|'+tam, name+'|'+tam); if(base) keys.push('*base|'+tam+' · '+base); }
+  if(crema) keys.push(name+'|'+crema);
+  ['Toppings Incluidos','Toppings Extra Básicos','Toppings Extra Premium','Doble Topping'].forEach(g=>[].concat(sel[g]||[]).forEach(t=>keys.push('*top|'+t)));
+  [].concat(sel['Shots Extra']||[]).forEach(t=>keys.push('*shot|'+t));
+  return keys.reduce((s,k)=>s+(_costos[k]||0),0)*(+it.qty||1);
+}
 function hoyMX(off){ const d=new Date(Date.now()+(off||0)*864e5); return d.toLocaleDateString('en-CA',{timeZone:'America/Mexico_City'}); }
 function repSetRango(r){
   repRango=r; const de=document.getElementById('rep-desde'), ha=document.getElementById('rep-hasta');
@@ -2463,12 +2225,22 @@ async function loadReportes(){
   const de=document.getElementById('rep-desde').value, ha=document.getElementById('rep-hasta').value; if(!de||!ha) return;
   const body=document.getElementById('rep-body'); body.innerHTML='<div class="empty">Cargando…</div>';
   const desde=encodeURIComponent(de+'T00:00:00-06:00'), hasta=encodeURIComponent(ha+'T23:59:59.999-06:00');
-  let q=`select=id,created_at,order_number,sucursal,service_type,pay_method,subtotal,discount_amt,total,cajero_name,client_name&created_at=gte.${desde}&created_at=lte.${hasta}&order=created_at.asc`;
+  let q=`select=id,created_at,order_number,sucursal,service_type,pay_method,subtotal,discount_amt,canje_monto,total,cajero_name,client_name,status&created_at=gte.${desde}&created_at=lte.${hasta}&order=created_at.asc`;
   if(repSuc!=='all') q+='&sucursal=eq.'+encodeURIComponent(repSuc);
   try{
-    repOrders=await sbGetAll('orders',q);
+    const todas=await sbGetAll('orders',q);
+    repCanceladas=todas.filter(o=>o.status==='cancelada');
+    repOrders=todas.filter(o=>o.status!=='cancelada');
     repItems=[]; const ids=repOrders.map(o=>o.id);
-    for(let i=0;i<ids.length;i+=150){ const part=await sbGetAll('order_items',`select=order_id,product_name,size,qty,subtotal&order_id=in.(${ids.slice(i,i+150).join(',')})`); repItems=repItems.concat(part); }
+    for(let i=0;i<ids.length;i+=150){ const part=await sbGetAll('order_items',`select=order_id,product_name,size,base,toppings,qty,subtotal&order_id=in.(${ids.slice(i,i+150).join(',')})`); repItems=repItems.concat(part); }
+    // periodo anterior del mismo largo, para comparar
+    const dias=Math.round((new Date(ha)-new Date(de))/864e5)+1;
+    const pd=new Date(de+'T12:00:00'); pd.setDate(pd.getDate()-dias); const ph=new Date(de+'T12:00:00'); ph.setDate(ph.getDate()-1);
+    const iso=d=>d.toISOString().slice(0,10);
+    let qp=`select=total,status&created_at=gte.${encodeURIComponent(iso(pd)+'T00:00:00-06:00')}&created_at=lte.${encodeURIComponent(iso(ph)+'T23:59:59.999-06:00')}`;
+    if(repSuc!=='all') qp+='&sucursal=eq.'+encodeURIComponent(repSuc);
+    repPrev=(await sbGetAll('orders',qp)).filter(o=>o.status!=='cancelada');
+    await cargarCostos();
   }catch(e){ body.innerHTML='<div class="empty">Error de conexión. Intenta de nuevo.</div>'; return; }
   document.getElementById('rep-sub').textContent=(de===ha?fmtDia(de):fmtDia(de)+' – '+fmtDia(ha))+' · '+(repSuc==='all'?'todas las sucursales':repSuc);
   renderReportes(de,ha);
@@ -2481,7 +2253,9 @@ function barras(rows, fmtV){
 function renderReportes(de,ha){
   const O=repOrders, body=document.getElementById('rep-body');
   if(!O.length){ body.innerHTML='<div class="card empty">Sin ventas en estas fechas.</div>'; return; }
-  const tot=O.reduce((a,o)=>a+Number(o.total||0),0), desc=O.reduce((a,o)=>a+Number(o.discount_amt||0),0);
+  const tot=O.reduce((a,o)=>a+Number(o.total||0),0), desc=O.reduce((a,o)=>a+Number(o.discount_amt||0)+Number(o.canje_monto||0),0);
+  const totPrev=repPrev.reduce((a,o)=>a+Number(o.total||0),0);
+  const costo=repItems.reduce((a,i)=>a+costoItem(i),0);
   const piezas=repItems.reduce((a,i)=>a+Number(i.qty||0),0);
   const dias=Math.round((new Date(ha)-new Date(de))/864e5)+1;
   const grp=(arr,kf,vf)=>{const m={};arr.forEach(x=>{const k=kf(x);m[k]=(m[k]||0)+vf(x);});return m;};
@@ -2494,7 +2268,7 @@ function renderReportes(de,ha){
   const porCaj=grp(O,o=>o.cajero_name||'—',o=>Number(o.total||0)), nCaj=cnt(O,o=>o.cajero_name||'—');
   const horaKey=o=>Number(new Date(o.created_at).toLocaleString('en-US',{timeZone:'America/Mexico_City',hour:'numeric',hour12:false}))%24;
   const porHora=grp(O,horaKey,o=>Number(o.total||0));
-  const pq={},pv={}; repItems.forEach(i=>{const k=i.product_name||'—'; pq[k]=(pq[k]||0)+Number(i.qty||0); pv[k]=(pv[k]||0)+Number(i.subtotal||0);});
+  const pq={},pv={},pc={}; repItems.forEach(i=>{const k=i.product_name||'—'; pq[k]=(pq[k]||0)+Number(i.qty||0); pv[k]=(pv[k]||0)+Number(i.subtotal||0); pc[k]=(pc[k]||0)+costoItem(i);});
   const top=Object.keys(pq).sort((a,b)=>pv[b]-pv[a]);
   const tq={}; repItems.forEach(i=>{ if(i.size){ tq[i.size]=(tq[i.size]||0)+Number(i.qty||0);} });
   const sortE=m=>Object.entries(m).sort((a,b)=>b[1]-a[1]);
@@ -2504,10 +2278,12 @@ function renderReportes(de,ha){
   const mejorDia=sortE(porDia)[0];
   body.innerHTML=`
     <div class="kpi-row">
-      <div class="kpi"><div class="k-l">Ventas</div><div class="k-v">${fmt(tot)}</div>${dias>1?`<div class="k-s">${fmt(tot/dias)} por día</div>`:''}</div>
+      <div class="kpi"><div class="k-l">Ventas</div><div class="k-v">${fmt(tot)}</div><div class="k-s">${totPrev?pctCambio(tot,totPrev)+' vs. periodo anterior':''}${dias>1?(totPrev?' · ':'')+fmt(tot/dias)+' por día':''}</div></div>
       <div class="kpi"><div class="k-l">Órdenes</div><div class="k-v">${O.length}</div><div class="k-s">${piezas} productos</div></div>
       <div class="kpi"><div class="k-l">Ticket promedio</div><div class="k-v">${fmt(tot/O.length)}</div></div>
-      <div class="kpi"><div class="k-l">Descuentos</div><div class="k-v">${fmt(desc)}</div>${dias>1&&mejorDia?`<div class="k-s">Mejor día: ${fmtDia(mejorDia[0])}</div>`:''}</div>
+      <div class="kpi"><div class="k-l">Descuentos y regalos</div><div class="k-v">${fmt(desc)}</div>${dias>1&&mejorDia?`<div class="k-s">Mejor día: ${fmtDia(mejorDia[0])}</div>`:''}</div>
+      ${costo>0?`<div class="kpi"><div class="k-l">Costo de insumos</div><div class="k-v">${fmt(costo)}</div><div class="k-s">margen bruto ${Math.round((tot-costo)/tot*100)}% · estimado por receta</div></div>`:''}
+      ${repCanceladas.length?`<div class="kpi"><div class="k-l">Cancelaciones</div><div class="k-v" style="color:#8a5a00">${repCanceladas.length}</div><div class="k-s">${fmt(repCanceladas.reduce((a,o)=>a+Number(o.total||0),0))} no cuentan</div></div>`:''}
     </div>
     <div class="rep-grid">
       ${dias>1?`<div class="card"><div class="card-title">Por día</div>${barras(Object.keys(porDia).sort().map(k=>[fmtDia(k),porDia[k],nDia[k]+' órd.']),fmt)}</div>`:''}
@@ -2516,8 +2292,14 @@ function renderReportes(de,ha){
       ${repSuc==='all'?`<div class="card"><div class="card-title">Por sucursal</div>${barras(sortE(porSuc).map(([k,v])=>['🏪 '+escH(k),v,nSuc[k]+' órd.']),fmt)}</div>`:''}
       <div class="card"><div class="card-title">Por cajero</div>${barras(sortE(porCaj).map(([k,v])=>[escH(k),v,nCaj[k]+' órd.']),fmt)}</div>
       ${Object.keys(tq).length?`<div class="card"><div class="card-title">Tamaños vendidos</div>${barras(sortE(tq).map(([k,v])=>[escH(k),v]),v=>v+' pzas')}</div>`:''}
-      <div class="card" style="grid-column:1/-1;"><div class="card-title">Productos más vendidos</div>${barras(top.slice(0,15).map(k=>[escH(k),pv[k],pq[k]+' pzas']),fmt)}</div>
+      <div class="card" style="grid-column:1/-1;"><div class="card-title"><span>Productos más vendidos</span><button class="btn btn-secondary btn-sm" onclick="repCSVProductos()">⬇ CSV productos</button></div>${barras(top.slice(0,15).map(k=>[escH(k),pv[k],pq[k]+' pzas'+(pc[k]>0&&pv[k]>0?' · margen '+Math.round((pv[k]-pc[k])/pv[k]*100)+'%':'')]),fmt)}</div>
     </div>`;
+}
+function repCSVProductos(){
+  const m={}; repItems.forEach(i=>{ const k=(i.product_name||'—')+'|'+(i.size||''); m[k]=m[k]||{p:i.product_name,t:i.size||'',q:0,v:0,c:0}; m[k].q+=Number(i.qty||0); m[k].v+=Number(i.subtotal||0); m[k].c+=costoItem(i); });
+  const rows=[['producto','tamano','piezas','venta','costo_estimado']].concat(Object.values(m).sort((a,b)=>b.v-a.v).map(x=>[x.p,x.t,x.q,x.v.toFixed(2),x.c.toFixed(2)]));
+  const csv='\ufeff'+rows.map(r=>r.map(v=>{v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}).join(',')).join('\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=`productos_${document.getElementById('rep-desde').value}_${document.getElementById('rep-hasta').value}.csv`; a.click();
 }
 function repCSV(){
   if(!repOrders.length){ toast('No hay ventas para exportar'); return; }
@@ -2654,8 +2436,7 @@ async function loadLovers(){
   llCli=Array.isArray(c)?c:[]; llCfg=(Array.isArray(cfg)&&cfg[0])||{sellos_requeridos:10};
   llSucs=(Array.isArray(suc)?suc:[]).map(x=>x.name);
   document.getElementById('ll-titulo').textContent=llCfg.programa_nombre||'Lady Lovers';
-  const ini=new Date(); ini.setDate(1); ini.setHours(0,0,0,0);
-  const m=await sbGetAll('lf_loyalty_sellos',`select=tipo,cantidad,sucursal,created_at&created_at=gte.${encodeURIComponent(ini.toISOString())}`);
+  const m=await sbGetAll('lf_loyalty_sellos',`select=tipo,cantidad,sucursal,created_at&created_at=gte.${encodeURIComponent(hoyMX().slice(0,8)+'01T00:00:00-06:00')}`);
   llMovs=Array.isArray(m)?m:[];
   renderLovers();
 }
@@ -2682,8 +2463,7 @@ function renderLovers(){
   const act=llCli.filter(c=>c.activo!==false);
   const activas=act.filter(c=>llSegmento(c)==='activa').length, dormidas=act.filter(c=>llSegmento(c)==='dormida').length;
   const premio=act.filter(c=>c.puede_canjear).length;
-  const ini=new Date(); ini.setDate(1); ini.setHours(0,0,0,0);
-  const nuevas=llCli.filter(c=>new Date(c.fecha_alta)>=ini).length;
+  const nuevas=llCli.filter(c=>fechaMXde(c.fecha_alta).slice(0,7)===hoyMX().slice(0,7)).length;
   const sellosMes=llMovs.filter(m=>m.tipo==='gana').reduce((a,m)=>a+m.cantidad,0), canjesMes=llMovs.filter(m=>m.tipo==='canje').length;
   document.getElementById('ll-kpis').innerHTML=`
     <div class="kpi"><div class="k-l">Lady Lovers</div><div class="k-v">${act.length}</div><div class="k-s">${nuevas} nuevas este mes</div></div>
@@ -2762,17 +2542,40 @@ async function llAbrir(id){
   const req=llCfg.sellos_requeridos||10, n=Math.max(0,c.sellos_actuales||0);
   document.getElementById('ll-m-sellos').innerHTML=llEdit?`<div class="ll-sellos-box"><div class="n">${n}<small style="font-size:13px;color:var(--text-3);font-weight:500;">/${req}</small></div>
     <div class="ll-dots">${Array.from({length:req},(_,i)=>`<i class="${i<n?'on':''}"></i>`).join('')}</div>
-    <div style="display:flex;gap:6px;"><button class="btn btn-secondary btn-sm" onclick="llAjustar(-1)">− Sello</button><button class="btn btn-secondary btn-sm" onclick="llAjustar(1)">+ Sello</button></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">${c.puede_canjear?'<button class="btn btn-primary btn-sm" onclick="llCanjear()">🎁 Canjear regalo</button>':''}<button class="btn btn-secondary btn-sm" onclick="llAjustar(-1)" ${n<=0?'disabled':''}>− Sello</button><button class="btn btn-secondary btn-sm" onclick="llAjustar(1)">+ Sello</button></div>
     <div style="width:100%;font-size:12px;color:var(--text-3);">${c.sellos_ganados_total||0} sellos en total · ${c.canjes_hechos||0} canjes · alta ${fmtFecha(c.fecha_alta,{day:'numeric',month:'short',year:'numeric'})}</div></div>`:'';
   document.getElementById('ll-m-hist').innerHTML='';
   document.getElementById('modal-ll').classList.add('open');
   if(llEdit){
-    const m=await sbGet('lf_loyalty_sellos',`cliente_id=eq.${llEdit.id}&select=*&order=created_at.desc&limit=30`);
-    if(Array.isArray(m)&&m.length) document.getElementById('ll-m-hist').innerHTML='<h4 style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-3);margin:0 0 6px;">Historial</h4>'+m.map(x=>`<div class="kv"><span>${fmtFecha(x.created_at)} · ${escH(x.sucursal||'')}${x.motivo?' · '+escH(x.motivo):''}</span><b style="color:${x.cantidad<0?'#b3261e':'#1f7a45'}">${x.cantidad>0?'+':''}${x.cantidad}</b></div>`).join('');
+    const [m,ords]=await Promise.all([
+      sbGet('lf_loyalty_sellos',`cliente_id=eq.${llEdit.id}&select=*&order=created_at.desc&limit=30`),
+      sbGet('orders',`loyalty_cliente_id=eq.${llEdit.id}&status=neq.cancelada&select=id,total,created_at,sucursal&order=created_at.desc&limit=200`)]);
+    let h='';
+    const O=Array.isArray(ords)?ords:[];
+    if(O.length){
+      const tot=O.reduce((a,o)=>a+Number(o.total||0),0);
+      let fav='';
+      try{ const it=await sbGet('order_items',`order_id=in.(${O.slice(0,60).map(o=>o.id).join(',')})&select=product_name,qty`); const c={}; (it||[]).forEach(i=>c[i.product_name]=(c[i.product_name]||0)+i.qty); const b=Object.entries(c).sort((a,b)=>b[1]-a[1])[0]; if(b) fav=b[0]; }catch(e){}
+      h+=`<div class="kpi-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:10px;"><div class="kpi"><div class="k-l">Compras</div><div class="k-v" style="font-size:18px;">${O.length}</div></div><div class="kpi"><div class="k-l">Ha gastado</div><div class="k-v" style="font-size:18px;">${fmt(tot)}</div></div><div class="kpi"><div class="k-l">Ticket prom.</div><div class="k-v" style="font-size:18px;">${fmt(tot/O.length)}</div></div></div>${fav?`<div class="m-hint">Su favorito: <b>${escH(fav)}</b> · última compra ${fmtFecha(O[0].created_at,{day:'numeric',month:'short'})} en ${escH(O[0].sucursal||'')}</div>`:''}`;
+    }
+    if(Array.isArray(m)&&m.length) h+='<h4 style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-3);margin:8px 0 6px;">Sellos</h4>'+m.map(x=>`<div class="kv"><span>${fmtFecha(x.created_at)} · ${escH(x.sucursal||'')}${x.motivo?' · '+escH(x.motivo):''}</span><b style="color:${x.cantidad<0?'#b3261e':'#1f7a45'}">${x.cantidad>0?'+':''}${x.cantidad}</b></div>`).join('');
+    document.getElementById('ll-m-hist').innerHTML=h;
   }
+}
+async function llCanjear(){
+  if(!llEdit) return;
+  const req=llCfg.sellos_requeridos||10;
+  if(!confirm(`¿Canjear el regalo de ${llEdit.nombre}? Se le descuentan ${req} sellos.`)) return;
+  const nota=prompt('¿Dónde o por qué se entrega? (opcional)','')||'desde admin';
+  const r=await fetch(SB_URL+'/rest/v1/rpc/pos_canjear_premio',{method:'POST',headers:SB_H,body:JSON.stringify({p_cliente:llEdit.id,p_sucursal:llEdit.sucursal_alta||'',p_por:(currentUser&&currentUser.name)||'Admin',p_nota:nota})});
+  const j=r.ok?await r.json():null;
+  if(!j||!j.ok){ toast(j&&j.faltan?'Le faltan '+j.faltan+' sellos':'⚠ No se pudo canjear'); return; }
+  toast('🎁 Regalo canjeado · le quedan '+j.sellos+' sellos');
+  const id=llEdit.id; await loadLovers(); llAbrir(id);
 }
 async function llAjustar(delta){
   if(!llEdit) return;
+  if(delta<0 && (llEdit.sellos_actuales||0)<=0){ toast('No tiene sellos que quitar'); return; }
   const motivo=prompt(`${delta>0?'Sumar':'Quitar'} un sello a ${llEdit.nombre}. ¿Por qué?`,'');
   if(motivo===null) return;
   const r=await sbPost('lf_loyalty_sellos',{cliente_id:llEdit.id,tipo:'ajuste',cantidad:delta,motivo:motivo||'Ajuste desde admin',sucursal:llEdit.sucursal_alta||'',cajero_name:(currentUser&&currentUser.name)||'Admin'});
@@ -2814,7 +2617,7 @@ async function llImportar(inp){
   const rows=llParseCSV(await file.text()); if(rows.length<2){ toast('⚠ El archivo está vacío'); return; }
   const H=rows[0].map(h=>h.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''));
   const col=(...ns)=>H.findIndex(h=>ns.some(n=>h.includes(n)));
-  const iN=col('nombre','name'), iA=col('apellido','last'), iT=col('tel','phone','celular','movil','whats'), iE=col('mail','correo'), iC=col('cumple','birth','nacimiento'), iS=col('sello','punto','stamp','visita');
+  const iN=col('nombre','name'), iA=col('apellido','last'), iT=col('tel','phone','celular','movil','whats'), iE=col('mail','correo'), iC=col('cumple','birth','nacimiento'), iS=col('sello','punto','stamp','visita'), iSuc=col('sucursal','tienda','branch');
   if(iN<0||iT<0){ toast('⚠ Necesito columnas de nombre y teléfono'); return; }
   const ya=new Set(llCli.map(c=>String(c.telefono||'').replace(/\D/g,'').slice(-10)));
   const nuevos=[], sellos={};
@@ -2823,7 +2626,7 @@ async function llImportar(inp){
     const nombre=[r[iN],iA>=0?r[iA]:''].join(' ').trim(); if(!nombre) return;
     let cumple=iC>=0?String(r[iC]||'').trim():''; const m=cumple.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
     if(m) cumple=`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; if(!/^\d{4}-\d{2}-\d{2}$/.test(cumple)) cumple=null;
-    nuevos.push({nombre,telefono:'+52'+tel,email:iE>=0&&r[iE]?String(r[iE]).trim():null,cumple,sucursal_alta:llSuc!=='all'?llSuc:(llSucs[0]||'Balbuena'),notas:'Importada '+hoyMX()});
+    nuevos.push({nombre,telefono:'+52'+tel,email:iE>=0&&r[iE]?String(r[iE]).trim():null,cumple,sucursal_alta:(iSuc>=0&&llSucs.find(x=>x.toLowerCase()===String(r[iSuc]||'').trim().toLowerCase()))||(llSuc!=='all'?llSuc:null),notas:'Importada '+hoyMX()});
     const sv=iS>=0?parseInt(r[iS]):0; if(sv>0) sellos['+52'+tel]=Math.min(sv,200);
   });
   if(!nuevos.length){ toast('No hay clientas nuevas (ya estaban o sin teléfono)'); return; }
@@ -2865,18 +2668,21 @@ async function saveCajaConfig(){
 // ── CONFIG ──
 async function loadConfig() {
   const cfg = await sbGet('config','order=id.asc&select=*');
-  document.getElementById('config-rows').innerHTML = cfg.map(c=>`
+  const propias = /^(ticket_|comanda_|suc_)|^(fondo_caja|descuento_max|enviar_venta_gastos|descontar_inventario)$/;
+  const lista = (Array.isArray(cfg)?cfg:[]).filter(c=>!propias.test(c.key));
+  document.getElementById('config-rows').innerHTML = !lista.length ? '<div class="empty">Todo se configura en las otras pestañas</div>' : lista.map(c=>`
     <div class="config-row">
       <div class="config-info">
-        <div class="config-key">${c.key.split('_').join(' ')}</div>
-        <div class="config-desc">${c.descripcion||''}</div>
+        <div class="config-key">${escH(c.key.split('_').join(' '))}</div>
+        <div class="config-desc">${escH(c.descripcion||'')}</div>
       </div>
-      <input class="config-val-input" data-key="${c.key}" value="${c.value}" placeholder="${c.value}">
+      <input class="config-val-input" data-key="${escH(c.key)}" data-orig="${escH(c.value)}" value="${escH(c.value)}">
     </div>`).join('');
 }
 
 async function saveConfig() {
-  const inputs = document.querySelectorAll('.config-val-input');
+  const inputs = [...document.querySelectorAll('.config-val-input')].filter(i => i.value !== i.dataset.orig);
+  if (!inputs.length) { toast('Sin cambios'); return; }
   let ok = true;
   for (const inp of inputs) {
     const res = await fetch(`${SB_URL}/rest/v1/config?key=eq.${inp.dataset.key}`, {
@@ -2919,42 +2725,28 @@ async function loadModificadores() {
 
 function renderGrupos() {
   const container = document.getElementById('grupos-list');
-  if (!gruposData.length) {
-    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-3);">Sin grupos configurados</div>';
-    return;
-  }
-
+  if (!gruposData.length) { container.innerHTML = '<div class="empty">Sin grupos configurados</div>'; return; }
   container.innerHTML = gruposData.map(g => `
-    <div class="card" style="margin-bottom:16px;">
-      <div class="card-title" style="margin-bottom:12px;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span style="font-size:16px;">${g.activo ? '✅' : '⏸'}</span>
-          <div>
-            <div style="font-size:15px;font-weight:600;">${g.nombre}</div>
-            <div style="font-size:11px;color:var(--text-3);margin-top:2px;">
-              ${g.requerido ? '🔴 Requerido' : '⚪ Opcional'} · 
-              Selección: ${g.min_seleccion}–${g.max_seleccion}
-              ${g.label ? ' · '+g.label : ''}
-            </div>
-          </div>
-        </div>
-        <div style="display:flex;gap:6px;">
-          <button class="btn btn-secondary btn-sm" onclick="openModalOpcion(${g.id},'${g.nombre}')">+ Opción</button>
-          <button class="btn btn-secondary btn-sm" onclick="openModalGrupoEdit(${g.id})">✏️</button>
-          <button class="btn btn-sm" style="border:1px solid var(--border-2);background:${g.activo?'var(--amber-light)':'var(--green-light)'};color:${g.activo?'var(--amber)':'var(--green)'}" 
-            onclick="toggleGrupo(${g.id}, ${g.activo})">${g.activo ? 'Desactivar' : 'Activar'}</button>
-          <button class="btn btn-sm btn-danger" onclick="eliminarGrupo(${g.id},'${g.nombre}')" title="Eliminar grupo">🗑</button>
+    <div class="card" style="margin-bottom:14px;${g.activo?'':'opacity:.6;'}">
+      <div class="card-title" style="margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+        <div><div style="font-size:15px;font-weight:600;">${escH(g.nombre)} ${g.activo?'':'<span class="tag">pausado</span>'}</div>
+          <div style="font-size:12px;color:var(--text-3);margin-top:2px;">${g.requerido?'Obligatorio':'Opcional'} · elige ${g.min_seleccion}–${g.max_seleccion}${g.label?' · '+escH(g.label):''}</div></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" onclick="openModalOpcion(${g.id},(gruposData.find(x=>x.id===${g.id})||{}).nombre)">+ Opción</button>
+          <button class="btn btn-secondary btn-sm" onclick="openModalGrupoEdit(${g.id})">✏️ Editar</button>
+          <button class="btn btn-secondary btn-sm" onclick="toggleGrupo(${g.id}, ${g.activo})">${g.activo ? '⏸ Pausar' : '▶ Activar'}</button>
+          <button class="btn btn-sm btn-danger" onclick="eliminarGrupo(${g.id},(gruposData.find(x=>x.id===${g.id})||{}).nombre)" title="Eliminar grupo">🗑</button>
         </div>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;">
         ${g.opciones.length ? g.opciones.map(o => `
-          <div style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--border-2);border-radius:8px;background:${o.activo?'white':'var(--bg)'};opacity:${o.activo?1:0.5};">
-            <span style="font-size:13px;font-weight:500;color:var(--text);">${o.nombre}</span>
-            ${o.precio_extra > 0 ? `<span style="font-size:11px;color:var(--green);font-weight:600;">+$${o.precio_extra}</span>` : '<span style="font-size:11px;color:var(--text-3);">gratis</span>'}
-            <button onclick="openModalOpcionEditById(${o.id},${g.id},${o.precio_extra})" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--text-3);padding:0 2px;" title="Editar">✏️</button>
-            <button onclick="toggleOpcion(${o.id},${o.activo})" style="background:none;border:none;cursor:pointer;font-size:11px;color:${o.activo?'var(--amber)':'var(--green)'};padding:0 2px;" title="${o.activo?'Desactivar':'Activar'}">${o.activo?'⏸':'▶'}</button>
-            <button onclick="eliminarOpcionById(${o.id},${g.id})" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--red);padding:0 2px;" title="Eliminar">🗑</button>
-          </div>`).join('') : '<div style="color:var(--text-3);font-size:13px;padding:4px;">Sin opciones — agrega con el botón + Opción</div>'}
+          <div style="display:flex;align-items:center;gap:4px;padding:4px 4px 4px 12px;border:1px solid var(--border-2);border-radius:10px;background:${o.activo?'white':'var(--bg)'};opacity:${o.activo?1:0.55};">
+            <span style="font-size:13px;font-weight:500;">${escH(o.nombre)}</span>
+            <span style="font-size:12px;color:${o.precio_extra>0?'#1f7a45':'var(--text-3)'};font-weight:600;margin:0 4px;">${o.precio_extra>0?'+$'+o.precio_extra:'gratis'}</span>
+            <button class="m-edit" style="width:32px;height:32px;font-size:13px;" onclick="openModalOpcionEditById(${o.id},${g.id},${o.precio_extra})" title="Editar">✏️</button>
+            <button class="m-edit" style="width:32px;height:32px;font-size:13px;" onclick="toggleOpcion(${o.id},${o.activo})" title="${o.activo?'Pausar':'Activar'}">${o.activo?'⏸':'▶'}</button>
+            <button class="m-edit" style="width:32px;height:32px;font-size:13px;" onclick="eliminarOpcionById(${o.id},${g.id})" title="Eliminar">🗑</button>
+          </div>`).join('') : '<div style="color:var(--text-3);font-size:13px;padding:4px;">Sin opciones — agrega con "+ Opción"</div>'}
       </div>
     </div>`).join('');
 }
@@ -2992,9 +2784,8 @@ async function saveGrupo() {
     max_seleccion: parseInt(document.getElementById('g-max').value) || 1,
     label: document.getElementById('g-label').value.trim() || null,
     requerido: document.getElementById('g-req-toggle').classList.contains('on'),
-    activo: true,
-    orden: gruposData.length + 1
   };
+  if (!id) { payload.activo = true; payload.orden = gruposData.length + 1; }
   if (!payload.nombre) { showToast('El nombre es requerido', 'error'); return; }
   try {
     const url = id ? SB_URL+'/rest/v1/modificadores_grupos?id=eq.'+id : SB_URL+'/rest/v1/modificadores_grupos';
@@ -3043,15 +2834,21 @@ async function saveOpcion() {
     grupo_id: parseInt(grupoId),
     nombre: document.getElementById('op-nombre').value.trim(),
     precio_extra: parseFloat(document.getElementById('op-precio').value) || 0,
-    activo: true,
-    orden: grupo ? grupo.opciones.length + 1 : 0
   };
+  if (!id) { payload.activo = true; payload.orden = grupo ? grupo.opciones.length + 1 : 0; }
+  const anterior = id && grupo ? (grupo.opciones.find(o => o.id == id) || {}).nombre : null;
   if (!payload.nombre) { showToast('El nombre es requerido', 'error'); return; }
   try {
     const url = id ? SB_URL+'/rest/v1/modificadores_opciones?id=eq.'+id : SB_URL+'/rest/v1/modificadores_opciones';
     const method = id ? 'PATCH' : 'POST';
     const res = await fetch(url, { method, headers: SB_H, body: JSON.stringify(payload) });
     if (!res.ok) throw new Error();
+    if (anterior && anterior !== payload.nombre) {
+      // mantener ligadas las recetas de inventario (toppings, shots y bases) al nombre nuevo
+      const enc = encodeURIComponent;
+      await fetch(`${SB_URL}/rest/v1/pos_recetas_venta?producto=in.(*top,*shot)&opcion=eq.${enc(anterior)}`, { method:'PATCH', headers:SB_H, body: JSON.stringify({ opcion: payload.nombre }) });
+      for (const t of ['Chico','Mediano','Grande']) await fetch(`${SB_URL}/rest/v1/pos_recetas_venta?producto=eq.*base&opcion=eq.${enc(t+' · '+anterior)}`, { method:'PATCH', headers:SB_H, body: JSON.stringify({ opcion: t+' · '+payload.nombre }) });
+    }
     closeModal('modal-opcion');
     showToast(id ? 'Opción actualizada' : 'Opción agregada');
     loadModificadores();
@@ -3070,9 +2867,10 @@ async function toggleOpcion(id, activo) {
 async function eliminarGrupo(id, nombre) {
   if (!confirm(`¿Eliminar el grupo "${nombre}" y todas sus opciones? Esta acción no se puede deshacer.`)) return;
   try {
-    await fetch(`${SB_URL}/rest/v1/modificadores_opciones?grupo_id=eq.${id}`, { method:'DELETE', headers:SB_H });
-    await fetch(`${SB_URL}/rest/v1/productos_modificadores?grupo_id=eq.${id}`, { method:'DELETE', headers:SB_H });
-    await fetch(`${SB_URL}/rest/v1/modificadores_grupos?id=eq.${id}`, { method:'DELETE', headers:SB_H });
+    const a = await fetch(`${SB_URL}/rest/v1/modificadores_opciones?grupo_id=eq.${id}`, { method:'DELETE', headers:SB_H });
+    const b = await fetch(`${SB_URL}/rest/v1/productos_modificadores?grupo_id=eq.${id}`, { method:'DELETE', headers:SB_H });
+    const c = await fetch(`${SB_URL}/rest/v1/modificadores_grupos?id=eq.${id}`, { method:'DELETE', headers:SB_H });
+    if (!a.ok || !b.ok || !c.ok) { showToast('⚠ No se pudo eliminar completo. Mejor páusalo.'); loadModificadores(); return; }
     showToast('✓ Grupo eliminado');
     loadModificadores();
   } catch(e) { showToast('⚠ Error eliminando grupo', 'error'); }
@@ -3081,7 +2879,8 @@ async function eliminarGrupo(id, nombre) {
 async function eliminarOpcion(id, nombre, grupoId) {
   if (!confirm(`¿Eliminar la opción "${nombre}"?`)) return;
   try {
-    await fetch(`${SB_URL}/rest/v1/modificadores_opciones?id=eq.${id}`, { method:'DELETE', headers:SB_H });
+    const r = await fetch(`${SB_URL}/rest/v1/modificadores_opciones?id=eq.${id}`, { method:'DELETE', headers:SB_H });
+    if (!r.ok) { showToast('⚠ No se pudo eliminar. Mejor páusala.'); return; }
     showToast('✓ Opción eliminada');
     loadModificadores();
   } catch(e) { showToast('⚠ Error eliminando opción', 'error'); }
@@ -3105,18 +2904,18 @@ function openModalSucursalById(id) {
   if (s) openModalSucursal(s);
 }
 function eliminarProductoById(id) {
-  var PRODS = window._adminProds || [];
+  var PRODS = window._adminProds || productsData || [];
   var p = PRODS.find(function(x){return x.id===id;});
   eliminarProducto(id, p ? (p.name||p.nombre||String(id)) : String(id));
 }
 function openModalOpcionEditById(oid, gid, precio) {
-  var g = todosGrupos ? todosGrupos.find(function(x){return x.id===gid;}) : null;
+  var g = (typeof gruposData!=='undefined' && gruposData.length ? gruposData : todosGrupos||[]).find(function(x){return x.id===gid;});
   var ops = g ? (g.opciones||[]) : [];
   var o = ops.find(function(x){return x.id===oid;}) || {};
   openModalOpcionEdit(oid, gid, o.nombre||o.name||'', precio);
 }
 function eliminarOpcionById(oid, gid) {
-  var g = todosGrupos ? todosGrupos.find(function(x){return x.id===gid;}) : null;
+  var g = (typeof gruposData!=='undefined' && gruposData.length ? gruposData : todosGrupos||[]).find(function(x){return x.id===gid;});
   var ops = g ? (g.opciones||[]) : [];
   var o = ops.find(function(x){return x.id===oid;}) || {};
   eliminarOpcion(oid, o.nombre||o.name||String(oid), gid);
@@ -3415,7 +3214,7 @@ async function toggleInsumo(id, active) {
 }
 
 async function deleteInsumo(id) {
-  if (!confirm('Eliminar este insumo permanentemente?')) return;
+  if (!confirm('¿Eliminar este insumo permanentemente?')) return;
   await fetch(SB_URL + '/rest/v1/recetas?insumo_id=eq.' + id, { method:'DELETE', headers:{ apikey:SB_KEY, Authorization:'Bearer '+SB_KEY } });
   await fetch(SB_URL + '/rest/v1/inv_movimientos?insumo_id=eq.' + id, { method:'DELETE', headers:{ apikey:SB_KEY, Authorization:'Bearer '+SB_KEY } });
   await fetch(SB_URL + '/rest/v1/insumos?id=eq.' + id, { method:'DELETE', headers:{ apikey:SB_KEY, Authorization:'Bearer '+SB_KEY } });
@@ -4345,7 +4144,7 @@ async function ignorarEntrada(entradaId) {
 }
 
 async function deleteRecetaLine(id) {
-  if (!confirm('Quitar este ingrediente?')) return;
+  if (!confirm('¿Quitar este ingrediente?')) return;
   await fetch(SB_URL+'/rest/v1/recetas?id=eq.'+id,{method:'DELETE',headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}});
   toast('Ingrediente quitado');
   if (selectedProductoReceta) await renderRecetaVariantes(selectedProductoReceta);
@@ -4434,7 +4233,7 @@ async function loadPromociones() {
       headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY }
     });
     if (!res.ok) {
-      document.getElementById('promos-list').innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-3);">⚠️ Tabla promociones no existe aún. Ejecuta el script <strong>2_setup_promos.js</strong> en consola y luego crea la tabla en Supabase.</div>';
+      document.getElementById('promos-list').innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-3);">⚠️ No se pudieron cargar las promociones. Revisa la conexión e intenta de nuevo.</div>';
       return;
     }
     allPromos = await res.json();
@@ -4465,7 +4264,7 @@ function renderPromos() {
     return;
   }
 
-  var tipoLabel = { porcentaje:'% Porcentaje', monto_fijo:'$ Monto fijo', codigo:'Codigo', '2x1':'2x1', hora:'Por hora', cumpleanos:'Cumpleanos' };
+  var tipoLabel = { porcentaje:'% (no se aplica en el POS)', monto_fijo:'$ (no se aplica en el POS)', codigo:'Código', '2x1':'2×1 (no se aplica en el POS)', hora:'Happy hour', cumpleanos:'Cumpleaños (no se aplica en el POS)' };
   var tipoColor = { porcentaje:'var(--pink)', monto_fijo:'var(--green)', codigo:'var(--purple)', '2x1':'var(--amber)', hora:'var(--blue)', cumpleanos:'var(--pink)' };
 
   document.getElementById('promos-list').innerHTML = allPromos.map(function(p) {
@@ -4513,8 +4312,8 @@ function onPromoTipoChange() {
 
   codigoWrap.style.display = tipo === 'codigo' ? '' : 'none';
   horaWrap.style.display = tipo === 'hora' ? '' : 'none';
-  valorWrap.style.display = tipo === '2x1' ? 'none' : '';
-  valorLabel.textContent = tipo === 'monto_fijo' ? 'Monto ($)' : 'Descuento (%)';
+  valorWrap.style.display = '';
+  valorLabel.textContent = document.getElementById('promo-es-monto').value === 'true' ? 'Descuento ($)' : 'Descuento (%)';
 }
 
 function openModalPromo(id) { id = id || null;
@@ -4522,7 +4321,8 @@ function openModalPromo(id) { id = id || null;
   editingPromoId = id || null;
   document.getElementById('modal-promo-title').textContent = p ? 'Editar promoción' : 'Nueva promoción';
   document.getElementById('promo-nombre').value = (p&&p.nombre) || '';
-  document.getElementById('promo-tipo').value = (p&&p.tipo) || 'porcentaje';
+  document.getElementById('promo-tipo').value = (p&&['codigo','hora'].includes(p.tipo)) ? p.tipo : 'codigo';
+  document.getElementById('promo-es-monto').value = String(!!(p&&(p.es_monto||p.tipo==='monto_fijo')));
   document.getElementById('promo-valor').value = (p&&p.valor) || '';
   document.getElementById('promo-codigo').value = (p&&p.codigo) || '';
   document.getElementById('promo-hora-ini').value = (p&&p.hora_inicio) || '';
@@ -4541,6 +4341,7 @@ async function savePromo() {
   const data = {
     nombre: document.getElementById('promo-nombre').value.trim(),
     tipo: document.getElementById('promo-tipo').value,
+    es_monto: document.getElementById('promo-es-monto').value === 'true',
     valor: parseFloat(document.getElementById('promo-valor').value) || 0,
     codigo: document.getElementById('promo-codigo').value.trim().toUpperCase() || null,
     hora_inicio: document.getElementById('promo-hora-ini').value || null,
@@ -4553,6 +4354,10 @@ async function savePromo() {
     activo: document.getElementById('promo-activo-toggle').classList.contains('on'),
   };
   if (!data.nombre) { toast('⚠ Nombre requerido'); return; }
+  if (data.valor <= 0) { toast('⚠ Pon cuánto descuenta'); return; }
+  if (!data.es_monto && data.valor > 100) { toast('⚠ El porcentaje no puede pasar de 100'); return; }
+  if (data.tipo === 'codigo' && !data.codigo) { toast('⚠ Escribe el código'); return; }
+  if (data.tipo === 'hora' && (!data.hora_inicio || !data.hora_fin)) { toast('⚠ Pon la hora de inicio y fin'); return; }
 
   const url = editingPromoId
     ? SB_URL + '/rest/v1/promociones?id=eq.' + editingPromoId
@@ -4651,15 +4456,8 @@ async function saveTicketConfig() {
     { key:'ticket_mostrar_iva',    val: tog('cfg-t-iva') },
     { key:'ticket_mostrar_cajero', val: tog('cfg-t-cajero') },
   ];
-  var ok = true;
-  for (var i=0; i<fields.length; i++) {
-    var f = fields[i];
-    // Upsert: try patch first, then post if not exists
-    var r = await fetch(SB_URL + '/rest/v1/config?key=eq.' + f.key, {
-      method:'PATCH', headers:SB_H, body:JSON.stringify({ value: f.val })
-    });
-    if (!r.ok) ok = false;
-  }
+  var ok = await sbUpsertConfig(fields.map(function(f){ return { key:f.key, value:f.val }; }));
+  fields.forEach(function(f){ allConfig[f.key]=f.val; });
   toast(ok ? '✓ Ticket guardado' : '⚠ Error al guardar');
   renderTicketPreview();
 }
@@ -4754,13 +4552,7 @@ async function loadSucursalesConfig() {
 
 async function saveSucursalesConfig() {
   const inputs = document.querySelectorAll('#sucursales-config-rows [data-key]');
-  let ok = true;
-  for (const inp of inputs) {
-    const res = await fetch(SB_URL + '/rest/v1/config?key=eq.' + inp.dataset.key, {
-      method:'PATCH', headers:SB_H, body:JSON.stringify({ value: inp.value })
-    });
-    if (!res.ok) ok = false;
-  }
+  const ok = await sbUpsertConfig([...inputs].map(inp => ({ key: inp.dataset.key, value: inp.value })));
   toast(ok ? '✓ Sucursales guardadas' : '⚠ Error al guardar');
 }
 
@@ -4829,7 +4621,7 @@ async function loadGastosOperativos() {
   const months = [];
   for (var i = 0; i < 12; i++) {
     var d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-    var key = d.toISOString().slice(0, 7);
+    var key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
     var label = d.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
     months.push({ key, label });
   }
@@ -4912,7 +4704,7 @@ function renderGastosTabla() {
 function openModalGasto(g) {
   editingGastoId = g ? g.id : null;
   document.getElementById('modal-gasto-title').textContent = g ? 'Editar gasto' : 'Nuevo gasto';
-  var today = new Date().toISOString().slice(0,10);
+  var today = hoyMX();
   document.getElementById('go-fecha').value = g ? g.fecha : today;
   document.getElementById('go-monto').value = g ? g.monto : '';
   document.getElementById('go-concepto').value = g ? g.concepto : '';
