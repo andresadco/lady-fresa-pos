@@ -2231,6 +2231,7 @@ async function confirmarPago(){
     payMethod,svcType,client,cambio,discount:discountMonto>0?0:discount,discountMonto:discountMonto>0?discountMonto:0,
     cashReceived:con, paid_at:new Date().toISOString(),
     loyaltyClienteId:loyaltyCliente?.id||null, loyaltyClienteQR:loyaltyCliente?.qr_code||null,
+    loyaltyReq:loyaltyConfig?.sellos_requeridos||10, loyaltySellos:loyaltyCliente?((loyaltyCliente.sellos_actuales||0)-(loyaltyAplicarCanje&&loyaltyCliente.puede_canjear?(loyaltyConfig?.sellos_requeridos||10):0)+1):null,
     loyaltyCanje:!!loyaltyAplicarCanje, canjeAmt:canjeAmt||0,
   };
 
@@ -3874,115 +3875,164 @@ function rememberEposBase(base){
   try{localStorage.setItem('lf_printer',JSON.stringify(printerCfg));}catch{}
 }
 
+// Logo para la impresora térmica: 384x177 puntos, 1 bit (negro=1), generado de img/marca/logo-vino.png
+const LF_TICKET_LOGO={w:384,h:177,data:'AAAAAAAAAAAAAAB///4AAAAAf////4AB////+AAD///4AH///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAB///4AAAAAf////4AA/////4AB///8AH///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAB///wAAAAAf////4AA//////AA///8AH///gAAAAAAAAAAAAAAAAAAAAAAAAAAAAB///wAAAAAf////4AA//////wAf//8AH///AAAAAAAAAAAAAAAAAAAAAAAAAAAAAB///wAAAAAf////4AA//////8Af//8AP//+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///wAAAAAf////4AAf/////+AP//+AP//+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///wAAAAA/////4AAf//////AH//+AP//8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///wAAAAA/////4AAf//////gH//+Af//4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///gAAAAA/////4AAf//////wD///Af//4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///gAAAAA/////8AAf//////4B///Af//wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///gAAAAA/////8AAf//////8B///A///gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///gAAAAA/////8AAf//////8A///g///gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///gAAAAA/////8AAf//////+Af//g///AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///gAAAAB/////8AAP//////+Af//x//+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//gAAAAB/////8AAP//wP///AP//x//+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//gAAAAB//9//+AAP//wH///AP//z//8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//gAAAAB//9//+AAP//wB///AH//7//8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//gAAAAB//8//+AAP//wB///gH/////4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//gAAAAD//8//+AAP//wA///gD/////4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//gAAAAD//8//+AAP//wA///gB/////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//gAAAAD//8///AAP//wAf//gB/////gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//gAAAAD//4///AAP//wAf//gA/////gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//gAAAAH//4///AAP//wAf//gA/////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//gAAAAH//4f//AAP//wAf//wAf////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//gAAAAH//4f//gAP//wAf//wAf///+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//gAAAAH//4f//gAP//wAf//wAP///+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//gAAAAP//wf//gAP//wAf//wAP///8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//gAAAAP//wP//gAP//wAf//wAH///8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//gAAAAP//gP//wAP//wAf//wAH///4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//gAAAAP//////wAP//wAf//gAD///4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//gAADAf//////wAP//wAf//gAB///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//gAA/Af//////wAP//wA///gAB///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//////Af//////4AP//wA///gAA///gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//////Af//////4AP//wB///gAA///gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//////A///////4AP//wD///AAA///AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//////A///////8AP//wH///AAA///AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//////A///AD//8AP//wf///AAA///AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///////B///AD//8AP//////+AAA///AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///////B//+AD//+Af//////+AAA///gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///////B//+AD//+Af//////8AAA///gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///////D//+AD//+Af//////8AAA///gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///////D//+AB///Af//////4AAA///gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///////H//+AB///Af//////wAAA///gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///////H//+AB///Af//////gAAA///gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///////H//+AB///gf//////AAAB///gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///////P//+AB///gf/////+AAAB///gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB///////P//8AB///w//////4AAAB///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB///////f//8AB///w//////wAAAB///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB///////f//8AB///4/////+AAAAB///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB/AAf//////8AB///4/////wAAAAD///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwAAA//+///8AB///8////8AAAAAD///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf/////////gADgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf///////////z//////+AAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAf///////////z///////+AAAD//////////+AAAAAAAAAAAAAAAAAAAAAAAAAAAAf///////////z////////wAAD//////////+AAAAAAAAAAAAAAAAAAAAAAAAAAAAf///////////z////////+AAD//////////+AAAAAAAAAAAAAAAAAAAAAAAAAAAAf///////////z/////////gAD//////////+AAAAAAB///wAAAAAAAAAAAAAAAAAf///////////j/////////4AD//////////+AAAAAA/////4AAAAAAAAAAAAAAAAf///////////j/////////8AD//////////+AAAAAP//////gAAAAAAAAAAAAAAAf///////////j//////////AD//////////+AAAAA///////+AAAAAAAAAAAAAAAf///////////j//////////gD//////////+AAAAH////////4AAP////////gAAf///////////j//////////wD//////////+AAAAf/////////AAP////////gAAf///////////j//////////4D//////////+AAAA//////////4AP////////gAAf///////////j//////////8D//////////+AAAD//////////8AP////////gAAf///////////j//////////8D//////////+AAAH//////////8AP////////gAAf///////////j//////////+D//////////+AAAP//////////8Af////////gAAf///////////j//////////+D//////////+AAAf//////////4Af////////gAAf///////////j///////////D//////////+AAA///////////4Af////////gAAf///////////n///////////D//////////+AAB///////////4Af////////gAAf///////////n///////////j//////////+AAB///////////4Af////////gAAf///////////n///////////j//////////+AAD///////////4Af////////gAAf///////////n///////////j//////////+AAD///////////wAf////////wAAf///////////n///////////j//////////+AAD///////////wAf////////wAAf///////////n///////////z//////////+AAH///////////wAf////////wAAf///////////n///////////z//////////+AAH///////////wA/////////wAAf///////////n///////////z//////////+AAH///////////gA/////////wAAf///////////n///////////z//////////+AAH///////////gA/////////wAAf///////////n///////////z//////////+AAH///////////gA/////////wAAf///////////n///////////j//////////+AAP///////////gA/////////4AAf/////gB////n///////////j//////////+AAP///////////gA/////////4AAf/////gAAAAAH//+AA//////j//////////+AAH///////////AB/////////4AAf/////gAAAAAH//+AAH/////j/////4AAAAAAAH/////gAB///AB/////////4AAf/////gAAA/////+AAD/////j/////4AAAAAAAH////wAAAA//AB/////////4AAf/////gAAA/////+AAB/////D/////4AAAAAAAH////AAAAAD/AB/////////4AAf/////gAAA/////+AAB/////D/////4AAAAAAAH///+AAAAAAeAB/////////8AAf/////gAAB/////+AAB////+D/////4AAAAAAAD///+AAAAAACAD////5////8AAf////////B/////+AAB////+D/////4AAAAAAAD///8AAAAAAAAD////5////8AAf////////B/////+AAB////8D///////////4AB///+AAAAAAAAD////5////8AAf////////B/////+AAB////8D///////////4AB///+AAAAAAAAD////5////+AAf////////B//////gAD////4D///////////4AA////AAAAAAAAD////5////+AAf////////B//////4AH////wD///////////4AAf///wAAAAAAAH////4////+AA/////////B///////gf////gD///////////4AAP////+AAAAAAH////4////+AA/////////B/////////////AD///////////4AAH///////8AAAH////w////+AA/////////B////////////+AD///////////4AAD////////4AAH////w/////AA/////////B////////////4AD///////////4AAA/////////AAP////w/////AA/////////B////////////wAD///////////4AAAf////////4AP////wf////AA/////////B///////////+AAD///////////4AAAH////////+AP////gf////AA//////gAAB///////////wADD///////////4AAAB/////////gP////gf////gA//////gAAB////////gPwAAHD/////4AAAAAABAAAP////////4P////gf////gA//////gAAB////////wAAAAPD/////4AAAAAABgAAB////////8P////gP////gA//////gAAB////////8AAAA/D/////4AAAAAAB4AAAD///////+H////AP////gA//////gAAB/////////AAAD/D/////4AAAAAAB8AAAAAAAD////D////AP////wA//////gAAB/////9///4AAP/D/////4AAAAAAB+AAAAAAAAf///h////AH////wA//////gAAB/////8////gD//D/////4AAAAAAB/gAAAAAAAP///x///+AH////wA//////gAAB/////8////////D/////8AAAAAAB/4AAAAAAAP///w///+AH////wA//////gAAB/////8////////D////////////h/+AAAAAAAP///4//////////4A//////gAAB/////8f///////D////////////h//gAAAAAAP///4f/////////4A//////gAAB/////8f///////D////////////h//4AAAAAAP///8f/////////4A//////gAAB/////8P///////D////////////h///AAAAAAf///8f/////////4A//////gAAB/////8P///////D////////////h///4AAAAA////8f/////////8A//////gAAB/////8P///////D////////////h////gAAAD////+f/////////8A//////gAAB/////8H///////D////////////h/////gAA/////+P/////////8A//////gAAB/////8H///////D////////////h/////////////+P/////////8A//////gAAB/////8H///////D////////////h/////////////+P/////////+A//////gAAB/////8D///////D////////////h/////////////+P/////////+A//////AAAB/////8D///////D////////////h/////////////+P//4AB////+A//////AAAB/////8B///////D////////////h/////////////8f//4AB/////A//////AAAB/////8B///////D////////////h/////////////8f//4AA/////A//////AAAB/////8B///////D////////////h/////////////8f//4AA/////A//////AAAB/////8A///////D////////////h/////////////8f//wAA/////g//////AAAB/////8A///////D////////////h/////////////4f//wAA/////g//////AAAB/////8Af//////D////////////h/////////////4///wAA/////g//////AAAB/////8AP//////D////////////h/////////////4///wAA/////w//////AAAB/////8AP//////D////////////h/////////////x///wAA/////w//////AAAB/////8AH//////D////////////h/////////////x///wAAf////w//////AAAB/////8AD//////D////////////h/////////////j///wAAf////4//////AAAB/////8AB//////D////////////h/////////////D///wAAf////4//////AAAB/////8AA//////D////////////h////////////+H///wAAf////4//////AAAB/////8AAf/////D////////////h////////////8P///gAAf////8//////AAAB/////8AAP/////D////////////gP///////////4f///gAAf////8//////AAAD/////8AAD/////D////////////gB///////////w////gAAf////+//////AAAB/////8AAA/////D////////////gAP//////////B////gAAf////+//////AAAAAAAAAAAAAP////D////////////gAA/////////8D////gAAf////+//////AAAAAAAAAAAAAB///+AAAAAAAAAAAAAAAAD////////wP////gAAf/////AAAAAAAAAAAAAAAAAAAAB//wAAAAAAAAAAAAAAAAAP///////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf/////4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf///8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/AAAAAA8AAAAAP4AAAAAAAAAAAAAAAAAHwAAAAAHgAAAAAfAAAAAA/AAAAAAAAAA/AAAAAB+AAAAAP4AAAAAAAAAAAAAAAAAPwAAAAAPwAAAAAfgAAAAA/AAAAAAAAAAwAAAAADmAAAAADgAAAAAAAAAAAAAAAAAA4AAAAAMwAAAAABgAAAAAwAAAAAAAAAAwAAAAADAAAAAABgAAAAAAAAAAAAAAAAAAYAAAAAMwAAAAABwAAAAAgAAAAAAAAAAwAAAAADAAAAAABgAAAAAAAAAAAAAAAAAAYAAAAAY4AAAAABwAAAAAgAAAAAAAAAAwAAAAADgAAAAABgAAAAAAAAAAAAAAAAAAYAAAAAYYAAAAABgAAAAAgAAAAAAAAAAwAAAAABgAAAAABgAAAAAAAAAAAAAAAAAA4AAAAAYYAAAAABgAAAAAkAAAAAAAAAA/AAAAABwAAAAABgAAAAAAAAAAAAAAAAAAwAAAAAYYAAAAADgAAAAA+AAAAAAAAAA/AAAAAA4AAAAABgAAAAAAAAAAAAAAAAABwAAAAAYYAAAAADAAAAAA/AAAAAAAAAA4AAAAAAcAAAAABgAAAAAAAAAAAAAAAAABgAAAAAYYAAAAADAAAAAADAAAAAAAAAAwAAAAAAMAAAAABgAAAAAAAAAAAAAAAAABgAAAAAYYAAAAAGAAAAAADAAAAAAAAAAwAAAAAAOAAAAABgAAAAAAAAAAAAAAAAADAAAAAAYYAAAAAGAAAAAADAAAAAAAAAAwAAAAAAGAAAAABgAAAAAAAAAAAAAAAAADAAAAAAYYAAAAAMAAAAAADAAAAAAAAAAwAAAAAAGAAAAABgAAAAAAAAAAAAAAAAAHAAAAAAc4AAAAAMAAAAAADAAAAAAAAAAwAAAAAAGAAAAABgAAAAAAAAAAAAAAAAAGAAAAAAMwAAAAAcAAAAAADAAAAAAAAAA/AAAAADOAAAAADgAAAAAYAAAAAAAAAAAP4AAAAANwAAAAAfwAAAAAvAAAAAAAAAA/AAAAAD8AAAAADgAAAAA4AAAAAAAAAAAP4AAAAAHgAAAAAfwAAAAA+AAAAAAAAAA/AAAAAB4AAAAADgAAAAAYAAAAAAAAAAAP4AAAAADAAAAAAfgAAAAA8AAAAA'};
 function buildTicketXML(saleData,type='ticket'){
   const isComanda=type==='comanda';
-  // Nombres, notas y textos con & < > rompían el XML y la impresora rechazaba el ticket
-  const _t=v=>String(v).replace(/&/g,'y').replace(/</g,'(').replace(/>/g,')').replace(/"/g,"'");
+  const COLS=42;
+  // Limpia para XML y para la impresora térmica: sin & < > " y sin emojis (salen como "?" en papel)
+  const _t=v=>String(v).replace(/&/g,'y').replace(/</g,'(').replace(/>/g,')').replace(/"/g,"'")
+    .replace(/[‘’]/g,"'").replace(/[“”]/g,"'").replace(/[–—]/g,'-').replace(/…/g,'...')
+    .replace(/[^\x00-ɏ]/gu,'').replace(/ {2,}/g,' ');
   const _x=v=> typeof v==='string' ? _t(v) : (v instanceof Date) ? v : Array.isArray(v) ? v.map(_x) : (v&&typeof v==='object') ? Object.fromEntries(Object.entries(v).map(([k,w])=>[k,_x(w)])) : v;
   saleData=_x(saleData);
   const _userName=_t(currentUser?.name||'');
-  const fmtD=n=>'$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2});
-  const line=(left,right='',bold=false)=>{
-    const pad=42,l=left.substring(0,pad-right.length-1);
-    const spaces=' '.repeat(Math.max(1,pad-l.length-right.length));
-    return `<text em="${bold}">${l}${spaces}${right}&#10;</text>`;
+  const fmtD=n=>'$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+  // Cada <text> lleva TODOS sus atributos: en ePOS-Print se quedan "pegados" a las líneas siguientes si no se reinician
+  const T=(text,{a='left',b=false,w=1,h=1}={})=>`<text align="${a}" em="${b}" width="${w}" height="${h}">${text}&#10;</text>`;
+  const center=(text,bold=false)=>T(text,{a:'center',b:bold});
+  const line=(left,right='',bold=false,cols=COLS,size=1)=>{
+    const l=String(left).substring(0,cols-right.length-1);
+    return T(l+' '.repeat(Math.max(1,cols-l.length-right.length))+right,{b:bold,w:size,h:size});
   };
-  const center=(text,bold=false)=>`<text align="center" em="${bold}">${text}&#10;</text>`;
-  const divider=()=>`<text>${'─'.repeat(42)}&#10;</text>`;
+  const wrap=(txt,indent='  ',cols=COLS)=>{
+    const out=[]; let cur=indent;
+    String(txt).split(' ').forEach(w=>{
+      if(cur.trim()&&(cur+' '+w).length>cols){ out.push(cur); cur=indent+'  '+w; }
+      else cur+=(cur.trim()?' ':'')+w;
+    });
+    if(cur.trim()) out.push(cur);
+    return out;
+  };
+  const divider=(ch='-')=>T(ch.repeat(COLS));
+  const feed=n=>`<feed line="${n}"/>`;
   let xml=`<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print">`;
   const tc=_x(ticketCfg||{}), cc=_x(comandaCfg||{});
   const tcGet=(k,def)=>tc[k]||def||'';
   const ccGet=(k,def)=>cc[k]||def||'';
-  const fontTag=(fontType,text)=>{
-    if(fontType==='double') return '<text width="2" height="2">'+text+'</text>';
-    if(fontType==='bold') return '<text em="true">'+text+'</text>';
-    if(fontType==='double-bold') return '<text width="2" height="2" em="true">'+text+'</text>';
-    return '<text>'+text+'</text>';
-  };
+  const fontOpts=f=>f==='double'?{w:2,h:2}:f==='bold'?{b:true}:f==='double-bold'?{w:2,h:2,b:true}:{};
+  const servicio=saleData.svcType==='para-llevar'?'PARA LLEVAR':saleData.svcType==='delivery'?'DELIVERY':'MOSTRADOR';
+  const folio='#'+String(saleData.id).padStart(3,'0');
   if(isComanda){
     const marginTop=parseInt(ccGet('comanda_margin_top','0'))||0;
     const marginBot=parseInt(ccGet('comanda_margin_bot','0'))||0;
     const itemSpace=parseInt(ccGet('comanda_item_space','1'))||1;
     const showTitulos=ccGet('comanda_titulos_grupos','true')!=='false';
-    for(let mt=0;mt<marginTop;mt++) xml+='<text>&#10;</text>';
-    xml+=fontTag(ccGet('comanda_font_marca','bold'),'*** COMANDA ***&#10;');
-    xml+=fontTag(ccGet('comanda_font_orden','double'),'Orden #'+String(saleData.id).padStart(3,'0')+'&#10;');
-    xml+=center(timeMX(saleData.date));
-    if(saleData.client) xml+=center(saleData.client);
-    xml+=fontTag(ccGet('comanda_font_tipo','bold'),(saleData.svcType==='para-llevar'?'PARA LLEVAR':saleData.svcType==='delivery'?'DELIVERY':'MOSTRADOR')+'&#10;');
-    xml+=divider();
-    saleData.items.forEach(item=>{
-      xml+=fontTag(ccGet('comanda_font_items','bold'),'x'+item.qty+' '+item.name.substring(0,30)+'&#10;');
+    const fMods=fontOpts(ccGet('comanda_font_mods','normal'));
+    if(marginTop) xml+=feed(marginTop);
+    xml+=T('*** COMANDA ***',{a:'center',...fontOpts(ccGet('comanda_font_marca','bold'))});
+    xml+=T('ORDEN '+folio,{a:'center',w:2,h:2,b:true,...fontOpts(ccGet('comanda_font_orden','double'))});
+    if(saleData.client) xml+=T(saleData.client.substring(0,21),{a:'center',w:2,h:2,b:true});
+    xml+=T(servicio+'  ·  '+timeMX(saleData.date),{a:'center',...fontOpts(ccGet('comanda_font_tipo','bold'))});
+    if(saleData._reprint) xml+=center('** REIMPRESIÓN **',true);
+    xml+=divider('=');
+    saleData.items.forEach((item,idx)=>{
+      xml+=T(item.qty+'x '+item.name.substring(0,36),fontOpts(ccGet('comanda_font_items','bold')));
       const sel=item.sel||{};
-      if(sel['Tamaño']) xml+=fontTag(ccGet('comanda_font_mods','normal'),'  '+(showTitulos?'Tamaño: ':'')+sel['Tamaño']+'&#10;');
-      if(sel['Bases']) xml+=fontTag(ccGet('comanda_font_mods','normal'),'  '+(showTitulos?'Base: ':'')+sel['Bases']+'&#10;');
-      if(sel['Tipo de Crema']) xml+=fontTag(ccGet('comanda_font_mods','normal'),'  '+(showTitulos?'Crema: ':'')+sel['Tipo de Crema']+'&#10;');
-      // Toppings: uno por línea para que cocina no pierda ninguno (antes se cortaba a 35 caracteres)
-      const tops=[...(sel['Toppings Incluidos']||[]),...(sel['Toppings Extra Básicos']||[]),...(sel['Toppings Extra Premium']||[])];
-      tops.forEach(t=>{ xml+=fontTag(ccGet('comanda_font_mods','normal'),'  + '+t+'&#10;'); });
-      (sel['Doble Topping']||[]).forEach(t=>{ xml+=fontTag(ccGet('comanda_font_mods','normal'),'  + DOBLE '+t+'&#10;'); });
+      const mod=t=>{ xml+=T('   '+t,fMods); };
+      if(sel['Tamaño']) mod((showTitulos?'Tamaño: ':'')+sel['Tamaño']);
+      if(sel['Bases']) mod((showTitulos?'Base: ':'')+sel['Bases']);
+      if(sel['Tipo de Crema']) mod((showTitulos?'Crema: ':'')+sel['Tipo de Crema']);
+      // Toppings uno por línea para que cocina no pierda ninguno
+      [...(sel['Toppings Incluidos']||[]),...(sel['Toppings Extra Básicos']||[]),...(sel['Toppings Extra Premium']||[])].forEach(t=>mod('+ '+t));
+      (sel['Doble Topping']||[]).forEach(t=>mod('+ DOBLE '+t));
       const shots=sel['Shots Extra']||[];
-      if(shots.length) xml+=fontTag(ccGet('comanda_font_mods','normal'),'  Shot: '+shots.join(', ')+'&#10;');
-      if(item.note) xml+=fontTag(ccGet('comanda_font_notas','normal'),'  ** '+item.note.substring(0,30)+'&#10;');
-      for(let sp=0;sp<itemSpace;sp++) xml+='<text>&#10;</text>';
+      if(shots.length) mod('Shot: '+shots.join(', '));
+      if(item.note) wrap('>> '+item.note,'   ').forEach(l=>{ xml+=T(l,{b:true,...fontOpts(ccGet('comanda_font_notas','normal'))}); });
+      if(idx<saleData.items.length-1) xml+=feed(itemSpace);
     });
-    xml+=divider();
-    if(saleData.client) xml+=center(saleData.client);
-    for(let mb=0;mb<marginBot;mb++) xml+='<text>&#10;</text>';
+    xml+=divider('=');
+    const piezas=saleData.items.reduce((s,i)=>s+(Number(i.qty)||0),0);
+    xml+=center(piezas+(piezas===1?' producto':' productos'));
+    if(marginBot) xml+=feed(marginBot);
   } else {
-    const header=tcGet('ticket_encabezado','LADY FRESA');
+    const header=tcGet('ticket_encabezado','');
     const footer=tcGet('ticket_pie_pagina','');
     const ig=tcGet('ticket_instagram','');
     const wa=tcGet('ticket_whatsapp','');
-    const web=tcGet('ticket_web','ladyfresa.mx');
+    const web=tcGet('ticket_web','');
     const rfc=tcGet('ticket_rfc','');
+    const qrUrl=(ticketCfg||{}).ticket_qr_url||'';
+    const qrTxt=tcGet('ticket_qr_texto','');
+    const mostrarLogo=tcGet('ticket_mostrar_logo','true')!=='false';
     const mostrarIva=tcGet('ticket_mostrar_iva','true')!=='false';
     const mostrarCajero=tcGet('ticket_mostrar_cajero','true')!=='false';
     const mostrarMods=tcGet('ticket_mostrar_mods','true')!=='false';
     const mostrarNotas=tcGet('ticket_mostrar_notas','true')!=='false';
-    header.split('\n').forEach(ln=>{if(ln.trim()) xml+=center(ln.trim(),true);});
+    // Logo
+    if(mostrarLogo&&typeof LF_TICKET_LOGO!=='undefined'){
+      xml+=`<text align="center"/><image width="${LF_TICKET_LOGO.w}" height="${LF_TICKET_LOGO.h}" color="color_1" mode="mono">${LF_TICKET_LOGO.data}</image>`+feed(1);
+    } else xml+=T('LADY FRESA',{a:'center',b:true,w:2,h:2});
+    header.split('\n').forEach(ln=>{ if(ln.trim()) xml+=center(ln.trim()); });
+    const suc=saleData._suc||currentUser?.sucursal||'';
+    if(suc&&suc!=='Principal') xml+=center('Sucursal '+suc);
     xml+=divider();
-    xml+=center('Orden #'+String(saleData.id).padStart(3,'0'));
-    xml+=center(fmtMX(saleData.date));
+    xml+=T('ORDEN '+folio,{a:'center',b:true,w:2,h:2});
+    if(saleData.client) xml+=center('Para: '+saleData.client.substring(0,34),true);
+    xml+=center(fmtMX(saleData.date)+'  ·  '+servicio.toLowerCase().replace(/^./,c=>c.toUpperCase()));
     if(saleData._reprint) xml+=center('*** REIMPRESIÓN ***',true);
-    if(mostrarCajero&&currentUser) xml+=center('Atendió: '+(saleData._cajero_name||_userName));
+    if(mostrarCajero&&(saleData._cajero_name||_userName)) xml+=center('Te atendió: '+(saleData._cajero_name||_userName));
     xml+=divider();
     saleData.items.forEach(item=>{
-      xml+=line(item.qty+'x '+item.name.substring(0,26),fmtD(item.unitPrice*item.qty));
+      xml+=line(item.qty+'x '+item.name,fmtD(item.unitPrice*item.qty),true);
       if(mostrarMods){
         const sel=item.sel||{};
-        if(sel['Tamaño']) xml+='<text>  '+sel['Tamaño']+'&#10;</text>';
-        const tops=[...(sel['Toppings Incluidos']||[]),...(sel['Toppings Extra Básicos']||[]),...(sel['Toppings Extra Premium']||[])];
-        if(tops.length) xml+='<text>  + '+tops.join(', ').substring(0,36)+'&#10;</text>';
+        const base=[sel['Tamaño'],sel['Bases'],sel['Tipo de Crema']].filter(Boolean).join(', ');
+        if(base) wrap(base).forEach(l=>{ xml+=T(l); });
+        const tops=[...(sel['Toppings Incluidos']||[]),...(sel['Toppings Extra Básicos']||[]),...(sel['Toppings Extra Premium']||[]),...(sel['Doble Topping']||[]).map(t=>'doble '+t),...(sel['Shots Extra']||[]).map(t=>'shot '+t)];
+        if(tops.length) wrap('+ '+tops.join(', ')).forEach(l=>{ xml+=T(l); });
       }
-      if(mostrarNotas&&item.note) xml+='<text>  * '+item.note.substring(0,32)+'&#10;</text>';
+      if(mostrarNotas&&item.note) wrap('Nota: '+item.note).forEach(l=>{ xml+=T(l); });
     });
     xml+=divider();
-    xml+=line('Subtotal',fmtD(saleData.sub));
-    if(saleData.canjeAmt>0) xml+=line('Regalo Lady Lovers','-'+fmtD(saleData.canjeAmt));
-    if(saleData.desc>0) xml+=line(saleData.promoNombre?('Promo '+saleData.promoNombre).substring(0,24):'Descuento','-'+fmtD(saleData.desc));
-    if(mostrarIva) xml+=line('IVA (16%)',fmtD(saleData.iva));
-    xml+=divider();
-    xml+=line('TOTAL',fmtD(saleData.total),true);
-    xml+=divider();
-    const payLabel=saleData.payMethod==='efectivo'?'Efectivo':saleData.payMethod==='tarjeta'?'Tarjeta Santander':'Transferencia';
+    const hayDesc=saleData.canjeAmt>0||saleData.desc>0;
+    if(hayDesc) xml+=line('Subtotal',fmtD(saleData.sub));
+    if(saleData.canjeAmt>0) xml+=line('Regalo Lady Lovers'+(saleData.canjeItem?.name?' ('+saleData.canjeItem.name+')':''),'-'+fmtD(saleData.canjeAmt));
+    if(saleData.desc>0) xml+=line(saleData.promoNombre?('Promo '+saleData.promoNombre):'Descuento','-'+fmtD(saleData.desc));
+    xml+=line('TOTAL',fmtD(saleData.total),true,COLS/2,2);
+    if(mostrarIva) xml+=T('IVA incluido '+fmtD(saleData.iva),{a:'right'});
+    xml+=feed(1);
+    const payLabel=saleData.payMethod==='efectivo'?'Efectivo':saleData.payMethod==='tarjeta'?'Tarjeta':'Transferencia';
     xml+=line('Pago',payLabel);
-    // MEJORA: recibido y cambio en ticket
     if(saleData.payMethod==='efectivo'&&saleData.cambio>0){
-      xml+=line('Recibió',fmtD(saleData.cashReceived||saleData.total));
+      xml+=line('Recibido',fmtD(saleData.cashReceived||saleData.total));
       xml+=line('Cambio',fmtD(saleData.cambio),true);
     }
-    if(rfc){xml+=divider();xml+=center('RFC: '+rfc);}
-    xml+=divider();
-    if(ig) xml+=center(ig);
-    if(wa) xml+=center('WhatsApp: '+wa);
-    if(web) xml+=center(web);
+    if(rfc) xml+=center('RFC: '+rfc);
+    // Lady Lovers: si es clienta, su progreso y el QR de su tarjeta; si no, la invitación
+    const prog=String(loyaltyConfig?.programa_nombre||'Lady Lovers').toUpperCase();
+    const req=Number(saleData.loyaltyReq||loyaltyConfig?.sellos_requeridos||10);
     if(saleData.loyaltyClienteQR){
-      xml+=divider(); xml+=center(String(loyaltyConfig?.programa_nombre||'Lady Lovers').toUpperCase(),true); xml+=center('Tus sellos en linea:'); xml+=center('club: '+saleData.loyaltyClienteQR);
+      xml+=divider();
+      xml+=T(prog,{a:'center',b:true,w:2,h:1});
+      if(saleData.loyaltySellos!=null){
+        const n=Math.max(0,Math.min(req,Number(saleData.loyaltySellos)));
+        const cajas=Array.from({length:req},(_,i)=>i<n?'[X]':'[ ]').join('');
+        xml+=center(cajas.length<=COLS?cajas:(n+' de '+req));
+        xml+=center(n>=req?'¡Ya tienes tu regalo! Pídelo en caja':'Llevas '+n+' de '+req+' sellos, te faltan '+(req-n),n>=req);
+      }
+      const base=location.origin+location.pathname.replace(/[^/]*$/,'');
+      xml+=feed(1)+`<text align="center"/><symbol type="qrcode_model_2" level="level_m" width="5">${base}club.html?qr=${encodeURIComponent(saleData.loyaltyClienteQR)}</symbol>`;
+      xml+=center('Escanea y ve tus sellos');
+    } else if(!saleData._reprint&&loyaltyConfig?.activo!==false){
+      xml+=divider();
+      xml+=T(prog,{a:'center',b:true,w:2,h:1});
+      xml+=center('Junta '+req+' sellos y te regalamos');
+      xml+=center('una fresa. Pide tu tarjeta en caja.');
     }
-    if(footer){xml+=divider();footer.split('\n').forEach(ln=>{if(ln.trim()) xml+=center(ln.trim());});}
+    if(qrUrl&&!saleData.loyaltyClienteQR){
+      xml+=divider();
+      xml+=`<text align="center"/><symbol type="qrcode_model_2" level="level_l" width="4">${qrUrl.replace(/&/g,'&amp;').replace(/</g,'').replace(/>/g,'')}</symbol>`;
+      if(qrTxt) xml+=center(qrTxt);
+    }
+    xml+=divider();
+    if(footer) footer.split('\n').forEach(ln=>{ if(ln.trim()) xml+=center(ln.trim()); });
+    const contacto=[ig,wa?'WhatsApp '+wa:''].filter(Boolean).join('  ·  ');
+    if(contacto) xml+=center(contacto.length<=COLS?contacto:ig);
+    if(contacto.length>COLS&&wa) xml+=center('WhatsApp '+wa);
+    if(web) xml+=center(web);
   }
-  xml+=`<cut type="feed"/></epos-print></s:Body></s:Envelope>`;
+  xml+=feed(1)+`<cut type="feed"/></epos-print></s:Body></s:Envelope>`;
   return xml;
 }
 

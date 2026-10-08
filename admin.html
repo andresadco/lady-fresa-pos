@@ -844,8 +844,8 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
         <div class="card">
           <div class="card-title">🧾 Ticket de venta</div>
           <div class="config-row" style="align-items:flex-start;">
-            <div class="config-info"><div class="config-key">Encabezado</div><div class="config-desc">Texto que aparece al inicio del ticket</div></div>
-            <textarea class="config-val-input" id="cfg-ticket-header" style="height:80px;width:240px;resize:vertical;" placeholder="Lady Fresa&#10;No somos Tinder pero aquí hubo match 🍓"></textarea>
+            <div class="config-info"><div class="config-key">Encabezado</div><div class="config-desc">Debajo del logo. Los emojis no se imprimen.</div></div>
+            <textarea class="config-val-input" id="cfg-ticket-header" style="height:80px;width:240px;resize:vertical;" placeholder="No somos Tinder, pero aquí hubo match"></textarea>
           </div>
           <div class="config-row" style="align-items:flex-start;">
             <div class="config-info"><div class="config-key">Pie de página</div><div class="config-desc">Texto al final del ticket</div></div>
@@ -864,7 +864,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
             <input class="config-val-input" id="cfg-ticket-web" placeholder="ladyfresa.mx">
           </div>
           <div class="config-row">
-            <div class="config-info"><div class="config-key">Link del QR</div><div class="config-desc">URL que aparece como QR al pie</div></div>
+            <div class="config-info"><div class="config-key">Link del QR</div><div class="config-desc">QR al pie cuando la clienta no es Lady Lover (ej. link corto de reseña de Google)</div></div>
             <input class="config-val-input" id="cfg-ticket-qr" placeholder="https://lady-fresa.kivly.store/">
           </div>
           <div class="config-row">
@@ -878,6 +878,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
           <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
             <div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Secciones visibles</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <div class="toggle-wrap"><button class="toggle on" id="cfg-t-logo" onclick="toggleCfgBtn(this)"></button><span class="toggle-label">Logo</span></div>
               <div class="toggle-wrap"><button class="toggle on" id="cfg-t-modificadores" onclick="toggleCfgBtn(this)"></button><span class="toggle-label">Modificadores</span></div>
               <div class="toggle-wrap"><button class="toggle on" id="cfg-t-notas" onclick="toggleCfgBtn(this)"></button><span class="toggle-label">Notas</span></div>
               <div class="toggle-wrap"><button class="toggle on" id="cfg-t-iva" onclick="toggleCfgBtn(this)"></button><span class="toggle-label">Impuestos</span></div>
@@ -891,7 +892,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
         <!-- Preview -->
         <div class="card">
           <div class="card-title">Vista previa</div>
-          <div id="ticket-preview" style="font-family:monospace;font-size:11px;background:var(--bg);padding:16px;border-radius:8px;max-width:300px;line-height:1.7;white-space:pre-wrap;border:1px dashed var(--border-2);"></div>
+          <div id="ticket-preview" style="font-family:monospace;font-size:10px;background:#fff;padding:16px;border-radius:8px;max-width:340px;overflow-x:auto;line-height:1.7;white-space:pre-wrap;border:1px dashed var(--border-2);"></div>
           <button class="btn btn-secondary btn-sm" style="margin-top:12px;" onclick="renderTicketPreview()">↻ Actualizar vista previa</button>
         </div>
       </div>
@@ -4548,6 +4549,7 @@ async function loadTicketConfig() {
     var val = allConfig[key] !== undefined ? allConfig[key] : (def || 'true');
     if (val === 'false') btn.classList.remove('on'); else btn.classList.add('on');
   };
+  setToggle('cfg-t-logo',          'ticket_mostrar_logo', 'true');
   setToggle('cfg-t-modificadores', 'ticket_mostrar_mods', 'true');
   setToggle('cfg-t-notas',         'ticket_mostrar_notas', 'true');
   setToggle('cfg-t-iva',           'ticket_mostrar_iva', 'true');
@@ -4568,6 +4570,7 @@ async function saveTicketConfig() {
     { key:'ticket_qr_url',         val: el('cfg-ticket-qr') ? el('cfg-ticket-qr').value : '' },
     { key:'ticket_qr_texto',       val: el('cfg-ticket-qrtxt') ? el('cfg-ticket-qrtxt').value : '' },
     { key:'ticket_rfc',            val: el('cfg-ticket-rfc') ? el('cfg-ticket-rfc').value : '' },
+    { key:'ticket_mostrar_logo',   val: tog('cfg-t-logo') },
     { key:'ticket_mostrar_mods',   val: tog('cfg-t-modificadores') },
     { key:'ticket_mostrar_notas',  val: tog('cfg-t-notas') },
     { key:'ticket_mostrar_iva',    val: tog('cfg-t-iva') },
@@ -4674,44 +4677,36 @@ async function saveSucursalesConfig() {
 }
 
 function renderTicketPreview() {
+  // Misma estructura que imprime el POS (buildTicketXML), en 42 columnas
   var get = function(k) { return allConfig[k] || ''; };
-  var header = get('ticket_encabezado') || 'LADY FRESA';
-  var footer = get('ticket_pie_pagina') || '';
-  var ig = get('ticket_instagram');
-  var web = get('ticket_web');
-  var wa = get('ticket_whatsapp');
-  var rfc = get('ticket_rfc');
-  var qr = get('ticket_qr_texto');
-  var NL = '\n';
-  var D = '--------------------------------';
-  var pad = function(s,n){ s=String(s); while(s.length<n) s=' '+s; return s.substring(0,n); };
-  var ctr = function(s){ s=s.substring(0,32); var sp=Math.floor((32-s.length)/2); var r=''; for(var i=0;i<sp;i++) r+=' '; return (r+s).substring(0,32); };
-
+  var limpia = function(t){ return String(t||'').replace(/[^\x00-ɏ]/gu,'').trim(); };
+  var N = 42, NL = '\n', D = '-'.repeat(N);
+  var ctr = function(s){ s = limpia(s).substring(0,N); return ' '.repeat(Math.floor((N-s.length)/2)) + s; };
+  var row = function(l,r){ return l + ' '.repeat(Math.max(1,N-l.length-r.length)) + r; };
+  var tog = function(id){ var e=document.getElementById(id); return !e || e.classList.contains('on'); };
   var p = '';
-  header.split('\n').forEach(function(ln){ if(ln.trim()) p += ctr(ln) + NL; });
+  p += tog('cfg-t-logo') ? ctr('[ LOGO LADY FRESA ]') + NL + NL : ctr('LADY FRESA') + NL;
+  (get('ticket_encabezado')).split('\n').forEach(function(ln){ if(limpia(ln)) p += ctr(ln) + NL; });
+  p += ctr('Sucursal Balbuena') + NL + D + NL;
+  p += ctr('ORDEN #258  (letra grande)') + NL + ctr('Para: Valeria') + NL + ctr('08-oct, 13:42  ·  Mostrador') + NL;
+  if (tog('cfg-t-cajero')) p += ctr('Te atendió: Andres') + NL;
+  p += D + NL + row('1x Fresas','$149.00') + NL;
+  if (tog('cfg-t-modificadores')) p += '  Mediano, Chococrema' + NL + '  + Nuez, Mms, Crema Pistache' + NL;
+  if (tog('cfg-t-notas')) p += '  Nota: sin lechera' + NL;
+  p += row('1x La Dubai','$225.00') + NL + D + NL;
+  p += row('TOTAL  (letra grande)','$374.00') + NL;
+  if (tog('cfg-t-iva')) p += row('','IVA incluido $51.59') + NL;
+  p += NL + row('Pago','Efectivo') + NL;
+  if (get('ticket_rfc')) p += ctr('RFC: ' + get('ticket_rfc')) + NL;
+  p += D + NL + ctr('LADY LOVERS') + NL + ctr('[X][X][X][X][X][X][ ][ ][ ][ ]') + NL + ctr('Llevas 6 de 10 sellos, te faltan 4') + NL + ctr('[QR de su tarjeta]') + NL;
+  p += ctr('(si no es clienta: invitación)') + NL;
+  if (get('ticket_qr_url')) p += ctr('[QR] ' + (get('ticket_qr_texto')||'')) + NL;
   p += D + NL;
-  p += 'Orden #001' + NL;
-  p += '07 abr 14:22 - Andres' + NL;
-  p += D + NL;
-  p += '1x Fresas                   $135' + NL;
-  p += '  Mediano - Crema' + NL;
-  p += '  + Oreo, Choco Chips' + NL;
-  p += '1x La Pistachona            $189' + NL;
-  p += D + NL;
-  p += 'Subtotal                    $324' + NL;
-  p += 'IVA incluido                 $52' + NL;
-  p += D + NL;
-  p += 'TOTAL                       $324' + NL;
-  p += D + NL;
-  p += 'Pago: Efectivo' + NL;
-  if (rfc) p += 'RFC: ' + rfc + NL;
-  p += D + NL;
-  if (ig) p += ig + NL;
-  if (wa) p += 'WhatsApp: ' + wa + NL;
-  if (web) p += web + NL;
-  if (qr) p += '[QR] ' + qr + NL;
-  if (footer) { p += D + NL; footer.split('\n').forEach(function(ln){ if(ln.trim()) p += ctr(ln) + NL; }); }
-
+  (get('ticket_pie_pagina')).split('\n').forEach(function(ln){ if(limpia(ln)) p += ctr(ln) + NL; });
+  var ig = get('ticket_instagram'), wa = get('ticket_whatsapp'), web = get('ticket_web');
+  var c = [ig, wa ? 'WhatsApp ' + wa : ''].filter(Boolean).join('  ·  ');
+  if (c) p += ctr(c) + NL;
+  if (web) p += ctr(web) + NL;
   var el = document.getElementById('ticket-preview');
   if (el) el.textContent = p;
 }
