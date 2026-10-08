@@ -97,6 +97,11 @@ html, body {
   flex-shrink: 0;
   position: sticky; top: 0; z-index: 10;
 }
+.tb-suc { flex-shrink: 0; height: 34px; padding: 0 10px; border-radius: 17px; border: 1.5px solid var(--red-mid); background: var(--red-light); color: var(--red-dark); font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap; }
+.tb-suc-arrow { font-size: 10px; opacity: .7; }
+.tb-suc.fija { cursor: default; } .tb-suc.fija .tb-suc-arrow { display: none; }
+.suc-opt { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 14px 16px; margin-bottom: 8px; border: 1.5px solid var(--border-2); border-radius: 14px; background: var(--surface); font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; color: var(--text); cursor: pointer; }
+.suc-opt.actual { border-color: var(--red); background: var(--red-light); color: var(--red-dark); }
 .tb-logo { font-family: 'Bebas Neue', serif; font-size: 22px; color: var(--red); letter-spacing: 2.5px; line-height: 1; flex-shrink: 0; }
 .tb-order-info { flex: 1; min-width: 0; }
 .tb-order-num { font-size: 14px; font-weight: 700; color: var(--text); }
@@ -812,6 +817,7 @@ html, body {
   <div class="login-logo-wrap">
     <span class="login-logo">LADY FRESA</span>
     <div class="login-est">EST. 2025 · PUNTO DE VENTA</div>
+    <div class="login-est" id="app-version" style="opacity:.55;margin-top:6px;">Versión 8 oct 2026 · 13:00</div>
   </div>
   <div class="login-card">
     <div class="login-greeting">Ingresa tu PIN</div>
@@ -843,6 +849,7 @@ html, body {
 <div class="screen" id="screen-pos">
   <div id="topbar">
     <div class="tb-logo">LF</div>
+    <button type="button" class="tb-suc" id="tb-suc" onclick="abrirCambioSucursal()" title="Sucursal">📍 <span id="tb-suc-name">—</span><span class="tb-suc-arrow" id="tb-suc-arrow">▾</span></button>
     <div class="tb-order-info">
       <div class="tb-order-num">Orden #<span id="order-num">001</span></div>
       <div class="tb-order-svc" id="tb-svc-label">Mostrador · <span id="tb-user">—</span></div>
@@ -1254,7 +1261,7 @@ const PERMS = {
 // ═══════════════════════════════
 async function abrirTurnoDB(user) {
   const hoyISO = new Date().toISOString().slice(0,10);
-  const key = 'lf_turno_' + hoyISO + '_' + user.id;
+  const key = 'lf_turno_' + hoyISO + '_' + user.id + '_' + (user.sucursal||'');
   const cached = localStorage.getItem(key);
   // CAMBIO v3: validar que el turno cacheado siga abierto
   if (cached) {
@@ -1274,7 +1281,7 @@ async function abrirTurnoDB(user) {
     }
   }
   try {
-    const rows = await sbGet('turnos', 'cajero_id=eq.'+user.id+'&cerrado_at=is.null&created_at=gte.'+hoyISO+'T00:00:00Z&select=id,created_at&limit=1');
+    const rows = await sbGet('turnos', 'cajero_id=eq.'+user.id+'&sucursal=eq.'+encodeURIComponent(user.sucursal||'Principal')+'&cerrado_at=is.null&created_at=gte.'+hoyISO+'T00:00:00Z&select=id,created_at&limit=1');
     if (Array.isArray(rows) && rows.length) {
       turnoId = rows[0].id;
       turnoStartTime = new Date(rows[0].created_at);
@@ -1289,6 +1296,48 @@ async function abrirTurnoDB(user) {
       localStorage.setItem(key, turnoId);
     }
   } catch(e) { console.warn('[Turno]', e); }
+}
+
+// ═══════════════════════════════
+// SUCURSAL — se ve siempre arriba; encargado/admin pueden cambiarla
+// ═══════════════════════════════
+function puedeCambiarSucursal(){ const p=PERMS[currentUser?.role]||PERMS.cajero; return !!p.dashboard; }
+function pintarSucursal(){
+  const n=document.getElementById('tb-suc-name'); if(n) n.textContent=currentUser?.sucursal||'—';
+  const b=document.getElementById('tb-suc'); if(b) b.classList.toggle('fija',!puedeCambiarSucursal());
+}
+async function abrirCambioSucursal(){
+  if(!currentUser) return;
+  if(!puedeCambiarSucursal()){ showToast('📍 Estás en '+currentUser.sucursal); return; }
+  if(order.length){ showToast('Termina o cancela la orden antes de cambiar de sucursal'); return; }
+  let sucs=[];
+  try{ const r=await sbGet('sucursales','select=name&order=name.asc'); if(Array.isArray(r)) sucs=r.map(x=>x.name).filter(Boolean); }catch(e){}
+  if(!sucs.length) sucs=['Balbuena','Moctezuma','Narvarte'];
+  const div=document.createElement('div');
+  div.className='lf-modal';
+  div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;display:flex;align-items:flex-end;';
+  div.onclick=e=>{if(e.target===div) div.remove();};
+  div.innerHTML=`<div class="lf-modal-box" style="background:#fff;border-radius:24px 24px 0 0;padding:20px;width:100%;padding-bottom:max(20px,env(safe-area-inset-bottom))">
+    <div style="width:44px;height:5px;background:#ddd;border-radius:3px;margin:0 auto 16px;"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;"><div style="font-family:'Bebas Neue',serif;font-size:22px;color:#A6182E;letter-spacing:1px;">📍 Sucursal</div><button onclick="this.closest('.lf-modal').remove()" aria-label="Cerrar" style="font-size:20px;background:none;border:none;color:#9a7075;cursor:pointer;width:38px;height:38px;">✕</button></div>
+    <div style="font-size:12px;color:#9a7075;margin-bottom:14px;">Las ventas, el turno y el corte se registran en la sucursal que elijas.</div>
+    ${sucs.map(n=>`<button class="suc-opt${n===currentUser.sucursal?' actual':''}" onclick="cambiarSucursal('${sanitize(n)}')"><span>📍 ${sanitize(n)}</span><span>${n===currentUser.sucursal?'Aquí estás ✓':'Cambiar →'}</span></button>`).join('')}
+  </div>`;
+  document.body.appendChild(div);
+}
+async function cambiarSucursal(nueva){
+  document.querySelector('.lf-modal')?.remove();
+  if(!currentUser||nueva===currentUser.sucursal) return;
+  currentUser.sucursal=nueva;
+  try{ const s=JSON.parse(localStorage.getItem('lf_session')||'{}'); if(s.user){ s.user.sucursal=nueva; localStorage.setItem('lf_session',JSON.stringify(s)); } }catch(e){}
+  turnoId=null; sales=[]; retiros=[]; turnoStartTime=new Date();
+  orderN=parseInt(localStorage.getItem('lf_order_n_'+nueva)||'1')||1;
+  document.getElementById('order-num').textContent=String(orderN).padStart(3,'0');
+  document.getElementById('order-num-2').textContent=String(orderN).padStart(3,'0');
+  pintarSucursal();
+  showToast('📍 Ahora estás en '+nueva);
+  await abrirTurnoDB(currentUser);
+  await reconstruirTurnoDesdeDB();
 }
 
 // CAMBIO v3: verifica antes de cada cobro que el turno siga abierto
@@ -1381,6 +1430,7 @@ function showPOS() {
   document.body.classList.add('pos-active');
   _navEnsureBase();
   document.getElementById('tb-user').textContent = currentUser.name;
+  pintarSucursal();
   document.getElementById('order-num').textContent = String(orderN).padStart(3,'0');
   document.getElementById('order-num-2').textContent = String(orderN).padStart(3,'0');
   const p = PERMS[currentUser.role] || PERMS.cajero;
