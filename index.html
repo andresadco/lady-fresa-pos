@@ -2398,6 +2398,30 @@ window.addEventListener('popstate',()=>{
 // ═══════════════════════════════
 let printerCfg=JSON.parse(localStorage.getItem('lf_printer')||'{"ip":"","port":"8008","ticket":true,"comanda":true}');
 
+// Rutas ePOS-Print por generación de impresora:
+//  - TM-T20IV / T82IV / modelos nuevos → HTTPS normal (puerto 443)
+//  - TM-T20III / T88VI y anteriores    → HTTPS :8043 (o HTTP :8008)
+// La primera que responda se recuerda en printerCfg.base y se prueba primero.
+const EPOS_BASES=[
+  {name:'HTTPS :443 (TM-T20IV)', base:ip=>'https://'+ip},
+  {name:'HTTPS :8043 (TM-T20III)', base:ip=>'https://'+ip+':8043'},
+  {name:'HTTP :8008', base:ip=>'http://'+ip+':8008'},
+  {name:'HTTP :80', base:ip=>'http://'+ip},
+];
+function eposEndpoints(ip,timeout){
+  const list=EPOS_BASES.map(b=>({name:b.name,base:b.base(ip)}));
+  // Desde una página HTTPS el navegador bloquea HTTP (mixed content): no perder tiempo con esos
+  const usable=location.protocol==='https:'?list.filter(e=>e.base.startsWith('https://')):list;
+  const pref=printerCfg.base;
+  usable.sort((a,b)=>(b.base===pref)-(a.base===pref));
+  return usable.map(e=>({...e,url:e.base+'/cgi-bin/epos/service.cgi?devid=local_printer&timeout='+timeout}));
+}
+function rememberEposBase(base){
+  if(printerCfg.base===base) return;
+  printerCfg.base=base;
+  try{localStorage.setItem('lf_printer',JSON.stringify(printerCfg));}catch{}
+}
+
 function buildTicketXML(saleData,type='ticket'){
   const isComanda=type==='comanda';
   const fmtD=n=>'$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2});
@@ -2506,22 +2530,21 @@ async function printEpson(saleData,type='ticket'){
     // Inyectar pulso de cajón ANTES del cut
     body=body.replace('<cut type="feed"/>','<cut type="feed"/><pulse drawer="drawer_1" time="pulse_100"/>');
   }
-  const urls=[
-    'https://'+ip+':8043/cgi-bin/epos/service.cgi?devid=local_printer&timeout=10000',
-    'http://'+ip+':8008/cgi-bin/epos/service.cgi?devid=local_printer&timeout=10000',
-    'http://'+ip+'/cgi-bin/epos/service.cgi?devid=local_printer&timeout=10000',
-  ];
   const errors=[];
-  for(const u of urls){
+  for(const ep of eposEndpoints(ip,10000)){
+    const u=ep.url;
     try{
       const res=await fetch(u,{method:'POST',headers,body,signal:AbortSignal.timeout(10000)});
       if(res.ok){
         const txt=await res.text();
         if(/success="false"/i.test(txt)){
+          // La impresora SÍ respondió por esta ruta (sin papel, tapa abierta…): no seguir probando otras
           const code=(txt.match(/code="([^"]+)"/)||[])[1]||'unknown';
+          rememberEposBase(ep.base);
           errors.push({url:u,error:'printer_'+code});
-          continue;
+          break;
         }
+        rememberEposBase(ep.base);
         updatePrinterStatus(true);
         return {ok:true,url:u};
       }
@@ -2591,14 +2614,10 @@ async function checkPrinterStatus(){
   if(!printerCfg.ip){updatePrinterStatus(null);return;}
   const headers={'Content-Type':'text/xml; charset=utf-8','SOAPAction':'""'};
   const body='<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print"><text></text></epos-print></s:Body></s:Envelope>';
-  const urls=[
-    'https://'+printerCfg.ip+':8043/cgi-bin/epos/service.cgi?devid=local_printer&timeout=3000',
-    'http://'+printerCfg.ip+':8008/cgi-bin/epos/service.cgi?devid=local_printer&timeout=3000',
-  ];
-  for(const u of urls){
+  for(const ep of eposEndpoints(printerCfg.ip,3000)){
     try{
-      const res=await fetch(u,{method:'POST',headers,body,signal:AbortSignal.timeout(3000)});
-      if(res.ok){updatePrinterStatus(true);return true;}
+      const res=await fetch(ep.url,{method:'POST',headers,body,signal:AbortSignal.timeout(3000)});
+      if(res.ok){rememberEposBase(ep.base);updatePrinterStatus(true);return true;}
     }catch{}
   }
   updatePrinterStatus(false);
@@ -2723,15 +2742,11 @@ async function testPrinter(){
   const ip=document.getElementById('pcfg-ip').value.trim();
   const status=document.getElementById('pcfg-status');
   if(!ip){ status.style.display='block'; status.style.background='#FEF2F2'; status.style.color='#991B1B'; status.textContent='⚠️ Escribe la IP primero'; return; }
-  status.style.display='block'; status.style.background='#FFF7ED'; status.style.color='#92400E'; status.innerHTML='⏳ Probando 3 puertos en '+ip+'...';
+  const tests=eposEndpoints(ip,5000);
+  status.style.display='block'; status.style.background='#FFF7ED'; status.style.color='#92400E'; status.innerHTML='⏳ Probando '+tests.length+' rutas en '+ip+'...';
 
   const headers={'Content-Type':'text/xml; charset=utf-8','SOAPAction':'""'};
   const testBody='<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print"><sound pattern="pattern_a" repeat="1"/></epos-print></s:Body></s:Envelope>';
-  const tests=[
-    {name:'HTTPS :8043',url:'https://'+ip+':8043/cgi-bin/epos/service.cgi?devid=local_printer&timeout=5000'},
-    {name:'HTTP :8008',url:'http://'+ip+':8008/cgi-bin/epos/service.cgi?devid=local_printer&timeout=5000'},
-    {name:'HTTP :80',url:'http://'+ip+'/cgi-bin/epos/service.cgi?devid=local_printer&timeout=5000'},
-  ];
 
   let html='<div style="font-size:11px;line-height:1.5;text-align:left;">';
   let anyOk=false;
@@ -2744,6 +2759,9 @@ async function testPrinter(){
       if(res.ok){
         html=html.replace('⏳ '+t.name+'...','<span style="color:#0B6B2E;">✅ '+t.name+' — OK (beep enviado)</span>');
         anyOk=true;
+        window._pcfgTestedBase=t.base; // se guarda al dar GUARDAR
+        status.innerHTML=html+'</div>';
+        break; // ya encontramos la ruta buena
       } else {
         html=html.replace('⏳ '+t.name+'...','<span style="color:#A6182E;">❌ '+t.name+' — HTTP '+res.status+' (ePOS-Print probablemente apagado)</span>');
       }
@@ -2755,7 +2773,7 @@ async function testPrinter(){
         fix='<div style="margin-left:14px;color:#92400E;">⚠️ Verifica que la impresora esté encendida y en la misma red.</div>';
       } else if(t.url.startsWith('https://')){
         msg+='red (certificado no aceptado)';
-        fix='<div style="margin-left:14px;color:#92400E;">⚠️ Abre <a href="https://'+ip+':8043/" target="_blank" style="color:#A6182E;font-weight:600;">https://'+ip+':8043/</a> en otra pestaña y acepta el certificado, luego vuelve aquí.</div>';
+        fix='<div style="margin-left:14px;color:#92400E;">⚠️ Si tu impresora usa esta ruta, abre <a href="'+t.base+'/" target="_blank" style="color:#A6182E;font-weight:600;">'+t.base+'/</a> en otra pestaña y acepta el certificado, luego vuelve aquí.</div>';
       } else if(location.protocol==='https:'){
         msg+='bloqueado (mixed content HTTPS→HTTP)';
         fix='<div style="margin-left:14px;color:#92400E;">⚠️ Tu app está en HTTPS y este puerto es HTTP. Activa HTTPS en la impresora o usa otra ruta.</div>';
@@ -2778,8 +2796,8 @@ async function testPrinter(){
       +'<div style="font-weight:600;margin-bottom:4px;">❌ Ningún puerto responde.</div>'
       +'<div style="font-size:11px;color:#666;">Las 3 causas más comunes (en orden):</div>'
       +'<ol style="font-size:11px;color:#666;margin:4px 0 0 18px;padding:0;">'
-      +'<li>ePOS-Print Service está apagado en la impresora.<br>Entra a <a href="http://'+ip+'/" target="_blank" style="color:#A6182E;">http://'+ip+'/</a> (user: <code>epson</code>, pass: <code>epson</code>) y actívalo.</li>'
-      +'<li>Certificado HTTPS no aceptado. Abre <a href="https://'+ip+':8043/" target="_blank" style="color:#A6182E;">https://'+ip+':8043/</a> y acepta.</li>'
+      +'<li>Certificado HTTPS no aceptado. TM-T20IV: abre <a href="https://'+ip+'/" target="_blank" style="color:#A6182E;">https://'+ip+'/</a> · TM-T20III: abre <a href="https://'+ip+':8043/" target="_blank" style="color:#A6182E;">https://'+ip+':8043/</a> — acepta la advertencia y vuelve a probar.</li>'
+      +'<li>ePOS-Print apagado en la impresora. Entra a <a href="http://'+ip+'/" target="_blank" style="color:#A6182E;">http://'+ip+'/</a> (TM-T20IV: la contraseña es el número de serie; modelos viejos: <code>epson</code>/<code>epson</code>) y actívalo.</li>'
       +'<li>Tablet y impresora no están en la misma red.</li>'
       +'</ol></div>';
   }
@@ -2788,8 +2806,12 @@ async function testPrinter(){
 
 function savePrinterCfg(){
   const drawerEl=document.getElementById('pcfg-drawer');
+  const newIp=document.getElementById('pcfg-ip').value.trim();
+  const keepBase=window._pcfgTestedBase&&new URL(window._pcfgTestedBase).hostname===newIp?window._pcfgTestedBase
+    :(printerCfg.base&&printerCfg.ip===newIp?printerCfg.base:undefined);
   printerCfg={
-    ip:document.getElementById('pcfg-ip').value.trim(),
+    ip:newIp,
+    base:keepBase,
     port:'8008',
     ticket:document.getElementById('pcfg-ticket').checked,
     comanda:document.getElementById('pcfg-comanda').checked,
