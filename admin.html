@@ -2299,7 +2299,12 @@ async function saveProducto() {
   try {
     let prodId = editingProdId;
     if (prodId) {
+      const antes = productsData.find(x=>x.id===prodId);
       await sbPatch('productos', prodId, data);
+      if (antes && antes.name && antes.name !== data.nombre) {
+        // mantener ligadas las recetas de inventario al nuevo nombre
+        await fetch(`${SB_URL}/rest/v1/pos_recetas_venta?producto=eq.${encodeURIComponent(antes.name)}`, { method:'PATCH', headers:SB_H, body: JSON.stringify({ producto: data.nombre }) });
+      }
       toast('✓ Producto actualizado');
     } else {
       const res = await sbPost('productos', { ...data, orden: productsData.length + 1 });
