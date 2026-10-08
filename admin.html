@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lady Fresa · Admin</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -29,7 +29,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 .login-header { background: linear-gradient(135deg, #672626 0%, #A6182E 100%); padding: 26px 28px 22px; text-align: center; border-bottom: none; }
 .login-logo { color: #fff !important; }
 .login-sub { color: rgba(255,255,255,0.7) !important; }
-.login-logo { font-family: 'Bebas Neue', 'Instrument Serif', serif; letter-spacing: 0.5px; font-size: 24px; color: var(--pink); margin-bottom: 2px; }
+.login-logo { font-family: 'Lilita One', 'Instrument Serif', serif; letter-spacing: 0.5px; font-size: 24px; color: var(--pink); margin-bottom: 2px; }
 .login-sub { font-size: 11px; color: var(--text-3); }
 .login-body { padding: 22px 28px; }
 .pin-display { display: flex; gap: 10px; justify-content: center; margin-bottom: 18px; }
@@ -54,7 +54,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
   position: sticky; top: 0; height: 100vh; overflow-y: auto;
 }
 .sidebar-logo { padding: 20px 20px 16px; border-bottom: 1px solid var(--border); }
-.sidebar-logo-text { font-family: 'Bebas Neue', 'Instrument Serif', serif; letter-spacing: 0.5px; font-size: 18px; color: var(--pink); }
+.sidebar-logo-text { font-family: 'Lilita One', 'Instrument Serif', serif; letter-spacing: 0.5px; font-size: 18px; color: var(--pink); }
 .sidebar-logo-sub { font-size: 10px; color: var(--text-3); margin-top: 1px; }
 .nav-section { padding: 16px 12px 8px; }
 .btn-sm { height: 30px; padding: 0 12px; font-size: 12px; }
@@ -77,7 +77,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 #main-content { flex: 1; min-width: 0; padding: 28px; }
 .page { display: none; }
 .page.active { display: block; }
-.page-title { font-family: 'Bebas Neue', 'Instrument Serif', serif; letter-spacing: 0.5px; font-size: 24px; color: var(--text); margin-bottom: 4px; }
+.page-title { font-family: 'Lilita One', 'Instrument Serif', serif; letter-spacing: 0.3px; font-size: 26px; color: #A6182E; margin-bottom: 4px; font-weight: 400; }
 .page-sub { font-size: 13px; color: var(--text-3); margin-bottom: 24px; }
 
 /* CARDS */
@@ -127,7 +127,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 .modal-overlay.open { display: flex; }
 .modal-box { background: white; border-radius: 16px; padding: 28px; width: 100%; max-width: 460px; box-shadow: 0 4px 30px rgba(0,0,0,0.15); animation: popIn 0.2s ease; }
 @keyframes popIn { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }
-.modal-title { font-family: 'Bebas Neue', 'Instrument Serif', serif; letter-spacing: 0.5px; font-size: 18px; margin-bottom: 20px; color: var(--text); }
+.modal-title { font-family: 'Lilita One', 'Instrument Serif', serif; letter-spacing: 0.5px; font-size: 18px; margin-bottom: 20px; color: var(--text); }
 .modal-actions { display: flex; gap: 8px; margin-top: 22px; justify-content: flex-end; }
 
 /* TOGGLE */
@@ -183,7 +183,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
   #shell { display: block !important; }
   #adm-topbar { display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 120; background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 12px; padding-top: max(10px, env(safe-area-inset-top)); }
   #adm-topbar .adm-menu-btn { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border-2); background: var(--surface); font-size: 20px; cursor: pointer; flex-shrink: 0; }
-  #adm-topbar .adm-title { flex: 1; min-width: 0; font-family: 'Bebas Neue', serif; font-size: 20px; letter-spacing: 1px; color: #A6182E; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #adm-topbar .adm-title { flex: 1; min-width: 0; font-family: 'Lilita One', serif; font-size: 20px; letter-spacing: 1px; color: #A6182E; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #adm-topbar .adm-pos { flex-shrink: 0; height: 40px; padding: 0 14px; border-radius: 10px; background: #A6182E; color: #fff; text-decoration: none; display: flex; align-items: center; font-size: 13px; font-weight: 600; }
   #sidebar { position: fixed; top: 0; left: 0; bottom: 0; height: 100dvh; width: 270px; max-width: 85vw; z-index: 160; transform: translateX(-105%); transition: transform 0.25s ease; box-shadow: 0 0 40px rgba(0,0,0,0.2); }
   body.adm-menu-open #sidebar { transform: translateX(0); }
@@ -332,6 +332,8 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 .ll-dots i.on { background:#A6182E; border-color:#A6182E; }
 @media (max-width:520px){ .ll-prog { width:84px; } }
 </style>
+<link rel="icon" type="image/png" href="img/marca/icono-192.png"><link rel="apple-touch-icon" href="img/marca/icono-512.png"><meta name="theme-color" content="#A6182E">
+<style>@font-face{font-family:'Lilita One';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/lilita-one-latin-400-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}@font-face{font-family:'Lilita One';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/lilita-one-latin-ext-400-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}</style>
 </head>
 <body>
 
@@ -339,7 +341,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 <div id="login-screen">
   <div class="login-box">
     <div class="login-header">
-      <div class="login-logo" style="font-family:'Bebas Neue',serif;font-size:32px;letter-spacing:3px;color:#A6182E;line-height:1;">LADY FRESA</div>
+      <img src="img/marca/logo-vino.png" alt="Lady Fresa" style="width:170px;height:auto;display:block;margin:0 auto 6px;">
       <div class="login-sub" style="letter-spacing:2px;text-transform:uppercase;font-size:10px;margin-top:4px;">EST. 2025 · PANEL ADMIN</div>
     </div>
     <div class="login-body">
@@ -380,8 +382,8 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
   <!-- SIDEBAR -->
   <div id="sidebar">
     <div class="sidebar-logo">
-      <div class="sidebar-logo-text" style="font-family:'Bebas Neue',serif;font-size:22px;letter-spacing:2px;color:#A6182E;line-height:1;">LADY FRESA</div>
-      <div class="sidebar-logo-sub" style="letter-spacing:2px;text-transform:uppercase;font-size:9px;color:#9a7078;margin-top:2px;">EST. 2025 · ADMIN</div>
+      <div style="display:flex;align-items:center;gap:10px;"><img src="img/marca/logo-vino.png" alt="Lady Fresa" style="width:118px;height:auto;display:block;"><img src="img/marca/mascota-hola.png" alt="" style="width:46px;height:auto;margin-left:auto;"></div>
+      <div class="sidebar-logo-sub" style="letter-spacing:2px;text-transform:uppercase;font-size:9px;color:#9a7078;margin-top:6px;">Panel de administración</div>
     </div>
 
     <div class="nav-section">
