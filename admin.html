@@ -310,6 +310,27 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
   .kpi .k-v { font-size:19px; }
   .t-tot { font-size:16px; }
 }
+
+.pg-actions { display:flex; gap:8px; flex-wrap:wrap; }
+@media (max-width:860px){ .pg-actions { width:100%; flex-wrap:nowrap; } .pg-head .pg-actions .btn { flex:1; width:auto; padding:0 8px; } }
+.ll-row { display:flex; align-items:center; gap:12px; padding:12px 14px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); cursor:pointer; }
+.ll-row + .ll-row { margin-top:8px; }
+.ll-row.off { opacity:.5; }
+.ll-av { width:42px; height:42px; border-radius:50%; background:#FDEEF1; color:#A6182E; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.ll-av.premio { background:#A6182E; color:#fff; }
+.ll-main { flex:1; min-width:0; }
+.ll-name { font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ll-meta { font-size:12px; color:var(--text-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ll-prog { width:120px; flex-shrink:0; text-align:right; }
+.ll-prog .bar { height:8px; border-radius:4px; background:#FDEEF1; overflow:hidden; margin-top:4px; }
+.ll-prog .bar i { display:block; height:100%; background:#A6182E; }
+.ll-prog b { font-size:13px; }
+.ll-sellos-box { display:flex; align-items:center; gap:10px; background:var(--bg); border-radius:12px; padding:12px; margin-bottom:14px; flex-wrap:wrap; }
+.ll-sellos-box .n { font-size:28px; font-weight:800; color:#A6182E; min-width:70px; }
+.ll-dots { display:flex; gap:4px; flex-wrap:wrap; flex:1; }
+.ll-dots i { width:16px; height:16px; border-radius:50%; border:2px solid #FD9CB3; }
+.ll-dots i.on { background:#A6182E; border-color:#A6182E; }
+@media (max-width:520px){ .ll-prog { width:84px; } }
 </style>
 </head>
 <body>
@@ -376,6 +397,11 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
       <button class="nav-item" onclick="goPage('modificadores',this)"><span class="nav-icon">🍫</span>Toppings y extras</button>
       <button class="nav-item" onclick="goPage('categorias',this)"><span class="nav-icon">🗂</span>Categorías</button>
       <button class="nav-item" onclick="goPage('promociones',this)"><span class="nav-icon">🎁</span>Promociones</button>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">Clientes</div>
+      <button class="nav-item" onclick="goPage('lovers',this)"><span class="nav-icon">💖</span>Lady Lovers</button>
     </div>
 
     <div class="nav-section">
@@ -725,6 +751,23 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
       <div id="ri-alert"></div>
       <div class="m-toolbar"><div class="chips" id="ri-tabs"></div></div>
       <div id="ri-body"><div class="empty">Cargando…</div></div>
+    </div>
+
+    <!-- LADY LOVERS -->
+    <div class="page" id="page-lovers">
+      <div class="pg-head">
+        <div><div class="page-title" id="ll-titulo">Lady Lovers</div>
+        <div class="page-sub">Tu club de lealtad: quién viene, quién ya no, quién ya tiene premio</div></div>
+        <div class="pg-actions">
+          <button class="btn btn-secondary" onclick="document.getElementById('ll-file').click()">⬆ Importar</button>
+          <button class="btn btn-secondary" onclick="llCSV()">⬇ Exportar</button>
+          <button class="btn btn-primary" onclick="llAbrir()">+ Nueva</button>
+          <input type="file" id="ll-file" accept=".csv,text/csv" style="display:none" onchange="llImportar(this)">
+        </div>
+      </div>
+      <div id="ll-kpis" class="kpi-row"></div>
+      <div class="m-toolbar"><div class="chips" id="ll-tabs"></div></div>
+      <div id="ll-body"><div class="empty">Cargando…</div></div>
     </div>
     <!-- REPORTES -->
     <div class="page" id="page-reportes">
@@ -1236,6 +1279,27 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
     </div>
   </div>
 </div>
+
+<div class="modal-overlay" id="modal-ll">
+  <div class="modal-box" style="max-width:520px;">
+    <div class="modal-title" id="ll-m-title">Lady Lover</div>
+    <div id="ll-m-sellos"></div>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Nombre</label><input class="form-input" id="ll-nombre"></div>
+      <div class="form-group"><label class="form-label">Teléfono (10 dígitos)</label><input class="form-input" id="ll-tel" inputmode="numeric" maxlength="14" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(-10)"></div>
+      <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="ll-email" type="email"></div>
+      <div class="form-group"><label class="form-label">Cumpleaños</label><input class="form-input" id="ll-cumple" type="date"></div>
+      <div class="form-group"><label class="form-label">Sucursal</label><select class="form-select" id="ll-suc"></select></div>
+      <div class="form-group"><label class="form-label">Estado</label><select class="form-select" id="ll-activo"><option value="true">Activa</option><option value="false">Dada de baja</option></select></div>
+      <div class="form-group full"><label class="form-label">Notas</label><input class="form-input" id="ll-notas" placeholder="Ej. le gusta la Dubai sin nuez"></div>
+    </div>
+    <div id="ll-m-hist" style="margin-top:14px;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-ll')">Cerrar</button>
+      <button class="btn btn-primary" onclick="llGuardar()">Guardar</button>
+    </div>
+  </div>
+</div>
 <div id="toast"></div>
 
 <script>
@@ -1510,6 +1574,7 @@ async function loadPage(page) {
   else if (page==='turnos') loadTurnos();
   else if (page==='reportes') initReportes();
   else if (page==='recinv') loadRecInv();
+  else if (page==='lovers') loadLovers();
   else if (page==='config') { loadConfig(); loadCajaConfig(); }
   else if (page==='inventario') loadInventario();
   else if (page==='recetas') loadRecetas();
@@ -2569,6 +2634,204 @@ async function riBorrar(){
   if(!riEdit||!confirm('¿Quitar este ingrediente de la receta?')) return;
   const r=await fetch(`${SB_URL}/rest/v1/pos_recetas_venta?id=eq.${riEdit.id}`,{method:'DELETE',headers:SB_H});
   toast(r.ok?'✓ Quitado':'⚠ No se pudo quitar'); closeModal('modal-ri'); loadRecInv();
+}
+
+
+// ───────── LADY LOVERS ─────────
+var llCli=[], llCfg=null, llTab='todas', llSuc='all', llQ='', llMovs=[], llEdit=null, llSucs=[];
+function llDias(d){ return d?Math.max(0,Math.floor((Date.now()-new Date(d))/864e5)):null; }
+function llTel(t){ const d=String(t||'').replace(/\D/g,'').slice(-10); return d.length===10?d.slice(0,2)+' '+d.slice(2,6)+' '+d.slice(6):t||''; }
+async function loadLovers(){
+  const [c,cfg,suc]=await Promise.all([
+    sbGetAll('lf_loyalty_cliente_resumen','select=*&order=ultima_actividad.desc.nullslast'),
+    sbGet('lf_loyalty_config','id=eq.1&select=*'),
+    sbGet('sucursales','select=name&active=eq.true&order=name.asc')]);
+  llCli=Array.isArray(c)?c:[]; llCfg=(Array.isArray(cfg)&&cfg[0])||{sellos_requeridos:10};
+  llSucs=(Array.isArray(suc)?suc:[]).map(x=>x.name);
+  document.getElementById('ll-titulo').textContent=llCfg.programa_nombre||'Lady Lovers';
+  const ini=new Date(); ini.setDate(1); ini.setHours(0,0,0,0);
+  const m=await sbGetAll('lf_loyalty_sellos',`select=tipo,cantidad,sucursal,created_at&created_at=gte.${encodeURIComponent(ini.toISOString())}`);
+  llMovs=Array.isArray(m)?m:[];
+  renderLovers();
+}
+function llSegmento(c){
+  const d=llDias(c.ultima_actividad||c.fecha_alta);
+  if(c.activo===false) return 'baja';
+  if(d!=null&&d>=30) return 'dormida';
+  return 'activa';
+}
+function llFiltrar(){
+  const mes=new Date().getMonth()+1;
+  return llCli.filter(c=>{
+    if(llSuc!=='all'&&(c.sucursal_alta||'—')!==llSuc) return false;
+    if(llQ){ const q=llQ.toLowerCase(), qd=llQ.replace(/\D/g,''); if(!((c.nombre||'').toLowerCase().includes(q)||(qd&&String(c.telefono||'').includes(qd)))) return false; }
+    if(llTab==='premio') return c.activo!==false&&c.puede_canjear;
+    if(llTab==='activas') return llSegmento(c)==='activa';
+    if(llTab==='dormidas') return llSegmento(c)==='dormida';
+    if(llTab==='cumple') return c.cumple&&Number(String(c.cumple).slice(5,7))===mes;
+    return true;
+  });
+}
+function renderLovers(){
+  const req=llCfg.sellos_requeridos||10;
+  const act=llCli.filter(c=>c.activo!==false);
+  const activas=act.filter(c=>llSegmento(c)==='activa').length, dormidas=act.filter(c=>llSegmento(c)==='dormida').length;
+  const premio=act.filter(c=>c.puede_canjear).length;
+  const ini=new Date(); ini.setDate(1); ini.setHours(0,0,0,0);
+  const nuevas=llCli.filter(c=>new Date(c.fecha_alta)>=ini).length;
+  const sellosMes=llMovs.filter(m=>m.tipo==='gana').reduce((a,m)=>a+m.cantidad,0), canjesMes=llMovs.filter(m=>m.tipo==='canje').length;
+  document.getElementById('ll-kpis').innerHTML=`
+    <div class="kpi"><div class="k-l">Lady Lovers</div><div class="k-v">${act.length}</div><div class="k-s">${nuevas} nuevas este mes</div></div>
+    <div class="kpi"><div class="k-l">Activas</div><div class="k-v">${activas}</div><div class="k-s">vinieron en 30 días</div></div>
+    <div class="kpi"><div class="k-l">Dormidas</div><div class="k-v" style="color:${dormidas?'#8a5a00':'inherit'}">${dormidas}</div><div class="k-s">+30 días sin venir</div></div>
+    <div class="kpi"><div class="k-l">Con premio listo</div><div class="k-v" style="color:#A6182E">${premio}</div><div class="k-s">${req} sellos o más</div></div>
+    <div class="kpi"><div class="k-l">Este mes</div><div class="k-v">${sellosMes}</div><div class="k-s">sellos · ${canjesMes} canje${canjesMes===1?'':'s'}</div></div>`;
+  const tabs=[['todas','Todas'],['premio','🎁 Premio listo'],['activas','Activas'],['dormidas','😴 Dormidas'],['cumple','🎂 Cumple este mes'],['movs','Movimientos'],['programa','⚙️ Programa']];
+  document.getElementById('ll-tabs').innerHTML=tabs.map(([k,l])=>`<button class="chip ${llTab===k?'on':''}" onclick="llTab='${k}';renderLovers()">${l}</button>`).join('');
+  const body=document.getElementById('ll-body');
+  if(llTab==='movs') return llRenderMovs();
+  if(llTab==='programa') return llRenderPrograma();
+  let list=llFiltrar();
+  if(llTab==='dormidas') list.sort((a,b)=>new Date(b.ultima_actividad||b.fecha_alta)-new Date(a.ultima_actividad||a.fecha_alta));
+  if(llTab==='premio') list.sort((a,b)=>b.sellos_actuales-a.sellos_actuales);
+  const sucChips=['all',...new Set([...llSucs,...llCli.map(c=>c.sucursal_alta||'—')])];
+  const shown=list.slice(0,300);
+  body.innerHTML=`
+    <div class="m-toolbar">
+      <input class="form-input m-search" id="ll-q" placeholder="🔍 Nombre o teléfono…" value="${escH(llQ)}" oninput="llQ=this.value;clearTimeout(window._llT);window._llT=setTimeout(()=>{renderLovers();const e=document.getElementById('ll-q');e.focus();e.setSelectionRange(e.value.length,e.value.length);},250)">
+      <div class="chips">${sucChips.map(sn=>`<button class="chip ${llSuc===sn?'on':''}" onclick="llSuc=${escH(JSON.stringify(sn))};renderLovers()">${sn==='all'?'Todas las sucursales':escH(sn)}</button>`).join('')}</div>
+    </div>
+    <div class="m-hint">${list.length} ${list.length===1?'clienta':'clientas'}${list.length>shown.length?' · mostrando '+shown.length:''}${llTab==='dormidas'&&list.length?' · exporta esta lista para mandarles un push de rescate':''}</div>
+    ${!shown.length?'<div class="card empty">Nadie aquí todavía.'+(llCli.length<5?' Importa tu lista de Kivly con ⬆ Importar.':'')+'</div>':shown.map(c=>{
+      const n=Math.max(0,c.sellos_actuales||0), pct=Math.min(100,n/req*100), d=llDias(c.ultima_actividad);
+      return `<div class="ll-row ${c.activo===false?'off':''}" onclick="llAbrir('${c.id}')">
+        <div class="ll-av ${c.puede_canjear?'premio':''}">${c.puede_canjear?'🎁':escH((c.nombre||'?').charAt(0).toUpperCase())}</div>
+        <div class="ll-main"><div class="ll-name">${escH(c.nombre)}</div>
+          <div class="ll-meta">${llTel(c.telefono)} · ${escH(c.sucursal_alta||'—')} · ${d==null?'sin visitas':d===0?'vino hoy':'hace '+d+' día'+(d===1?'':'s')}${c.canjes_hechos?' · '+c.canjes_hechos+' canje'+(c.canjes_hechos===1?'':'s'):''}</div></div>
+        <div class="ll-prog"><b>${n}/${req}</b><div class="bar"><i style="width:${pct}%"></i></div></div>
+      </div>`; }).join('')}`;
+}
+async function llRenderMovs(){
+  const body=document.getElementById('ll-body'); body.innerHTML='<div class="empty">Cargando…</div>';
+  const m=await sbGet('lf_loyalty_sellos','select=*&order=created_at.desc&limit=200');
+  const nom={}; llCli.forEach(c=>nom[c.id]=c.nombre);
+  const T={gana:['+','Compra','ok'],canje:['🎁','Canje','open'],ajuste:['±','Ajuste','warn']};
+  const porSuc={}; llMovs.filter(x=>x.tipo==='gana').forEach(x=>{porSuc[x.sucursal||'—']=(porSuc[x.sucursal||'—']||0)+x.cantidad;});
+  body.innerHTML=`${Object.keys(porSuc).length?`<div class="card"><div class="card-title">Sellos dados este mes por sucursal</div>${barras(Object.entries(porSuc).sort((a,b)=>b[1]-a[1]).map(([k,v])=>['🏪 '+escH(k),v]),v=>v+' sellos')}</div>`:''}
+    <div class="card"><div class="card-title">Últimos movimientos</div>${!Array.isArray(m)||!m.length?'<div class="empty">Sin movimientos</div>':m.map(x=>{const t=T[x.tipo]||['','',''];return `<div class="kv" style="padding:8px 0;gap:8px;align-items:center;">
+      <span style="flex:1;min-width:0;"><b>${escH(nom[x.cliente_id]||'—')}</b> <span class="tag ${t[2]}">${t[1]||escH(x.tipo)}</span><br><small style="color:var(--text-3)">${fmtFecha(x.created_at)} · ${escH(x.sucursal||'')} · ${escH(x.cajero_name||'')}${x.motivo?' · '+escH(x.motivo):''}</small></span>
+      <b style="color:${x.cantidad<0?'#b3261e':'#1f7a45'}">${x.cantidad>0?'+':''}${x.cantidad}</b></div>`;}).join('')}</div>`;
+}
+function llRenderPrograma(){
+  const c=llCfg||{};
+  document.getElementById('ll-body').innerHTML=`<div class="card">
+    <div class="set-row"><div><b>Programa activo</b><small>Si lo apagas, el POS deja de pedir cliente y de dar sellos.</small></div><button class="toggle ${c.activo!==false?'on':''}" id="llp-activo" onclick="this.classList.toggle('on')"></button></div>
+    <div class="set-row"><div><b>Nombre</b><small>Sale en el ticket y en la tarjeta digital.</small></div><input class="form-input" id="llp-nombre" value="${escH(c.programa_nombre||'Lady Lovers')}" style="width:200px;"></div>
+    <div class="set-row"><div><b>Sellos para premio</b><small>Un sello por cada compra.</small></div><div class="money-in"><input class="form-input" id="llp-req" type="number" min="1" max="50" value="${c.sellos_requeridos||10}"><span>sellos</span></div></div>
+    <div class="set-row"><div><b>Valor máximo del premio</b><small>El canje descuenta hasta este monto.</small></div><div class="money-in"><span>$</span><input class="form-input" id="llp-max" type="number" min="0" value="${c.premio_precio_max||0}"></div></div>
+    <div class="form-group" style="margin-top:12px;"><label class="form-label">Mensaje de bienvenida</label><input class="form-input" id="llp-bien" value="${escH(c.mensaje_bienvenida||'')}"></div>
+    <div class="form-group" style="margin-top:12px;"><label class="form-label">Mensaje al canjear</label><input class="form-input" id="llp-canje" value="${escH(c.mensaje_canje||'')}"></div>
+    <div style="text-align:right;margin-top:16px;"><button class="btn btn-primary" onclick="llGuardarPrograma()">Guardar</button></div></div>`;
+}
+async function llGuardarPrograma(){
+  const req=parseInt(document.getElementById('llp-req').value), max=parseFloat(document.getElementById('llp-max').value);
+  if(!(req>0)){ toast('⚠ Sellos inválidos'); return; }
+  const data={ activo:document.getElementById('llp-activo').classList.contains('on'), programa_nombre:document.getElementById('llp-nombre').value.trim()||'Lady Lovers',
+    sellos_requeridos:req, premio_precio_max:isNaN(max)?null:max, mensaje_bienvenida:document.getElementById('llp-bien').value.trim(), mensaje_canje:document.getElementById('llp-canje').value.trim(),
+    updated_at:new Date().toISOString(), updated_by:(currentUser&&currentUser.name)||'admin' };
+  const r=await fetch(`${SB_URL}/rest/v1/lf_loyalty_config?id=eq.1`,{method:'PATCH',headers:SB_H,body:JSON.stringify(data)});
+  toast(r.ok?'✓ Programa guardado':'⚠ No se guardó'); if(r.ok) loadLovers();
+}
+async function llAbrir(id){
+  llEdit=id?llCli.find(c=>c.id===id):null;
+  const c=llEdit||{};
+  document.getElementById('ll-m-title').textContent=llEdit?c.nombre:'Nueva Lady Lover';
+  document.getElementById('ll-nombre').value=c.nombre||'';
+  document.getElementById('ll-tel').value=String(c.telefono||'').replace(/\D/g,'').slice(-10);
+  document.getElementById('ll-email').value=c.email||'';
+  document.getElementById('ll-cumple').value=c.cumple||'';
+  document.getElementById('ll-notas').value=c.notas||'';
+  document.getElementById('ll-activo').value=String(c.activo!==false);
+  const sucs=[...new Set([...llSucs,c.sucursal_alta].filter(Boolean))];
+  document.getElementById('ll-suc').innerHTML=sucs.map(x=>`<option ${x===c.sucursal_alta?'selected':''}>${escH(x)}</option>`).join('');
+  const req=llCfg.sellos_requeridos||10, n=Math.max(0,c.sellos_actuales||0);
+  document.getElementById('ll-m-sellos').innerHTML=llEdit?`<div class="ll-sellos-box"><div class="n">${n}<small style="font-size:13px;color:var(--text-3);font-weight:500;">/${req}</small></div>
+    <div class="ll-dots">${Array.from({length:req},(_,i)=>`<i class="${i<n?'on':''}"></i>`).join('')}</div>
+    <div style="display:flex;gap:6px;"><button class="btn btn-secondary btn-sm" onclick="llAjustar(-1)">− Sello</button><button class="btn btn-secondary btn-sm" onclick="llAjustar(1)">+ Sello</button></div>
+    <div style="width:100%;font-size:12px;color:var(--text-3);">${c.sellos_ganados_total||0} sellos en total · ${c.canjes_hechos||0} canjes · alta ${fmtFecha(c.fecha_alta,{day:'numeric',month:'short',year:'numeric'})}</div></div>`:'';
+  document.getElementById('ll-m-hist').innerHTML='';
+  document.getElementById('modal-ll').classList.add('open');
+  if(llEdit){
+    const m=await sbGet('lf_loyalty_sellos',`cliente_id=eq.${llEdit.id}&select=*&order=created_at.desc&limit=30`);
+    if(Array.isArray(m)&&m.length) document.getElementById('ll-m-hist').innerHTML='<h4 style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-3);margin:0 0 6px;">Historial</h4>'+m.map(x=>`<div class="kv"><span>${fmtFecha(x.created_at)} · ${escH(x.sucursal||'')}${x.motivo?' · '+escH(x.motivo):''}</span><b style="color:${x.cantidad<0?'#b3261e':'#1f7a45'}">${x.cantidad>0?'+':''}${x.cantidad}</b></div>`).join('');
+  }
+}
+async function llAjustar(delta){
+  if(!llEdit) return;
+  const motivo=prompt(`${delta>0?'Sumar':'Quitar'} un sello a ${llEdit.nombre}. ¿Por qué?`,'');
+  if(motivo===null) return;
+  const r=await sbPost('lf_loyalty_sellos',{cliente_id:llEdit.id,tipo:'ajuste',cantidad:delta,motivo:motivo||'Ajuste desde admin',sucursal:llEdit.sucursal_alta||'',cajero_name:(currentUser&&currentUser.name)||'Admin'});
+  if(!r.ok){ toast('⚠ No se pudo'); return; }
+  toast('✓ Sello '+(delta>0?'sumado':'quitado'));
+  const id=llEdit.id; await loadLovers(); llAbrir(id);
+}
+async function llGuardar(){
+  const tel=document.getElementById('ll-tel').value.replace(/\D/g,'');
+  const data={ nombre:document.getElementById('ll-nombre').value.trim(), telefono:'+52'+tel, email:document.getElementById('ll-email').value.trim()||null,
+    cumple:document.getElementById('ll-cumple').value||null, notas:document.getElementById('ll-notas').value.trim()||null,
+    sucursal_alta:document.getElementById('ll-suc').value, activo:document.getElementById('ll-activo').value==='true', updated_at:new Date().toISOString() };
+  if(!data.nombre){ toast('⚠ Falta el nombre'); return; }
+  if(tel.length!==10){ toast('⚠ Teléfono de 10 dígitos'); return; }
+  const r=llEdit? await fetch(`${SB_URL}/rest/v1/lf_loyalty_clientes?id=eq.${llEdit.id}`,{method:'PATCH',headers:SB_H,body:JSON.stringify(data)})
+               : await sbPost('lf_loyalty_clientes',data);
+  if(!r.ok){ const e=await r.json().catch(()=>({})); toast(e.code==='23505'?'⚠ Ese teléfono ya está registrado':'⚠ No se guardó'); return; }
+  toast('✓ Guardado'); closeModal('modal-ll'); loadLovers();
+}
+function llCSV(){
+  const rows=[['nombre','telefono','email','cumple','sucursal','sellos','canjes','ultima_visita','dias_sin_venir','estado']];
+  const sel = (llTab==='movs'||llTab==='programa') ? llCli : llFiltrar();
+  sel.forEach(c=>rows.push([c.nombre,String(c.telefono||'').replace(/\D/g,'').slice(-10),c.email||'',c.cumple||'',c.sucursal_alta||'',c.sellos_actuales||0,c.canjes_hechos||0,
+    c.ultima_actividad?new Date(c.ultima_actividad).toLocaleDateString('en-CA',{timeZone:'America/Mexico_City'}):'',llDias(c.ultima_actividad)??'',llSegmento(c)]));
+  const csv='﻿'+rows.map(r=>r.map(v=>{v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}).join(',')).join('\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=`lady-lovers_${llTab}_${hoyMX()}.csv`; a.click();
+  toast(`⬇ ${sel.length} clientas exportadas`);
+}
+function llParseCSV(txt){
+  txt=txt.replace(/^﻿/,''); const sep=(txt.split('\n')[0].match(/;/g)||[]).length>(txt.split('\n')[0].match(/,/g)||[]).length?';':',';
+  const out=[]; let row=[], f='', q=false;
+  for(let i=0;i<txt.length;i++){ const ch=txt[i];
+    if(q){ if(ch==='"'){ if(txt[i+1]==='"'){f+='"';i++;} else q=false; } else f+=ch; }
+    else if(ch==='"') q=true; else if(ch===sep){ row.push(f); f=''; } else if(ch==='\n'||ch==='\r'){ if(ch==='\r'&&txt[i+1]==='\n') i++; row.push(f); f=''; if(row.some(x=>x.trim())) out.push(row); row=[]; } else f+=ch; }
+  row.push(f); if(row.some(x=>x.trim())) out.push(row); return out;
+}
+async function llImportar(inp){
+  const file=inp.files&&inp.files[0]; inp.value=''; if(!file) return;
+  const rows=llParseCSV(await file.text()); if(rows.length<2){ toast('⚠ El archivo está vacío'); return; }
+  const H=rows[0].map(h=>h.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''));
+  const col=(...ns)=>H.findIndex(h=>ns.some(n=>h.includes(n)));
+  const iN=col('nombre','name'), iA=col('apellido','last'), iT=col('tel','phone','celular','movil','whats'), iE=col('mail','correo'), iC=col('cumple','birth','nacimiento'), iS=col('sello','punto','stamp','visita');
+  if(iN<0||iT<0){ toast('⚠ Necesito columnas de nombre y teléfono'); return; }
+  const ya=new Set(llCli.map(c=>String(c.telefono||'').replace(/\D/g,'').slice(-10)));
+  const nuevos=[], sellos={};
+  rows.slice(1).forEach(r=>{
+    const tel=String(r[iT]||'').replace(/\D/g,'').slice(-10); if(tel.length!==10||ya.has(tel)) return; ya.add(tel);
+    const nombre=[r[iN],iA>=0?r[iA]:''].join(' ').trim(); if(!nombre) return;
+    let cumple=iC>=0?String(r[iC]||'').trim():''; const m=cumple.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+    if(m) cumple=`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; if(!/^\d{4}-\d{2}-\d{2}$/.test(cumple)) cumple=null;
+    nuevos.push({nombre,telefono:'+52'+tel,email:iE>=0&&r[iE]?String(r[iE]).trim():null,cumple,sucursal_alta:llSuc!=='all'?llSuc:(llSucs[0]||'Balbuena'),notas:'Importada '+hoyMX()});
+    const sv=iS>=0?parseInt(r[iS]):0; if(sv>0) sellos['+52'+tel]=Math.min(sv,200);
+  });
+  if(!nuevos.length){ toast('No hay clientas nuevas (ya estaban o sin teléfono)'); return; }
+  if(!confirm(`Importar ${nuevos.length} Lady Lovers nuevas${Object.keys(sellos).length?` (${Object.keys(sellos).length} con sellos)`:''}?`)) return;
+  let ok=0;
+  for(let i=0;i<nuevos.length;i+=200){
+    const r=await fetch(`${SB_URL}/rest/v1/lf_loyalty_clientes`,{method:'POST',headers:SB_H,body:JSON.stringify(nuevos.slice(i,i+200))});
+    if(!r.ok){ toast('⚠ Se detuvo en la fila '+(i+1)); break; }
+    const creados=await r.json(); ok+=creados.length;
+    const movs=creados.filter(c=>sellos[c.telefono]).map(c=>({cliente_id:c.id,tipo:'ajuste',cantidad:sellos[c.telefono],motivo:'Sellos importados',sucursal:c.sucursal_alta,cajero_name:(currentUser&&currentUser.name)||'Admin'}));
+    if(movs.length) await sbPost('lf_loyalty_sellos',movs);
+  }
+  toast(`✓ ${ok} Lady Lovers importadas`); loadLovers();
 }
 
 // ───────── CONFIG: CAJA ─────────
