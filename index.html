@@ -162,6 +162,7 @@ html, body {
   text-transform: uppercase; letter-spacing: 0.5px;
 }
 .prod-emoji { font-size: 28px; margin-bottom: 6px; line-height: 1; }
+.prod-img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 12px; margin-bottom: 8px; display: block; background: #fff; }
 .prod-name { font-size: 12px; font-weight: 600; color: var(--text); line-height: 1.2; margin-bottom: 3px; }
 .prod-desc { font-size: 10px; color: var(--text-3); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .prod-price { font-size: 13px; font-weight: 700; color: var(--red); margin-top: 5px; }
@@ -1132,7 +1133,7 @@ async function loadCatalog() {
       prods.forEach(p=>{
         const mods=(Array.isArray(pm)?pm.filter(x=>x.producto_id===p.id).sort((a,b)=>a.orden-b.orden):[])
           .map(x=>grupos.find(g=>g.id===x.grupo_id)?.nombre).filter(Boolean);
-        PRODUCTS.push({id:p.id,name:p.nombre,cat:p.categoria,price:parseFloat(p.precio),desc:p.descripcion||'',emoji:p.emoji||'🍓',mods});
+        PRODUCTS.push({id:p.id,name:p.nombre,cat:p.categoria,price:parseFloat(p.precio),desc:p.descripcion||'',emoji:p.emoji||'🍓',img:p.imagen||'',mods});
         EMOJI_MAP[p.nombre]=p.emoji||'🍓';
       });
     } else { PRODUCTS.push(...PRODUCTS_FALLBACK); }
@@ -1157,7 +1158,7 @@ function renderProducts() {
     return `<div class="prod-card${qty?' in-order':''}" onclick="openCustom(${p.id})">
       ${qty?`<div class="prod-qty-badge">${qty}</div>`:''}
       ${isSpec?'<div class="prod-cat-badge">Especial</div>':''}
-      <div class="prod-emoji">${sanitize(pEmoji(p.name))}</div>
+      ${p.img?`<img class="prod-img" src="${sanitize(p.img)}" alt="" loading="lazy" onerror="this.style.display='none'">`:`<div class="prod-emoji">${sanitize(pEmoji(p.name))}</div>`}
       <div class="prod-name">${sanitize(p.name)}</div>
       ${p.desc?`<div class="prod-desc">${sanitize(p.desc)}</div>`:''}
       <div class="prod-price">$${p.price}${p.mods.includes('Tamaño')?' base':''}</div>
