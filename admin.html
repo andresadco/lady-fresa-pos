@@ -387,7 +387,8 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
     <div class="nav-section">
       <div class="nav-section-label">Inventario</div>
       <a class="nav-item" href="https://andresadco.github.io/inventario/" target="_blank" rel="noopener" style="text-decoration:none;"><span class="nav-icon">📦</span>App de inventario ↗</a>
-      <button class="nav-item" onclick="goPage('recetas',this)"><span class="nav-icon">📋</span>Recetas y costos</button>
+      <button class="nav-item" onclick="goPage('recinv',this)"><span class="nav-icon">🧾</span>Recetas → inventario</button>
+      <button class="nav-item" onclick="goPage('recetas',this)"><span class="nav-icon">📋</span>Recetas y costos (viejo)</button>
       <button class="nav-item" onclick="goPage('inventario',this)"><span class="nav-icon">🧂</span>Insumos (costos)</button>
       <button class="nav-item" onclick="goPage('movimientos',this)"><span class="nav-icon">↕️</span>Movimientos</button>
       <button class="nav-item" id="nav-entradas" onclick="goPage('entradas',this)"><span class="nav-icon">📥</span>Entradas pendientes</button>
@@ -713,6 +714,18 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
       <div id="tbody-turnos" class="t-list"><div class="empty">Cargando…</div></div>
     </div>
 
+
+    <!-- RECETAS PARA INVENTARIO -->
+    <div class="page" id="page-recinv">
+      <div class="pg-head">
+        <div><div class="page-title">Recetas → inventario</div>
+        <div class="page-sub">Lo que descuenta cada venta del app de inventario. Se activa por sucursal en Configuración → Caja y POS.</div></div>
+        <button class="btn btn-primary" onclick="riAbrir()">+ Agregar ingrediente</button>
+      </div>
+      <div id="ri-alert"></div>
+      <div class="m-toolbar"><div class="chips" id="ri-tabs"></div></div>
+      <div id="ri-body"><div class="empty">Cargando…</div></div>
+    </div>
     <!-- REPORTES -->
     <div class="page" id="page-reportes">
       <div class="pg-head">
@@ -1200,6 +1213,29 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
   </div>
 </div>
 
+
+<div class="modal-overlay" id="modal-ri">
+  <div class="modal-box" style="max-width:480px;">
+    <div class="modal-title" id="ri-title">Ingrediente de receta</div>
+    <div class="form-grid single">
+      <div class="form-group"><label class="form-label">Aplica a</label>
+        <select class="form-select" id="ri-prod" onchange="riPintarOpc()"></select></div>
+      <div class="form-group" id="ri-opc-wrap"><label class="form-label" id="ri-opc-lbl">Opción</label>
+        <select class="form-select" id="ri-opc"></select></div>
+      <div class="form-group"><label class="form-label">Insumo (del app de inventario)</label>
+        <input class="form-input" id="ri-ins-q" placeholder="🔍 Buscar insumo…" oninput="riPintarIns()">
+        <select class="form-select" id="ri-ins" size="5" style="height:auto;padding:4px;" onchange="riUnidad()"></select></div>
+      <div class="form-group"><label class="form-label">Cantidad por pieza vendida</label>
+        <div style="display:flex;gap:8px;align-items:center;"><input class="form-input" id="ri-cant" type="number" inputmode="decimal" min="0" step="any" style="flex:1;" oninput="riUnidad()"><span id="ri-uni" style="font-size:13px;color:var(--text-2);min-width:60px;"></span></div>
+        <div class="pin-msg" id="ri-equiv"></div></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="ri-del" style="margin-right:auto;" onclick="riBorrar()">🗑 Quitar</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-ri')">Cancelar</button>
+      <button class="btn btn-primary" onclick="riGuardar()">Guardar</button>
+    </div>
+  </div>
+</div>
 <div id="toast"></div>
 
 <script>
@@ -1473,6 +1509,7 @@ async function loadPage(page) {
   }
   else if (page==='turnos') loadTurnos();
   else if (page==='reportes') initReportes();
+  else if (page==='recinv') loadRecInv();
   else if (page==='config') { loadConfig(); loadCajaConfig(); }
   else if (page==='inventario') loadInventario();
   else if (page==='recetas') loadRecetas();
@@ -2419,6 +2456,119 @@ function repCSV(){
   const csv='﻿'+rows.map(r=>r.map(v=>{v=String(v==null?'':v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}).join(',')).join('\n');
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
   a.download=`ventas_${document.getElementById('rep-desde').value}_${document.getElementById('rep-hasta').value}${repSuc==='all'?'':'_'+repSuc}.csv`; a.click();
+}
+
+
+// ───────── RECETAS → INVENTARIO ─────────
+var riRows=[], riIns=[], riProds=[], riMods={}, riTab='fruta', riEdit=null;
+const RI_GRUPOS={'*vaso':'Vaso, domo y cuchara por tamaño','*base':'Bases por tamaño (fresas, plátanos, combinado)','*top':'Toppings (cada porción)','*shot':'Shots extra'};
+function riUnidadDe(u){ u=String(u||'').toLowerCase().trim(); if(u==='kg') return {f:1000,h:'g'}; if(u==='l'||u==='litro'||u==='1 litro') return {f:1000,h:'ml'}; return null; }
+function riFmt(c,u){ const k=riUnidadDe(u); return k?`${+(c*k.f).toFixed(1)} ${k.h}`:`${+Number(c).toFixed(3)} ${u||''}`; }
+async function loadRecInv(){
+  const [r,i,p,g,o]=await Promise.all([
+    sbGet('pos_recetas_venta','select=*&order=producto.asc,opcion.asc'),
+    sbGet('lfi_insumos','select=id,nombre,unidad,categoria&order=nombre.asc'),
+    sbGet('productos','select=nombre,categoria,activo&activo=eq.true&order=orden.asc'),
+    sbGet('modificadores_grupos','select=id,nombre'),
+    sbGet('modificadores_opciones','select=grupo_id,nombre,activo&activo=eq.true&order=orden.asc')]);
+  riRows=Array.isArray(r)?r:[]; riIns=Array.isArray(i)?i:[]; riProds=Array.isArray(p)?p:[];
+  riMods={}; const gn={}; (Array.isArray(g)?g:[]).forEach(x=>gn[x.id]=x.nombre);
+  (Array.isArray(o)?o:[]).forEach(x=>{ const n=gn[x.grupo_id]; (riMods[n]=riMods[n]||[]); if(!riMods[n].includes(x.nombre)) riMods[n].push(x.nombre); });
+  renderRecInv();
+}
+function riInsumo(id){ return riIns.find(x=>x.id===id)||{nombre:'¿?',unidad:''}; }
+function renderRecInv(){
+  const tabs=[['fruta','🍓 Fresas y plátanos'],['top','🍫 Toppings y shots'],['prod','⭐ Especiales y bebidas'],['faltan','⚠ Sin receta']];
+  const conReceta=new Set(riRows.map(r=>r.producto));
+  const fruta=['Fresas','Platanos','Combinado'];
+  const faltan=riProds.filter(p=>!conReceta.has(p.nombre)&&!fruta.includes(p.nombre)&&p.categoria!=='Extras');
+  document.getElementById('ri-tabs').innerHTML=tabs.map(([k,l])=>`<button class="chip ${riTab===k?'on':''}" onclick="riTab='${k}';renderRecInv()">${l}${k==='faltan'?`<small>${faltan.length}</small>`:''}</button>`).join('');
+  const est=riRows.filter(r=>r.estimado).length;
+  document.getElementById('ri-alert').innerHTML=`<div class="alert">🍓 La <b>fresa y el plátano</b> no se descuentan por venta (la fresa se cuenta por caja en el inventario). ${est?`<b>${est}</b> cantidades son estimadas a partir de las recetas viejas — revísalas antes de activar.`:''}</div>`;
+  const fila=r=>{ const i=riInsumo(r.insumo_id); return `<div class="kv" style="padding:8px 0;align-items:center;gap:8px;">
+      <span style="flex:1;min-width:0;">${r.opcion?`<b>${escH(r.opcion)}</b> · `:''}${escH(i.nombre)} ${r.estimado?'<span class="tag warn">estimado</span>':''}</span>
+      <b style="white-space:nowrap;">${riFmt(r.cantidad,i.unidad)}</b>
+      <button class="m-edit" style="width:34px;height:34px;" onclick="riAbrir(${r.id})">✏️</button></div>`; };
+  const bloque=(titulo,rows,prod)=>`<div class="card"><div class="card-title"><span>${titulo}</span><button class="btn btn-secondary btn-sm" onclick="riAbrir(null,${escH(JSON.stringify(prod))})">+ Agregar</button></div>${rows.length?rows.map(fila).join(''):'<div class="empty" style="padding:12px;">Sin ingredientes</div>'}</div>`;
+  let h='';
+  if(riTab==='fruta'){
+    h+=bloque(RI_GRUPOS['*vaso'],riRows.filter(r=>r.producto==='*vaso'),'*vaso');
+    ['Chico','Mediano','Grande'].forEach(t=>{ h+=bloque('Bases · '+t, riRows.filter(r=>r.producto==='*base'&&r.opcion.startsWith(t+' · ')).map(r=>Object.assign({},r,{opcion:r.opcion.slice(t.length+3)})),'*base'); });
+    fruta.forEach(p=>{ const rs=riRows.filter(r=>r.producto===p); if(rs.length) h+=bloque('Extra de '+p,rs,p); });
+  } else if(riTab==='top'){
+    h+=bloque(RI_GRUPOS['*top'],riRows.filter(r=>r.producto==='*top'),'*top');
+    h+=bloque(RI_GRUPOS['*shot'],riRows.filter(r=>r.producto==='*shot'),'*shot');
+    const topsMenu=[...new Set([...(riMods['Toppings Incluidos']||[]),...(riMods['Toppings Extra Básicos']||[]),...(riMods['Toppings Extra Premium']||[])])];
+    const sinTop=topsMenu.filter(t=>!riRows.some(r=>r.producto==='*top'&&r.opcion===t));
+    if(sinTop.length) h+=`<div class="card"><div class="card-title">Toppings sin receta (no descuentan)</div><div class="chips" style="flex-wrap:wrap;">${sinTop.map(t=>`<button class="chip" onclick="riAbrir(null,'*top',${escH(JSON.stringify(t))})">+ ${escH(t)}</button>`).join('')}</div></div>`;
+  } else if(riTab==='prod'){
+    const ps=[...new Set(riRows.map(r=>r.producto).filter(p=>!p.startsWith('*')&&!fruta.includes(p)))];
+    h+=ps.map(p=>bloque(p,riRows.filter(r=>r.producto===p),p)).join('')||'<div class="empty">Sin recetas</div>';
+  } else {
+    h+=!faltan.length?'<div class="card empty">Todos los productos tienen receta ✓</div>':`<div class="card"><div class="card-title">Productos que no descuentan nada</div>${faltan.map(p=>`<div class="kv" style="padding:8px 0;align-items:center;"><span>${escH(p.nombre)} <small style="color:var(--text-3)">${escH(p.categoria||'')}</small></span><button class="btn btn-secondary btn-sm" onclick="riAbrir(null,${escH(JSON.stringify(p.nombre))})">+ Receta</button></div>`).join('')}</div>`;
+  }
+  document.getElementById('ri-body').innerHTML=h;
+}
+function riAbrir(id,prod,opc){
+  riEdit=id?riRows.find(r=>r.id===id):null;
+  const sel=document.getElementById('ri-prod');
+  const opts=[['*vaso','Vaso por tamaño (fresas/plátanos/combinado)'],['*base','Base por tamaño'],['*top','Topping'],['*shot','Shot extra'],...riProds.map(p=>[p.nombre,p.nombre])];
+  sel.innerHTML=opts.map(([v,l])=>`<option value="${escH(v)}">${escH(l)}</option>`).join('');
+  sel.value=riEdit?riEdit.producto:(prod||'*top'); sel.disabled=!!riEdit;
+  riPintarOpc(riEdit?riEdit.opcion:(opc||''));
+  document.getElementById('ri-opc').disabled=!!riEdit;
+  document.getElementById('ri-ins-q').value=''; riPintarIns(riEdit?riEdit.insumo_id:null);
+  const ins=riEdit?riInsumo(riEdit.insumo_id):null, k=ins?riUnidadDe(ins.unidad):null;
+  document.getElementById('ri-cant').value=riEdit?(k?+(riEdit.cantidad*k.f).toFixed(2):riEdit.cantidad):'';
+  document.getElementById('ri-del').style.display=riEdit?'':'none';
+  document.getElementById('ri-title').textContent=riEdit?'Editar cantidad':'Agregar ingrediente';
+  riUnidad();
+  document.getElementById('modal-ri').classList.add('open');
+}
+function riPintarOpc(actual){
+  const p=document.getElementById('ri-prod').value, sel=document.getElementById('ri-opc'), lbl=document.getElementById('ri-opc-lbl');
+  let ops=[];
+  if(p==='*vaso'){ lbl.textContent='Tamaño'; ops=['Chico','Mediano','Grande']; }
+  else if(p==='*base'){ lbl.textContent='Tamaño · Base'; ['Chico','Mediano','Grande'].forEach(t=>(riMods['Bases']||[]).forEach(b=>ops.push(t+' · '+b))); }
+  else if(p==='*top'){ lbl.textContent='Topping'; ops=[...new Set([...(riMods['Toppings Incluidos']||[]),...(riMods['Toppings Extra Básicos']||[]),...(riMods['Toppings Extra Premium']||[])])]; }
+  else if(p==='*shot'){ lbl.textContent='Shot'; ops=riMods['Shots Extra']||[]; }
+  else { lbl.textContent='Cuándo'; ops=['', 'Chico','Mediano','Grande','Crema','Crema sin azucar']; }
+  if(actual!=null && !ops.includes(actual)) ops.unshift(actual);
+  sel.innerHTML=ops.map(o=>`<option value="${escH(o)}">${o===''?'Siempre':escH(p.startsWith('*')?o:(['Crema','Crema sin azucar'].includes(o)?'Solo si es '+o:'Solo tamaño '+o))}</option>`).join('');
+  if(actual!=null) sel.value=actual;
+}
+function riPintarIns(selId){
+  const q=document.getElementById('ri-ins-q').value.trim().toLowerCase(), sel=document.getElementById('ri-ins');
+  const cur=selId||sel.value;
+  const list=riIns.filter(i=>!q||i.nombre.toLowerCase().includes(q)||i.id===cur);
+  sel.innerHTML=list.map(i=>`<option value="${i.id}">${escH(i.nombre)} — ${escH(i.unidad||'')}</option>`).join('');
+  if(cur) sel.value=cur; else if(list.length) sel.selectedIndex=0;
+  riUnidad();
+}
+function riUnidad(){
+  const ins=riIns.find(i=>i.id===document.getElementById('ri-ins').value), u=document.getElementById('ri-uni'), e=document.getElementById('ri-equiv');
+  if(!ins){ u.textContent=''; e.textContent=''; return; }
+  const k=riUnidadDe(ins.unidad); u.textContent=k?k.h:(ins.unidad||'');
+  const c=parseFloat(document.getElementById('ri-cant').value);
+  e.textContent=k&&!isNaN(c)?`= ${+(c/k.f).toFixed(4)} ${ins.unidad} del inventario`:(k?'':'En la misma unidad que cuenta el inventario');
+}
+async function riGuardar(){
+  const insId=document.getElementById('ri-ins').value, ins=riIns.find(i=>i.id===insId);
+  let c=parseFloat(document.getElementById('ri-cant').value);
+  if(!ins){ toast('⚠ Elige un insumo'); return; }
+  if(isNaN(c)||c<=0){ toast('⚠ Cantidad mayor a 0'); return; }
+  const k=riUnidadDe(ins.unidad); if(k) c=c/k.f;
+  const data={ insumo_id:insId, cantidad:+c.toFixed(5), estimado:false };
+  let r;
+  if(riEdit) r=await fetch(`${SB_URL}/rest/v1/pos_recetas_venta?id=eq.${riEdit.id}`,{method:'PATCH',headers:SB_H,body:JSON.stringify(data)});
+  else { data.producto=document.getElementById('ri-prod').value; data.opcion=document.getElementById('ri-opc').value||''; r=await fetch(`${SB_URL}/rest/v1/pos_recetas_venta`,{method:'POST',headers:SB_H,body:JSON.stringify(data)}); }
+  if(!r.ok){ toast('⚠ No se guardó'); return; }
+  toast('✓ Receta guardada'); closeModal('modal-ri'); loadRecInv();
+}
+async function riBorrar(){
+  if(!riEdit||!confirm('¿Quitar este ingrediente de la receta?')) return;
+  const r=await fetch(`${SB_URL}/rest/v1/pos_recetas_venta?id=eq.${riEdit.id}`,{method:'DELETE',headers:SB_H});
+  toast(r.ok?'✓ Quitado':'⚠ No se pudo quitar'); closeModal('modal-ri'); loadRecInv();
 }
 
 // ───────── CONFIG: CAJA ─────────

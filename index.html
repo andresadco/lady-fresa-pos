@@ -817,7 +817,7 @@ html, body {
   <div class="login-logo-wrap">
     <span class="login-logo">LADY FRESA</span>
     <div class="login-est">EST. 2025 · PUNTO DE VENTA</div>
-    <div class="login-est" id="app-version" style="opacity:.55;margin-top:6px;">Versión 8 oct 2026 · 13:00</div>
+    <div class="login-est" id="app-version" style="opacity:.55;margin-top:6px;">Versión 8 oct 2026 · 16:00</div>
   </div>
   <div class="login-card">
     <div class="login-greeting">Ingresa tu PIN</div>
@@ -1526,7 +1526,7 @@ const GASTOS_URL='https://tnspshptvqvhhwwckzcc.supabase.co';
 const GASTOS_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRuc3BzaHB0dnF2aGh3d2NremNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyOTE4MzYsImV4cCI6MjA4Nzg2NzgzNn0.VYO6LMiRfv9pTCO-jRrz4ph2S_uKgX-kqYRCyVKCwdU';
 async function loadPosConfig(){
   try{
-    const r=await fetch(SB_URL+'/rest/v1/config?key=in.(fondo_caja,enviar_venta_gastos)',{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}});
+    const r=await fetch(SB_URL+'/rest/v1/config?key=in.(fondo_caja,enviar_venta_gastos,descontar_inventario)',{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}});
     if(r.ok){ (await r.json()).forEach(c=>{ posCfg[c.key]=c.value; }); }
   }catch(e){}
 }
@@ -2339,42 +2339,35 @@ window.addEventListener('online',()=>{if(offlineQueue.length) flushOfflineQueue(
 // INVENTORY DEDUCTION (sin cambios)
 // ═══════════════════════════════
 async function descontarInventario(saleData){
-  try {
-    const[recetas,insumos]=await Promise.all([sbGet('recetas','select=*'),sbGet('insumos','select=id,nombre,stock_actual,unidad,costo_unitario&activo=eq.true')]);
-    if(!Array.isArray(recetas)||!Array.isArray(insumos)) return;
-    const insMap={}; insumos.forEach(i=>insMap[i.id]=i);
-    const deductions={};
-    saleData.items.forEach(item=>{
-      const sel=item.sel||{};
-      const tamano=sel['Tamaño']||null,base=sel['Bases']||null;
-      const tops=[...(sel['Toppings Incluidos']||[]),...(sel['Toppings Extra Básicos']||[]),...(sel['Toppings Extra Premium']||[])];
-      recetas.filter(r=>r.producto_nombre===item.name).forEach(r=>{
-        const tipo=r.tipo_componente||'ingrediente',v=r.modificador_opcion;
-        let aplica=false;
-        if(tipo==='ingrediente') aplica=true;
-        else if(tipo==='fruta') aplica=!tamano||v===tamano;
-        else if(tipo==='base'){if(tamano&&base) aplica=v===(tamano+' · '+base);else if(tamano) aplica=v?.startsWith(tamano);else aplica=true;}
-        else if(tipo==='topping') aplica=tops.includes(v);
-        if(!aplica) return;
-        const ins=insMap[r.insumo_id]; if(!ins) return;
-        const uu=r.unidad_uso||ins.unidad;
-        const toG={kg:1000,g:1,gr:1},toMl={l:1000,ml:1};
-        let f=null;
-        if(toG[uu]&&toG[ins.unidad]) f=toG[uu]/toG[ins.unidad];
-        else if(toMl[uu]&&toMl[ins.unidad]) f=toMl[uu]/toMl[ins.unidad];
-        const cantBase=f?r.cantidad*f:r.cantidad;
-        deductions[r.insumo_id]=(deductions[r.insumo_id]||0)+cantBase*item.qty;
+  // Descuenta insumos en el app de inventario (lfi) según las recetas de pos_recetas_venta.
+  // Solo si la sucursal está activada en Configuración → Caja y POS. Una sola vez por orden.
+  try{
+    const suc=currentUser?.sucursal||'';
+    const v=(posCfg.descontar_inventario||'').toLowerCase();
+    const activo=v==='todas'||v==='true'||v.split(',').map(x=>x.trim()).includes(suc.toLowerCase());
+    if(!activo||!saleData._server_id) return;
+    const keys={}; const add=(k,q)=>{ keys[k]=(keys[k]||0)+q; };
+    (saleData.items||[]).forEach(item=>{
+      const q=Number(item.qty)||1, sel=item.sel||{}, name=item.name||'';
+      const one=x=>Array.isArray(x)?x[0]:x;
+      let tam=one(sel['Tamaño']);
+      if(!tam){ if(/chic/i.test(name)) tam='Chico'; else if(/median/i.test(name)) tam='Mediano'; }
+      const base=one(sel['Bases']), crema=one(sel['Tipo de Crema']);
+      add(name+'|',q);
+      if(tam){ add('*vaso|'+tam,q); if(base) add('*base|'+tam+' · '+base,q); }
+      if(tam) add(name+'|'+tam,q);
+      if(crema) add(name+'|'+crema,q);
+      ['Toppings Incluidos','Toppings Extra Básicos','Toppings Extra Premium','Doble Topping'].forEach(g=>{
+        [].concat(sel[g]||[]).forEach(t=>{ if(t) add('*top|'+t,q); });
       });
+      [].concat(sel['Shots Extra']||[]).forEach(t=>{ if(t) add('*shot|'+t,q); });
     });
-    await Promise.all(Object.entries(deductions).map(([insId,cant])=>{
-      const ins=insMap[insId]; if(!ins) return;
-      const nuevoStock=Math.max(0,(ins.stock_actual||0)-cant);
-      return Promise.all([
-        fetch(SB_URL+'/rest/v1/insumos?id=eq.'+insId,{method:'PATCH',headers:SB_H,body:JSON.stringify({stock_actual:Math.round(nuevoStock*1000)/1000})}),
-        fetch(SB_URL+'/rest/v1/inv_movimientos',{method:'POST',headers:SB_H,body:JSON.stringify({insumo_id:parseInt(insId),tipo:'salida',cantidad:parseFloat(cant.toFixed(4)),nota:'Venta orden #'+String(saleData.id).padStart(3,'0'),usuario_name:currentUser?.name||'POS'})}),
-      ]);
-    }));
-  } catch(e){console.error('[INV]',e);}
+    const p_keys=Object.entries(keys).map(([k,q])=>({k,q}));
+    if(!p_keys.length) return;
+    const r=await fetch(SB_URL+'/rest/v1/rpc/pos_descontar_venta',{method:'POST',headers:SB_H,
+      body:JSON.stringify({p_order_id:saleData._server_id,p_sucursal:suc,p_keys,p_por:'POS · '+(currentUser?.name||'')})});
+    if(!r.ok) console.warn('[INV]',r.status,await r.text().catch(()=>''));
+  }catch(e){ console.error('[INV]',e); }
 }
 
 // ═══════════════════════════════
