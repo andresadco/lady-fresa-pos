@@ -86,9 +86,9 @@ html, body { background: var(--bg); color: var(--text); font-family: 'DM Sans', 
   font-size: 22px;
 }
 .stamp { border-style: dashed; border-color: #e8a6b3; background: #fff; color: #e8a6b3; font-family: 'Lilita One', sans-serif; font-size: 16px; position: relative; }
-.stamp.filled { border: 3px solid var(--red); background: #FDEEF1 url(img/marca/sello.png) center/cover no-repeat; color: transparent; box-shadow: 0 3px 10px rgba(166,24,46,.22); animation: selloIn .4s ease both; }
+.stamp.filled { border: none; background: var(--red); color: #fff; font-size: 22px; letter-spacing: .5px; box-shadow: 0 3px 10px rgba(166,24,46,.22); animation: selloIn .4s ease both; }
 .stamp.meta { border-color: var(--red); color: var(--red); font-size: 10px; letter-spacing: .5px; }
-.stamp.meta.filled { color: transparent; }
+.stamp.meta.filled { color: #fff; font-size: 22px; }
 @keyframes selloIn { from { transform: scale(.6) rotate(-14deg); opacity: 0; } to { opacity: 1; } }
 
 .faltan {
@@ -216,6 +216,11 @@ html, body { background: var(--bg); color: var(--text); font-family: 'DM Sans', 
   margin-bottom: 8px;
 }
 .cta-btn:active { background: #333; }
+.avisos { margin: 18px 16px 6px; background: #fff; border: 1.5px solid var(--red-mid); border-radius: 20px; padding: 16px; text-align: center; }
+.avisos-t { font-family: 'Lilita One', sans-serif; color: var(--red); font-size: 20px; }
+.avisos-s { font-size: 13px; color: #6b4a50; margin: 6px 0 12px; line-height: 1.4; }
+.avisos .cta-btn { background: var(--red); }
+.avisos.ok .cta-btn { background: #fff; color: var(--red); border: 1.5px solid var(--red); }
 .cta-btn.share {
   background: var(--red);
 }
@@ -246,6 +251,7 @@ html, body { background: var(--bg); color: var(--text); font-family: 'DM Sans', 
 </style>
 <link rel="icon" type="image/png" href="img/marca/icono-192.png"><link rel="apple-touch-icon" href="img/marca/icono-512.png"><meta name="theme-color" content="#A6182E">
 <style>@font-face{font-family:'Lilita One';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/lilita-one-latin-400-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}@font-face{font-family:'Lilita One';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/lilita-one-latin-ext-400-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}</style>
+<link rel="manifest" href="club.webmanifest"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 </head>
 <body>
 
@@ -313,6 +319,12 @@ html, body { background: var(--bg); color: var(--text); font-family: 'DM Sans', 
   <div class="history" id="history"></div>
 
   <!-- CTA -->
+  <div class="avisos" id="avisos-box">
+    <div class="avisos-t">Entérate primero de las promos</div>
+    <div class="avisos-s" id="avisos-s">Te avisamos cuando tengas regalo, en tu cumple y cuando haya algo especial. Nada de spam.</div>
+    <button class="cta-btn" id="avisos-btn" onclick="activarAvisos()">🔔 Activar avisos</button>
+  </div>
+
   <div class="cta">
     <button class="cta-btn share" onclick="shareTarjeta()">
       📤 Compartir mi tarjeta
@@ -384,7 +396,7 @@ function render(c,movs,cfg){
   let html='';
   for(let i=0;i<req;i++){
     const lleno=i<c.sellos_actuales, meta=i===req-1, giro=((i*37)%15)-7;
-    html+=`<div class="stamp${lleno?' filled':''}${meta?' meta':''}" style="${lleno?'transform:rotate('+giro+'deg);animation-delay:'+(i*60)+'ms':''}">${lleno?'':(meta?'REGALO':(i+1))}</div>`;
+    html+=`<div class="stamp${lleno?' filled':''}${meta?' meta':''}" style="${lleno?'animation-delay:'+(i*60)+'ms':''}">${lleno?'LF':(meta?'REGALO':(i+1))}</div>`;
   }
   stampsEl.innerHTML=html;
   // Mensaje "faltan"
@@ -448,7 +460,52 @@ async function shareTarjeta(){
   }
 }
 
-init();
+const VAPID_PUBLIC='BEb1urSUxK_EUnJI8QJl2Y4fMSTE937N1Xv_NMtudzY8n-h_QHS_0rKCeuigdFypNSlwd6UdnbRcc12Cdp8lQhc';
+const QR=(new URLSearchParams(location.search).get('qr')||'').toUpperCase().trim();
+const esIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+const esApp=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+function b64ToU8(b){ const p='='.repeat((4-b.length%4)%4); const r=atob((b+p).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from([...r].map(c=>c.charCodeAt(0))); }
+function pintarAvisos(estado){
+  const box=document.getElementById('avisos-box'), btn=document.getElementById('avisos-btn'), s=document.getElementById('avisos-s');
+  if(!box) return;
+  if(estado==='ok'){ box.classList.add('ok'); btn.textContent='✓ Avisos activados'; btn.disabled=true; s.textContent='Listo, te vamos a avisar de tus regalos y promos.'; }
+  else if(estado==='ios'){ btn.textContent='Cómo activarlos en iPhone'; s.innerHTML='En iPhone primero guarda tu tarjeta: toca <b>Compartir</b> ⬆️ y luego <b>"Agregar a pantalla de inicio"</b>. Ábrela desde ese ícono y aquí activas los avisos.'; }
+  else if(estado==='bloqueado'){ btn.textContent='Avisos bloqueados'; btn.disabled=true; s.textContent='Bloqueaste los avisos en este navegador. Puedes volver a permitirlos en la configuración del navegador.'; }
+  else if(estado==='no'){ box.style.display='none'; }
+}
+async function revisarAvisos(){
+  if(!QR) return pintarAvisos('no');
+  if(esIOS&&!esApp) return pintarAvisos('ios');
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window)) return pintarAvisos('no');
+  if(Notification.permission==='denied') return pintarAvisos('bloqueado');
+  try{
+    const reg=await navigator.serviceWorker.register('sw-club.js');
+    const sub=await reg.pushManager.getSubscription();
+    if(sub){
+      const r=await fetch(SB_URL+'/rest/v1/rpc/lf_push_estado',{method:'POST',headers:{...SB_H,'Content-Type':'application/json'},body:JSON.stringify({p_qr:QR,p_endpoint:sub.endpoint})});
+      if(r.ok&&await r.json()) return pintarAvisos('ok');
+    }
+  }catch(e){}
+}
+async function activarAvisos(){
+  if(esIOS&&!esApp){ alert('En iPhone: toca Compartir ⬆️ → "Agregar a pantalla de inicio". Luego abre tu tarjeta desde ese ícono y activa los avisos.'); return; }
+  const btn=document.getElementById('avisos-btn'); btn.disabled=true; btn.textContent='Activando…';
+  try{
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted'){ pintarAvisos(perm==='denied'?'bloqueado':''); btn.disabled=false; btn.textContent='🔔 Activar avisos'; return; }
+    const reg=await navigator.serviceWorker.register('sw-club.js'); await navigator.serviceWorker.ready;
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToU8(VAPID_PUBLIC)});
+    const j=sub.toJSON();
+    const r=await fetch(SB_URL+'/rest/v1/rpc/lf_push_suscribir',{method:'POST',headers:{...SB_H,'Content-Type':'application/json'},
+      body:JSON.stringify({p_qr:QR,p_endpoint:j.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth,p_plataforma:esIOS?'ios':(/android/i.test(navigator.userAgent)?'android':'web')})});
+    const ok=r.ok&&(await r.json()).ok;
+    if(!ok) throw new Error('no guardó');
+    pintarAvisos('ok');
+  }catch(e){ btn.disabled=false; btn.textContent='🔔 Activar avisos'; alert('No se pudieron activar los avisos. Intenta de nuevo.'); }
+}
+
+init().then(revisarAvisos);
 </script>
 </body>
 </html>

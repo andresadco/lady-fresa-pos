@@ -1,0 +1,11 @@
+{
+  "name": "Lady Lovers · Lady Fresa",
+  "short_name": "Lady Lovers",
+  "display": "standalone",
+  "background_color": "#A6182E",
+  "theme_color": "#A6182E",
+  "icons": [
+    { "src": "img/marca/icono-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "img/marca/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

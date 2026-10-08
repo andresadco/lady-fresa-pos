@@ -329,7 +329,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 .ll-sellos-box .n { font-size:28px; font-weight:800; color:#A6182E; min-width:70px; }
 .ll-dots { display:flex; gap:4px; flex-wrap:wrap; flex:1; }
 .ll-dots i { width:16px; height:16px; border-radius:50%; border:2px solid #FD9CB3; }
-.ll-dots i.on { background:#FDEEF1 url(img/marca/sello.png) center/cover no-repeat; border-color:#A6182E; }
+.ll-dots i.on { background:#A6182E; border-color:#A6182E; }
 @media (max-width:520px){ .ll-prog { width:84px; } }
 </style>
 <link rel="icon" type="image/png" href="img/marca/icono-192.png"><link rel="apple-touch-icon" href="img/marca/icono-512.png"><meta name="theme-color" content="#A6182E">
@@ -2489,10 +2489,11 @@ function renderLovers(){
     <div class="kpi"><div class="k-l">Dormidas</div><div class="k-v" style="color:${dormidas?'#8a5a00':'inherit'}">${dormidas}</div><div class="k-s">+30 días sin venir</div></div>
     <div class="kpi"><div class="k-l">Con premio listo</div><div class="k-v" style="color:#A6182E">${premio}</div><div class="k-s">${req} sellos o más</div></div>
     <div class="kpi"><div class="k-l">Este mes</div><div class="k-v">${sellosMes}</div><div class="k-s">sellos · ${canjesMes} canje${canjesMes===1?'':'s'}</div></div>`;
-  const tabs=[['todas','Todas'],['premio','🎁 Premio listo'],['activas','Activas'],['dormidas','😴 Dormidas'],['cumple','🎂 Cumple este mes'],['movs','Movimientos'],['programa','⚙️ Programa']];
+  const tabs=[['todas','Todas'],['premio','🎁 Premio listo'],['activas','Activas'],['dormidas','😴 Dormidas'],['cumple','🎂 Cumple este mes'],['campanas','📣 Campañas'],['movs','Movimientos'],['programa','⚙️ Programa']];
   document.getElementById('ll-tabs').innerHTML=tabs.map(([k,l])=>`<button class="chip ${llTab===k?'on':''}" onclick="llTab='${k}';renderLovers()">${l}</button>`).join('');
   const body=document.getElementById('ll-body');
   if(llTab==='movs') return llRenderMovs();
+  if(llTab==='campanas') return llRenderCampanas();
   if(llTab==='programa') return llRenderPrograma();
   let list=llFiltrar();
   if(llTab==='dormidas') list.sort((a,b)=>new Date(b.ultima_actividad||b.fecha_alta)-new Date(a.ultima_actividad||a.fecha_alta));
@@ -2658,6 +2659,104 @@ async function llImportar(inp){
     if(movs.length) await sbPost('lf_loyalty_sellos',movs);
   }
   toast(`✓ ${ok} Lady Lovers importadas`); loadLovers();
+}
+
+
+// ───────── CAMPAÑAS (avisos push a las Lady Lovers) ─────────
+var _llPush=null, _cpSeg='todas';
+const CP_SEGMENTOS=[['todas','Todas las Lady Lovers'],['activas','Activas (vinieron en 30 días)'],['dormidas','Dormidas (+30 días sin venir)'],['premio','Con regalo listo'],['cerca','A 1 o 2 sellos del regalo'],['cumple','Cumplen este mes']];
+const CP_SUGERENCIAS={
+  todas:['Antojo de hoy 🍓','Hoy se te antoja algo rico, ¿o no? Te esperamos en Lady Fresa.'],
+  activas:['Gracias por venir 💋','Eres de las nuestras. Esta semana tu siguiente fresa trae sorpresa.'],
+  dormidas:['Te extrañamos 🍓','¿Ya nos cambiaste? Regresa esta semana y te consentimos con algo extra.'],
+  premio:['¡Tu regalo te espera! 🎁','Ya juntaste tus sellos: tu fresa de regalo está lista. Pásate por ella.'],
+  cerca:['Ya casi 👀','Te faltan poquitos sellos para tu fresa de regalo. ¿Hoy sumamos uno?'],
+  cumple:['Feliz cumple 🎂','En tu mes te queremos consentir: pásate y date el gusto.'],
+};
+function cpClientas(seg){
+  const req=llCfg.sellos_requeridos||10, mes=new Date().getMonth()+1;
+  return llCli.filter(c=>{
+    if(c.activo===false) return false;
+    if(seg.startsWith('suc:')) return (c.sucursal_alta||'')===seg.slice(4);
+    if(seg==='activas') return llSegmento(c)==='activa';
+    if(seg==='dormidas') return llSegmento(c)==='dormida';
+    if(seg==='premio') return c.puede_canjear;
+    if(seg==='cerca') { const f=req-(c.sellos_actuales||0); return f>0&&f<=2; }
+    if(seg==='cumple') return c.cumple&&Number(String(c.cumple).slice(5,7))===mes;
+    return true;
+  });
+}
+async function llRenderCampanas(){
+  const body=document.getElementById('ll-body'); body.innerHTML='<div class="empty">Cargando…</div>';
+  if(!_llPush){ try{ const r=await fetch(SB_URL+'/rest/v1/rpc/lf_push_clientas',{method:'POST',headers:SB_H,body:'{}'}); _llPush=new Set(r.ok?(await r.json()).map(x=>typeof x==='string'?x:x.lf_push_clientas):[]); }catch(e){ _llPush=new Set(); } }
+  const camp=await sbGet('lf_campanas','select=*&order=created_at.desc&limit=20');
+  const C=Array.isArray(camp)?camp:[];
+  let usos={};
+  const pids=C.map(c=>c.promo_id).filter(Boolean);
+  if(pids.length){ const o=await sbGet('orders',`promo_id=in.(${pids.join(',')})&status=neq.cancelada&select=promo_id,total`); (Array.isArray(o)?o:[]).forEach(x=>{ usos[x.promo_id]=usos[x.promo_id]||{n:0,t:0}; usos[x.promo_id].n++; usos[x.promo_id].t+=Number(x.total||0); }); }
+  const segs=[...CP_SEGMENTOS, ...llSucs.map(n=>['suc:'+n,'Clientas de '+n])];
+  const sug=CP_SUGERENCIAS[_cpSeg]||CP_SUGERENCIAS.todas;
+  body.innerHTML=`
+  <div class="card">
+    <div class="card-title">Nuevo aviso</div>
+    <div class="form-grid">
+      <div class="form-group full"><label class="form-label">¿A quién?</label>
+        <select class="form-select" id="cp-seg" onchange="_cpSeg=this.value;llRenderCampanas()">${segs.map(([k,l])=>`<option value="${escH(k)}" ${k===_cpSeg?'selected':''}>${escH(l)}</option>`).join('')}</select>
+        <div class="m-hint" id="cp-cuenta" style="margin-top:6px;"></div></div>
+      <div class="form-group full"><label class="form-label">Título</label><input class="form-input" id="cp-tit" maxlength="60" value="${escH(sug[0])}"></div>
+      <div class="form-group full"><label class="form-label">Mensaje</label><textarea class="form-input" id="cp-msg" maxlength="200" rows="3" style="height:auto;padding:10px 12px;resize:vertical;">${escH(sug[1])}</textarea></div>
+      <div class="form-group full"><label style="display:flex;gap:8px;align-items:center;font-size:14px;"><input type="checkbox" id="cp-promo" onchange="document.getElementById('cp-promo-box').style.display=this.checked?'grid':'none'"> Incluir código de promoción</label>
+        <div id="cp-promo-box" style="display:none;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px;">
+          <select class="form-select" id="cp-p-tipo"><option value="pct">% descuento</option><option value="monto">$ descuento</option></select>
+          <input class="form-input" id="cp-p-valor" type="number" min="1" value="15" placeholder="Valor">
+          <select class="form-select" id="cp-p-dias"><option value="3">Vale 3 días</option><option value="7" selected>Vale 7 días</option><option value="14">Vale 14 días</option><option value="30">Vale 30 días</option></select>
+        </div>
+        <div class="m-hint" style="margin-top:6px;">Se crea un código único (ej. LL7K2P), se agrega al mensaje y en Reportes ves cuántas lo usaron.</div></div>
+    </div>
+    <div class="pg-actions" style="margin-top:14px;justify-content:flex-end;">
+      <button class="btn btn-secondary" onclick="cpExportar()">⬇ Lista para WhatsApp</button>
+      <button class="btn btn-primary" onclick="cpEnviar()">📣 Enviar aviso</button>
+    </div>
+  </div>
+  <div class="card"><div class="card-title">Avisos enviados</div>
+    ${!C.length?'<div class="empty">Todavía no mandas avisos</div>':C.map(c=>{ const u=usos[c.promo_id]; return `<div class="kv" style="padding:10px 0;gap:10px;align-items:center;"><span style="flex:1;min-width:0;"><b>${escH(c.titulo)}</b> <small style="color:var(--text-3)">· ${fmtFecha(c.created_at,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} · ${escH(c.por||'')}</small><br><small style="color:var(--text-2)">${escH(c.mensaje)}</small></span>
+      <span style="text-align:right;white-space:nowrap;"><b>${c.clientas}</b> <small>clientas</small>${c.promo_codigo?`<br><span class="tag ${u&&u.n?'ok':''}">${escH(c.promo_codigo)}: ${u?u.n:0} usos${u&&u.t?' · '+fmt(u.t):''}</span>`:''}</span></div>`; }).join('')}
+  </div>
+  <div class="m-hint">Las clientas reciben los avisos solo si los activaron en su tarjeta (botón "🔔 Activar avisos"). En iPhone primero tienen que guardar la tarjeta en su pantalla de inicio.</div>`;
+  const lista=cpClientas(_cpSeg), conPush=lista.filter(c=>_llPush.has(c.id)).length;
+  document.getElementById('cp-cuenta').innerHTML=`<b>${lista.length}</b> clientas en este grupo · <b>${conPush}</b> con avisos activos${conPush<lista.length?' · las demás las puedes contactar con la lista para WhatsApp':''}`;
+}
+function cpExportar(){
+  const lista=cpClientas(_cpSeg);
+  const rows=[['nombre','telefono','sucursal','sellos','ultima_visita']].concat(lista.map(c=>[c.nombre,String(c.telefono||'').replace(/\D/g,'').slice(-10),c.sucursal_alta||'',c.sellos_actuales||0,c.ultima_actividad?fechaMXde(c.ultima_actividad):'']));
+  const csv='﻿'+rows.map(r=>r.map(v=>{v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}).join(',')).join('\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=`lady-lovers_${_cpSeg.replace(':','-')}_${hoyMX()}.csv`; a.click();
+}
+async function cpEnviar(){
+  const lista=cpClientas(_cpSeg), ids=lista.filter(c=>_llPush.has(c.id)).map(c=>c.id);
+  let tit=document.getElementById('cp-tit').value.trim(), msg=document.getElementById('cp-msg').value.trim();
+  if(!tit||!msg){ toast('⚠ Escribe título y mensaje'); return; }
+  if(!ids.length){ toast('Nadie de este grupo tiene avisos activos todavía'); return; }
+  let promo=null;
+  if(document.getElementById('cp-promo').checked){
+    const valor=parseFloat(document.getElementById('cp-p-valor').value), monto=document.getElementById('cp-p-tipo').value==='monto', dias=parseInt(document.getElementById('cp-p-dias').value);
+    if(!(valor>0)||(!monto&&valor>100)){ toast('⚠ Revisa el valor de la promo'); return; }
+    const codigo='LL'+Math.random().toString(36).slice(2,6).toUpperCase().replace(/[0O1I]/g,'7');
+    const fin=new Date(); fin.setDate(fin.getDate()+dias);
+    promo={ nombre:'Aviso: '+tit, tipo:'codigo', codigo, valor, es_monto:monto, fecha_inicio:hoyMX(), fecha_fin:fin.toLocaleDateString('en-CA',{timeZone:'America/Mexico_City'}), activo:true, descripcion:'Creada desde Campañas Lady Lovers' };
+    msg+=` Usa el código ${codigo} (${monto?'$'+valor:valor+'%'} de descuento, vale ${dias} días).`;
+  }
+  if(!confirm(`¿Mandar este aviso a ${ids.length} clienta${ids.length>1?'s':''}?\n\n${tit}\n${msg}`)) return;
+  let promo_id=null;
+  if(promo){ const r=await sbPost('promociones',promo); if(!r.ok){ toast('⚠ No se pudo crear la promo'); return; } const j=await r.json(); promo_id=(Array.isArray(j)?j[0]:j).id; }
+  try{
+    const r=await fetch(SB_URL+'/functions/v1/lf-push-clientas',{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY,Authorization:'Bearer '+SB_KEY},
+      body:JSON.stringify({admin_pin:currentUser&&currentUser._pin,titulo:tit,mensaje:msg,cliente_ids:ids,segmento:_cpSeg,promo_id,promo_codigo:promo&&promo.codigo,base_url:location.href.replace(/admin\.html.*$/,'')})});
+    const j=await r.json();
+    if(!r.ok||!j.ok) throw new Error(j.error||r.status);
+    toast(`📣 Enviado a ${j.clientas} clienta${j.clientas===1?'':'s'}`+(j.fallas?` · ${j.fallas} sin entregar`:''));
+    _llPush=null; llRenderCampanas();
+  }catch(e){ toast('⚠ No se pudo enviar: '+e.message); }
 }
 
 // ───────── CONFIG: CAJA ─────────

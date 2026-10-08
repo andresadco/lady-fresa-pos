@@ -413,8 +413,8 @@ html, body {
   border: 1.5px solid var(--red-mid); background: var(--surface);
   flex-shrink: 0;
 }
-.lc-stamp.filled { background: #FDEEF1 url(img/marca/sello.png) center/cover no-repeat; border-color: var(--red); position: relative; width: 22px; height: 22px; }
-.lc-stamp.filled::after { display: none !important; }
+.lc-stamp.filled { background: var(--red); border-color: var(--red); position: relative; }
+.lc-stamp.filled::after { content: 'LF' !important; font-family: 'Lilita One', sans-serif; font-size: 8px !important; color: #fff; letter-spacing: 0; }
 .lc-stamp.filled::after {
   content: '✓'; position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
@@ -856,7 +856,7 @@ html, body {
   <div class="login-logo-wrap">
     <img src="img/marca/logo-blanco.png" alt="Lady Fresa" class="login-logo-img">
     <div class="login-est">PUNTO DE VENTA</div>
-    <div class="login-est" id="app-version" style="opacity:.55;margin-top:6px;">Versión 8 oct 2026 · 22:30</div>
+    <div class="login-est" id="app-version" style="opacity:.55;margin-top:6px;">Versión 8 oct 2026 · 23:00</div>
   </div>
   <div class="login-card">
     <div class="login-greeting">Ingresa tu PIN</div>
