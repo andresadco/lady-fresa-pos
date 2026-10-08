@@ -85,8 +85,11 @@ html, body { background: var(--bg); color: var(--text); font-family: 'DM Sans', 
   display: flex; align-items: center; justify-content: center;
   font-size: 22px;
 }
-.stamp.filled { background: var(--red); border-color: var(--red); }
-.stamp.filled::after { content: '🍓'; }
+.stamp { border-style: dashed; border-color: #e8a6b3; background: #fff; color: #e8a6b3; font-family: 'Lilita One', sans-serif; font-size: 16px; position: relative; }
+.stamp.filled { border: 3px solid var(--red); background: #FDEEF1 url(img/marca/sello.png) center/cover no-repeat; color: transparent; box-shadow: 0 3px 10px rgba(166,24,46,.22); animation: selloIn .4s ease both; }
+.stamp.meta { border-color: var(--red); color: var(--red); font-size: 10px; letter-spacing: .5px; }
+.stamp.meta.filled { color: transparent; }
+@keyframes selloIn { from { transform: scale(.6) rotate(-14deg); opacity: 0; } to { opacity: 1; } }
 
 .faltan {
   text-align: center;
@@ -262,7 +265,7 @@ html, body { background: var(--bg); color: var(--text); font-family: 'DM Sans', 
   <!-- HERO -->
   <div class="hero">
     <img src="img/marca/logo-blanco.png" alt="Lady Fresa" class="hero-logo-img">
-    <div class="hero-club">💖 LADY LOVERS</div>
+    <div class="hero-club">LADY LOVERS</div>
     <img src="img/marca/mascota-hola.png" alt="" class="hero-mascota">
     <div class="hero-name" id="name">—</div>
     <div class="hero-phone" id="phone">—</div>
@@ -380,7 +383,8 @@ function render(c,movs,cfg){
   const stampsEl=document.getElementById('stamps');
   let html='';
   for(let i=0;i<req;i++){
-    html+=`<div class="stamp${i<c.sellos_actuales?' filled':''}"></div>`;
+    const lleno=i<c.sellos_actuales, meta=i===req-1, giro=((i*37)%15)-7;
+    html+=`<div class="stamp${lleno?' filled':''}${meta?' meta':''}" style="${lleno?'transform:rotate('+giro+'deg);animation-delay:'+(i*60)+'ms':''}">${lleno?'':(meta?'REGALO':(i+1))}</div>`;
   }
   stampsEl.innerHTML=html;
   // Mensaje "faltan"
