@@ -657,7 +657,7 @@ html, body {
   <div class="sheet-footer">
     <div class="pay-row">
       <button class="pay-btn active" onclick="setPay('efectivo',this)"><span class="pay-icon">💵</span>Efectivo</button>
-      <button class="pay-btn" onclick="setPay('tarjeta',this)"><span class="pay-icon">💳</span>Tarjeta</button>
+      <button class="pay-btn" onclick="setPay('tarjeta',this)"><span class="pay-icon">💳</span>Tarjeta Santander</button>
       <button class="pay-btn" onclick="setPay('transferencia',this)"><span class="pay-icon">📲</span>Transfer.</button>
     </div>
     <button class="cobrar-btn" id="cobrar-btn" onclick="openCobro()">COBRAR</button>
@@ -1613,7 +1613,7 @@ function openCobro(){
   const{total}=calcTotals();
   document.getElementById('cobro-total').textContent='$'+total.toLocaleString('es-MX',{minimumFractionDigits:2});
   document.getElementById('cobro-sub').textContent=order.reduce((s,i)=>s+i.qty,0)+' productos';
-  document.getElementById('cobro-pay-label').textContent=payMethod==='efectivo'?'💵 Efectivo':payMethod==='tarjeta'?'💳 Tarjeta':'📲 Transferencia';
+  document.getElementById('cobro-pay-label').textContent=payMethod==='efectivo'?'💵 Efectivo':payMethod==='tarjeta'?'💳 Tarjeta Santander':'📲 Transferencia';
   const efecSection=document.getElementById('efec-section');
   efecSection.style.display=payMethod==='efectivo'?'block':'none';
   // Reset error banner
@@ -2085,7 +2085,7 @@ function renderCierreModal(){
 
   const payRows=[
     {label:'💵 Efectivo',amt:d.efectivo,color:'var(--green)'},
-    {label:'💳 Tarjeta',amt:d.tarjeta,color:'var(--blue)'},
+    {label:'💳 Tarjeta Santander',amt:d.tarjeta,color:'var(--blue)'},
     {label:'📲 Transferencia',amt:d.transferencia,color:'var(--purple)'},
   ].filter(r=>r.amt>0);
 
@@ -2503,7 +2503,7 @@ function buildTicketXML(saleData,type='ticket'){
     xml+=divider();
     xml+=line('TOTAL',fmtD(saleData.total),true);
     xml+=divider();
-    const payLabel=saleData.payMethod==='efectivo'?'Efectivo':saleData.payMethod==='tarjeta'?'Tarjeta':'Transferencia';
+    const payLabel=saleData.payMethod==='efectivo'?'Efectivo':saleData.payMethod==='tarjeta'?'Tarjeta Santander':'Transferencia';
     xml+=line('Pago',payLabel);
     // MEJORA: recibido y cambio en ticket
     if(saleData.payMethod==='efectivo'&&saleData.cambio>0){
@@ -2670,7 +2670,7 @@ function buildTicketText(saleData){
   text+=`─────────────────\n`;
   if(saleData.desc>0) text+=`Descuento: -${fmtD(saleData.desc)}\n`;
   text+=`Total: ${fmtD(saleData.total)}\n`;
-  const payLabel=saleData.payMethod==='efectivo'?'Efectivo':saleData.payMethod==='tarjeta'?'Tarjeta':'Transferencia';
+  const payLabel=saleData.payMethod==='efectivo'?'Efectivo':saleData.payMethod==='tarjeta'?'Tarjeta Santander':'Transferencia';
   text+=`Pago: ${payLabel}\n`;
   if(saleData.payMethod==='efectivo'&&saleData.cambio>0){
     text+=`Recibió: ${fmtD(saleData.cashReceived||saleData.total)}\n`;
