@@ -1180,7 +1180,7 @@ function renderProducts() {
 const TOPS_GROUPS = ['Toppings Incluidos','Toppings Extra Básicos','Toppings Extra Premium','Doble Topping','Shots Extra'];
 // Labels cortos para el header del acordeón
 const MOD_LABELS = {
-  'Tamaño':'Tamaño','Bases':'Base / Crema',
+  'Tamaño':'Tamaño','Bases':'Base / Crema','Tipo de Crema':'Tipo de crema',
   'Toppings Incluidos':'Toppings gratis','Toppings Extra Básicos':'Toppings extra +$15',
   'Toppings Extra Premium':'Toppings premium +$25','Doble Topping':'Doble topping',
   'Shots Extra':'Shots extra +$25',
@@ -1192,6 +1192,7 @@ function openCustom(pid, editIdx=null) {
   p.mods.forEach(m=>{const mod=MODS[m];if(!mod) return; sel[m]=mod.max===1?null:[];});
   if(p.mods.includes('Tamaño')&&sel['Tamaño']===null) sel['Tamaño']='Chico';
   if(p.mods.includes('Bases')&&sel['Bases']===null) sel['Bases']='Crema';
+  if(p.mods.includes('Tipo de Crema')&&sel['Tipo de Crema']===null) sel['Tipo de Crema']='Crema';
   CS={p,sel,editIdx};
   if(editIdx!==null) CS.sel=JSON.parse(JSON.stringify(order[editIdx].sel));
   document.getElementById('cust-emoji').textContent=pEmoji(p.name);
@@ -1507,7 +1508,7 @@ function renderOrderItems(){
       const tagHtml=item.tags.map(t=>{
         let cls='oi-tag tag-top';
         if(t.modKey==='Tamaño') cls='oi-tag tag-size';
-        else if(t.modKey==='Bases') cls='oi-tag tag-base';
+        else if(t.modKey==='Bases'||t.modKey==='Tipo de Crema') cls='oi-tag tag-base';
         else if(t.extra>0) cls='oi-tag tag-paid';
         return `<span class="${cls}">${sanitize(t.name)}${t.extra>0?' +$'+t.extra:''}</span>`;
       }).join('');
@@ -2459,8 +2460,11 @@ function buildTicketXML(saleData,type='ticket'){
       const sel=item.sel||{};
       if(sel['Tamaño']) xml+=fontTag(ccGet('comanda_font_mods','normal'),'  '+(showTitulos?'Tamaño: ':'')+sel['Tamaño']+'&#10;');
       if(sel['Bases']) xml+=fontTag(ccGet('comanda_font_mods','normal'),'  '+(showTitulos?'Base: ':'')+sel['Bases']+'&#10;');
+      if(sel['Tipo de Crema']) xml+=fontTag(ccGet('comanda_font_mods','normal'),'  '+(showTitulos?'Crema: ':'')+sel['Tipo de Crema']+'&#10;');
+      // Toppings: uno por línea para que cocina no pierda ninguno (antes se cortaba a 35 caracteres)
       const tops=[...(sel['Toppings Incluidos']||[]),...(sel['Toppings Extra Básicos']||[]),...(sel['Toppings Extra Premium']||[])];
-      if(tops.length) xml+=fontTag(ccGet('comanda_font_mods','normal'),'  + '+tops.join(', ').substring(0,35)+'&#10;');
+      tops.forEach(t=>{ xml+=fontTag(ccGet('comanda_font_mods','normal'),'  + '+t+'&#10;'); });
+      (sel['Doble Topping']||[]).forEach(t=>{ xml+=fontTag(ccGet('comanda_font_mods','normal'),'  + DOBLE '+t+'&#10;'); });
       const shots=sel['Shots Extra']||[];
       if(shots.length) xml+=fontTag(ccGet('comanda_font_mods','normal'),'  Shot: '+shots.join(', ')+'&#10;');
       if(item.note) xml+=fontTag(ccGet('comanda_font_notas','normal'),'  ** '+item.note.substring(0,30)+'&#10;');
