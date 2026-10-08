@@ -175,6 +175,32 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 2px; }
+
+/* ── Celular / tablet chica: menú lateral como cajón con botón ☰ ── */
+#adm-topbar, #adm-backdrop { display: none; }
+.modal-box { max-height: 92dvh; overflow-y: auto; }
+@media (max-width: 860px) {
+  #shell { display: block !important; }
+  #adm-topbar { display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 120; background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 12px; padding-top: max(10px, env(safe-area-inset-top)); }
+  #adm-topbar .adm-menu-btn { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border-2); background: var(--surface); font-size: 20px; cursor: pointer; flex-shrink: 0; }
+  #adm-topbar .adm-title { flex: 1; min-width: 0; font-family: 'Bebas Neue', serif; font-size: 20px; letter-spacing: 1px; color: #A6182E; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #adm-topbar .adm-pos { flex-shrink: 0; height: 40px; padding: 0 14px; border-radius: 10px; background: #A6182E; color: #fff; text-decoration: none; display: flex; align-items: center; font-size: 13px; font-weight: 600; }
+  #sidebar { position: fixed; top: 0; left: 0; bottom: 0; height: 100dvh; width: 270px; max-width: 85vw; z-index: 160; transform: translateX(-105%); transition: transform 0.25s ease; box-shadow: 0 0 40px rgba(0,0,0,0.2); }
+  body.adm-menu-open #sidebar { transform: translateX(0); }
+  #adm-backdrop { position: fixed; inset: 0; background: rgba(26,5,8,0.45); z-index: 150; }
+  body.adm-menu-open #adm-backdrop { display: block; }
+  #main-content { padding: 14px; }
+  .card { padding: 14px; }
+  .data-table { display: block; overflow-x: auto; white-space: nowrap; }
+  .modal-overlay { padding: 12px; }
+  .modal-box { padding: 18px; box-sizing: border-box; }
+  .modal-box [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+  .form-grid { grid-template-columns: 1fr; gap: 12px; }
+  .form-input, .form-select { width: 100%; max-width: 100%; box-sizing: border-box; }
+  .modal-box [style*="display:flex"], .modal-box [style*="display: flex"] { flex-wrap: wrap; }
+  .modal-box input, .modal-box select, .modal-box textarea { max-width: 100%; box-sizing: border-box; }
+}
+
 </style>
 </head>
 <body>
@@ -214,6 +240,12 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 
 <!-- SHELL -->
 <div id="shell" style="display:none;">
+  <div id="adm-topbar">
+    <button class="adm-menu-btn" onclick="admMenu(true)" aria-label="Menú">☰</button>
+    <div class="adm-title" id="adm-title">Resumen</div>
+    <a class="adm-pos" href="index.html">🏪 POS</a>
+  </div>
+  <div id="adm-backdrop" onclick="admMenu(false)"></div>
 
   <!-- SIDEBAR -->
   <div id="sidebar">
@@ -1088,6 +1120,8 @@ function logout() {
 function goPage(page, btn) {
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
+  const t=document.getElementById('adm-title'); if(t) t.textContent=btn.textContent.trim();
+  admMenu(false); window.scrollTo(0,0);
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   loadPage(page);
@@ -4352,6 +4386,42 @@ async function ejecutarSync() {
   document.getElementById('panel-sincronizar').style.display = 'none';
   await loadEntradasPendientes();
 }
+</script>
+
+<script>
+// ── Menú lateral en celular + botón "atrás" / Esc cierran ventanas en vez de salir ──
+function admMenu(open){
+  const was=document.body.classList.contains('adm-menu-open');
+  document.body.classList.toggle('adm-menu-open',!!open);
+  if(open&&!was) admNavPush('menu');
+  if(!open&&was) admNavPop('menu');
+}
+let _admSkip=0,_admFromPop=false;
+function admNavPush(n){ if(_admFromPop) return; try{history.pushState({adm:n},'');}catch(e){} }
+function admNavPop(n){ if(_admFromPop) return; if(history.state&&history.state.adm===n){ _admSkip++; history.back(); } }
+function admCloseTop(){
+  const conf=document.querySelector('#_lfc-cancel, #lfc-cancel'); if(conf){ conf.click(); return true; }
+  const open=[...document.querySelectorAll('.modal-overlay.open')];
+  if(open.length){ open[open.length-1].classList.remove('open'); return true; }
+  if(document.body.classList.contains('adm-menu-open')){ admMenu(false); return true; }
+  return false;
+}
+window.addEventListener('popstate',()=>{
+  if(_admSkip>0){ _admSkip--; return; }
+  let closed=false;
+  _admFromPop=true; try{ closed=admCloseTop(); } finally{ _admFromPop=false; }
+  if(!closed&&(!history.state||history.state.adm==='root')){ location.href='index.html'; return; } // nada abierto: "atrás" regresa al POS
+  try{ if(!history.state||!history.state.adm) history.pushState({adm:'base'},''); }catch(e){}
+});
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ _admFromPop=true; try{admCloseTop();}finally{_admFromPop=false;} } });
+// Cuando una ventana se abre/cierra, sincronizar con el historial para que "atrás" la cierre
+new MutationObserver(ms=>ms.forEach(m=>{
+  const el=m.target; if(!el.classList||!el.classList.contains('modal-overlay')) return;
+  const isOpen=el.classList.contains('open'), wasOpen=(m.oldValue||'').split(' ').includes('open');
+  if(isOpen&&!wasOpen) admNavPush('modal:'+el.id);
+  if(!isOpen&&wasOpen) admNavPop('modal:'+el.id);
+})).observe(document.body,{subtree:true,attributes:true,attributeFilter:['class'],attributeOldValue:true});
+try{ history.replaceState({adm:'root'},''); history.pushState({adm:'base'},''); }catch(e){}
 </script>
 </body>
 </html>

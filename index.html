@@ -105,6 +105,16 @@ html, body {
 .tb-btn { width: 38px; height: 38px; border-radius: 12px; border: 1.5px solid var(--border-2); background: var(--bg); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .tb-btn:active { background: var(--red-light); }
 .tb-badge { font-size: 9px; font-weight: 600; color: var(--green); letter-spacing: 0.5px; display: flex; align-items: center; gap: 3px; white-space: nowrap; }
+/* Celular: los botones de arriba no caben — se deslizan de lado y se ve completo el número de orden */
+@media (max-width: 560px) {
+  #topbar { padding: 0 10px; gap: 8px; }
+  .tb-order-info { flex: 0 0 auto; min-width: 72px; }
+  .tb-order-num { font-size: 13px; white-space: nowrap; }
+  .tb-actions { flex: 1 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none; justify-content: flex-start; padding: 4px 0; }
+  .tb-actions::-webkit-scrollbar { display: none; }
+  .tb-btn { width: 36px; height: 36px; font-size: 16px; }
+  .tb-badge { display: none; }
+}
 
 /* ══════════════════════════════════════════
    CAT TABS
@@ -253,7 +263,14 @@ html, body {
 .size-card.sel .size-name { color: var(--red-dark); }
 .size-card.sel .size-extra { color: var(--red); }
 
-.bases-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.bases-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.base-chip .base-name { min-width: 0; overflow-wrap: break-word; }
+@media (max-width: 480px) { .bases-grid { grid-template-columns: 1fr; } }
+/* Ventanas sueltas (impresora, retiro): en tablet van centradas como las demás */
+@media (min-width: 600px) {
+  .lf-modal { align-items: center !important; justify-content: center; padding: 20px; }
+  .lf-modal > .lf-modal-box { max-width: 480px; border-radius: 24px !important; max-height: 92dvh; overflow-y: auto; }
+}
 .base-chip { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border: 2px solid var(--border-2); border-radius: 12px; cursor: pointer; transition: all 0.15s; }
 .base-chip:active { transform: scale(0.98); }
 .base-chip.sel { border-color: #c1601a; background: #FEF3EC; }
@@ -998,6 +1015,7 @@ function showPOS() {
   document.getElementById('screen-login').classList.remove('active');
   document.getElementById('screen-pos').classList.add('active');
   document.body.classList.add('pos-active');
+  _navEnsureBase();
   document.getElementById('tb-user').textContent = currentUser.name;
   document.getElementById('order-num').textContent = String(orderN).padStart(3,'0');
   document.getElementById('order-num-2').textContent = String(orderN).padStart(3,'0');
@@ -1964,10 +1982,11 @@ function abrirRetiro(){
   const p=PERMS[currentUser?.role]||PERMS.cajero;
   if(!p.discount){ showToast('No tienes permiso para registrar retiros'); return; }
   const div=document.createElement('div');
+  div.className='lf-modal';
   div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;display:flex;align-items:flex-end;';
-  div.innerHTML=`<div style="background:#fff;border-radius:24px 24px 0 0;padding:20px;width:100%;padding-bottom:max(20px,env(safe-area-inset-bottom))">
+  div.innerHTML=`<div class="lf-modal-box" style="background:#fff;border-radius:24px 24px 0 0;padding:20px;width:100%;padding-bottom:max(20px,env(safe-area-inset-bottom))">
     <div style="width:44px;height:5px;background:#ddd;border-radius:3px;margin:0 auto 16px;"></div>
-    <div style="font-family:'Bebas Neue',serif;font-size:22px;color:#A6182E;letter-spacing:1px;margin-bottom:16px;">💸 Registrar Retiro</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;"><div style="font-family:'Bebas Neue',serif;font-size:22px;color:#A6182E;letter-spacing:1px;">💸 Registrar Retiro</div><button onclick="this.closest('.lf-modal').remove()" aria-label="Cerrar" style="font-size:20px;background:none;border:none;color:#9a7075;cursor:pointer;width:38px;height:38px;">✕</button></div>
     <div style="font-size:12px;color:#9a7075;margin-bottom:6px;">Monto retirado</div>
     <input id="retiro-monto" type="number" placeholder="0.00" min="0" step="1"
       style="width:100%;height:52px;border:1.5px solid #e0c0c8;border-radius:12px;padding:0 16px;font-size:22px;font-weight:700;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:12px;text-align:right;">
@@ -1976,7 +1995,7 @@ function abrirRetiro(){
       style="width:100%;height:44px;border:1.5px solid #e0c0c8;border-radius:12px;padding:0 14px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:16px;">
     <div style="display:flex;gap:8px;">
       <button onclick="guardarRetiro()" style="flex:2;height:52px;background:#A6182E;color:#fff;border:none;border-radius:14px;font-family:'Bebas Neue',serif;font-size:18px;letter-spacing:2px;cursor:pointer;">REGISTRAR</button>
-      <button onclick="this.closest('div[style*=fixed]').remove()" style="flex:1;height:52px;background:#FDF6F7;border:none;border-radius:14px;color:#9a7075;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;">Cancelar</button>
+      <button onclick="this.closest('.lf-modal').remove()" style="flex:1;height:52px;background:#FDF6F7;border:none;border-radius:14px;color:#9a7075;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;">Cancelar</button>
     </div>
   </div>`;
   div.onclick=e=>{if(e.target===div) div.remove();};
@@ -2007,7 +2026,7 @@ function guardarRetiro(){
       pagado:true,
     })
   }).catch(()=>{});
-  document.querySelector('div[style*="position:fixed"][style*="flex-end"]')?.remove();
+  document.querySelector('.lf-modal')?.remove();
   showToast('✅ Retiro de $'+monto.toLocaleString('es-MX')+' registrado');
   if(document.getElementById('sheet-cierre').classList.contains('open')){
     buildCierreData(); renderCierreModal();
@@ -2335,10 +2354,12 @@ function quitarPromo(){
 // SHEET HELPERS + SWIPE DOWN
 // ═══════════════════════════════
 let _sheetStack=[];
+const _ovTimers={};
 
 function openSheet(name){
   // v2: en desktop, el panel de orden siempre está visible — no abrir como sheet
   if(name==='order'&&window.matchMedia&&window.matchMedia('(min-width: 980px)').matches) return;
+  clearTimeout(_ovTimers[name]);
   document.getElementById('ov-'+name).classList.add('open');
   requestAnimationFrame(()=>{
     const sheet=document.getElementById('sheet-'+name);
@@ -2346,15 +2367,19 @@ function openSheet(name){
     setupSwipeClose(sheet,name);
   });
   _sheetStack.push(name);
+  _navPush(name);
 }
 
 function closeSheet(name){
   // v2: en desktop, el panel de orden siempre está visible — no cerrarlo
   if(name==='order'&&window.matchMedia&&window.matchMedia('(min-width: 980px)').matches) return;
-  document.getElementById('sheet-'+name).classList.remove('open');
-  setTimeout(()=>document.getElementById('ov-'+name).classList.remove('open'),320);
+  const sh=document.getElementById('sheet-'+name);
+  sh.classList.remove('open');
+  // Antes: si se volvía a abrir antes de 320 ms, el fondo oscuro desaparecía y no se podía cerrar tocando afuera
+  clearTimeout(_ovTimers[name]);
+  _ovTimers[name]=setTimeout(()=>{ if(!sh.classList.contains('open')) document.getElementById('ov-'+name).classList.remove('open'); },320);
   const idx=_sheetStack.lastIndexOf(name);
-  if(idx!==-1) _sheetStack.splice(idx,1);
+  if(idx!==-1){ _sheetStack.splice(idx,1); _navPop(name); }
 }
 
 function setupSwipeClose(sheet,name){
@@ -2391,9 +2416,53 @@ function setupSwipeClose(sheet,name){
   sheet.addEventListener('touchend',onEnd,{passive:true});
 }
 
+// ═══════════════════════════════
+// NAVEGACIÓN "ATRÁS": botón atrás del teléfono/tablet, gesto de regresar y tecla Esc
+// cierran la ventana de encima en vez de salirse del POS.
+// ═══════════════════════════════
+let _navSkip=0, _navFromPop=false;
+function _posActive(){ return document.getElementById('screen-pos')?.classList.contains('active'); }
+function _navPush(name){ if(_navFromPop||!_posActive()) return; try{ history.pushState({lf:name},''); }catch{} }
+function _navPop(name){
+  if(_navFromPop) return;
+  if(history.state&&history.state.lf===name){ _navSkip++; history.back(); }
+}
+function _navEnsureBase(){ try{ if(!history.state||!history.state.lf) history.pushState({lf:'base'},''); }catch{} }
+function _navCloseTop(){
+  // 1) diálogos de confirmación
+  const conf=document.getElementById('_lfc-cancel'); if(conf){ conf.click(); return true; }
+  // 2) ventanas sueltas (impresora, retiro)
+  const mods=document.querySelectorAll('.lf-modal'); if(mods.length){ mods[mods.length-1].remove(); return true; }
+  // 3) pantalla de venta exitosa
+  const sf=document.getElementById('success-flash'); if(sf&&sf.classList.contains('open')){ cerrarSuccessFlash(); return true; }
+  // 4) hojas (orden, cobro, personalizar, historial, cierre)
+  if(_sheetStack.length){
+    const top=_sheetStack[_sheetStack.length-1];
+    if(top==='cobro'){ closeCobro(); openOrderSheet(); }   // de Cobrar se regresa a la orden
+    else closeSheet(top);
+    return true;
+  }
+  return false;
+}
 window.addEventListener('popstate',()=>{
-  if(_sheetStack.length>0) closeSheet(_sheetStack[_sheetStack.length-1]);
+  if(_navSkip>0){ _navSkip--; return; }
+  if(!_posActive()) return;
+  _navFromPop=true;
+  let closed=false;
+  try{ closed=_navCloseTop(); } finally { _navFromPop=false; }
+  if(!closed&&typeof showToast==='function') showToast('Para salir del POS usa el botón ⏻');
+  _navEnsureBase();
 });
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape'||!_posActive()) return;
+  e.preventDefault(); _navFromPop=true;
+  try{ _navCloseTop(); } finally{ _navFromPop=false; }
+});
+// Ventanas sueltas: cerrar tocando afuera y quitar su entrada del historial al cerrarse
+new MutationObserver(muts=>{
+  muts.forEach(m=>m.removedNodes.forEach(n=>{ if(n.classList&&n.classList.contains('lf-modal')) _navPop('modal'); }));
+  muts.forEach(m=>m.addedNodes.forEach(n=>{ if(n.classList&&n.classList.contains('lf-modal')) _navPush('modal'); }));
+}).observe(document.body,{childList:true});
 
 // ═══════════════════════════════
 // PRINTING — EPSON ePOS + FALLBACK (sin cambios)
@@ -2690,8 +2759,9 @@ function showShareSheet(saleData){
   if(navigator.share){navigator.share({title:`Ticket Lady Fresa #${String(saleData.id).padStart(3,'0')}`,text}).catch(()=>{});return;}
   const encoded=encodeURIComponent(text);
   const div=document.createElement('div');
+  div.className='lf-modal';
   div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;display:flex;align-items:flex-end;';
-  div.innerHTML=`<div style="background:#fff;border-radius:24px 24px 0 0;padding:20px;width:100%;padding-bottom:max(20px,env(safe-area-inset-bottom))">
+  div.innerHTML=`<div class="lf-modal-box" style="background:#fff;border-radius:24px 24px 0 0;padding:20px;width:100%;padding-bottom:max(20px,env(safe-area-inset-bottom))">
     <div style="width:44px;height:5px;background:#ddd;border-radius:3px;margin:0 auto 16px;"></div>
     <div style="font-family:'Bebas Neue',serif;font-size:22px;color:#A6182E;letter-spacing:1px;margin-bottom:16px;">Enviar Ticket</div>
     <a href="https://wa.me/?text=${encoded}" style="display:flex;align-items:center;gap:12px;padding:14px;border:1.5px solid #e0e0e0;border-radius:14px;margin-bottom:10px;text-decoration:none;color:#1a0508;">
@@ -2700,7 +2770,7 @@ function showShareSheet(saleData){
     <a href="mailto:?subject=Ticket Lady Fresa&body=${encoded}" style="display:flex;align-items:center;gap:12px;padding:14px;border:1.5px solid #e0e0e0;border-radius:14px;margin-bottom:10px;text-decoration:none;color:#1a0508;">
       <span style="font-size:24px;">✉️</span><span style="font-size:14px;font-weight:600;">Correo</span>
     </a>
-    <button onclick="this.closest('div[style*=fixed]').remove()" style="width:100%;height:48px;border:none;border-radius:14px;background:#FDF6F7;color:#9a7075;font-family:DM Sans,sans-serif;font-size:14px;cursor:pointer;margin-top:4px;">Cerrar</button>
+    <button onclick="this.closest('.lf-modal').remove()" style="width:100%;height:48px;border:none;border-radius:14px;background:#FDF6F7;color:#9a7075;font-family:DM Sans,sans-serif;font-size:14px;cursor:pointer;margin-top:4px;">Cerrar</button>
   </div>`;
   div.onclick=e=>{if(e.target===div) div.remove();};
   document.body.appendChild(div);
@@ -2713,10 +2783,12 @@ function _sfReprint(){cerrarSuccessFlash();if(window._lastSale) printSale(window
 function openPrinterCfg(){
   const ip=printerCfg.ip||'';
   const div=document.createElement('div');
+  div.className='lf-modal';
   div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;display:flex;align-items:flex-end;';
-  div.innerHTML=`<div style="background:#fff;border-radius:24px 24px 0 0;padding:20px;width:100%;padding-bottom:max(20px,env(safe-area-inset-bottom))">
+  div.onclick=e=>{if(e.target===div) div.remove();};
+  div.innerHTML=`<div class="lf-modal-box" style="background:#fff;border-radius:24px 24px 0 0;padding:20px;width:100%;padding-bottom:max(20px,env(safe-area-inset-bottom))">
     <div style="width:44px;height:5px;background:#ddd;border-radius:3px;margin:0 auto 16px;"></div>
-    <div style="font-family:'Bebas Neue',serif;font-size:22px;color:#A6182E;letter-spacing:1px;margin-bottom:16px;">🖨️ Impresora Epson</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;"><div style="font-family:'Bebas Neue',serif;font-size:22px;color:#A6182E;letter-spacing:1px;">🖨️ Impresora Epson</div><button onclick="this.closest('.lf-modal').remove()" aria-label="Cerrar" style="font-size:20px;background:none;border:none;color:#9a7075;cursor:pointer;width:38px;height:38px;">✕</button></div>
     <div style="font-size:12px;color:#9a7075;margin-bottom:6px;">IP de la impresora</div>
     <input id="pcfg-ip" value="${ip}" placeholder="192.168.1.100" style="width:100%;height:48px;border:1.5px solid #e0c0c8;border-radius:12px;padding:0 14px;font-size:16px;font-family:monospace;outline:none;margin-bottom:10px;">
     <div id="pcfg-status" style="min-height:36px;margin-bottom:10px;border-radius:10px;padding:8px 12px;font-size:12px;display:none;"></div>
@@ -2736,7 +2808,7 @@ function openPrinterCfg(){
     </label>
     <div style="display:flex;gap:8px;margin-bottom:8px;">
       <button onclick="savePrinterCfg()" style="flex:2;height:52px;background:#A6182E;color:#fff;border:none;border-radius:14px;font-family:'Bebas Neue',serif;font-size:18px;letter-spacing:2px;cursor:pointer;">GUARDAR</button>
-      <button onclick="this.closest('div[style*=fixed]').remove()" style="flex:1;height:52px;background:#FDF6F7;border:none;border-radius:14px;color:#9a7075;font-family:DM Sans,sans-serif;font-size:14px;cursor:pointer;">Cancelar</button>
+      <button onclick="this.closest('.lf-modal').remove()" style="flex:1;height:52px;background:#FDF6F7;border:none;border-radius:14px;color:#9a7075;font-family:DM Sans,sans-serif;font-size:14px;cursor:pointer;">Cancelar</button>
     </div>
     <button onclick="testPrinter()" style="width:100%;height:44px;background:#F0FDF4;border:1.5px solid #86efac;border-radius:14px;color:#166534;font-family:DM Sans,sans-serif;font-size:14px;font-weight:600;cursor:pointer;">🔌 Probar conexión</button>
   </div>`;
@@ -2824,7 +2896,7 @@ function savePrinterCfg(){
     retryQueue:true,
   };
   localStorage.setItem('lf_printer',JSON.stringify(printerCfg));
-  document.querySelector('div[style*="fixed"]')?.remove();
+  document.querySelector('.lf-modal')?.remove();
   showToast('✅ Impresora guardada');
   // Re-arrancar heartbeat con la nueva IP
   checkPrinterStatus();
