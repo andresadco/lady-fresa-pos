@@ -1191,6 +1191,47 @@ const SB_URL = 'https://ngpumyxxxlafuzcsaepy.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ncHVteXh4eGxhZnV6Y3NhZXB5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyNjkzNzYsImV4cCI6MjA4OTg0NTM3Nn0.u4WHkOXLrNn4WSKHJedXXNDYrCMdfaDNK8KlvJNfXLg';
 const SB_H = { 'Content-Type':'application/json', 'apikey':SB_KEY, 'Authorization':'Bearer '+SB_KEY, 'Prefer':'return=representation' };
 
+// ═══════════════════════════════
+// SESIÓN SEGURA: el PIN se valida en el servidor (función lf-login) y regresa una sesión real.
+// Todas las llamadas a la base (/rest/v1) viajan con el token de quien inició sesión;
+// sin sesión, la base ya no deja leer ni escribir ventas, clientas, turnos, etc.
+// ═══════════════════════════════
+const LF_AUTH_KEY='lf_auth_pos';
+let LF_AUTH=null; try{ LF_AUTH=JSON.parse(localStorage.getItem(LF_AUTH_KEY)||'null'); }catch(e){}
+function lfAuthSet(s){ LF_AUTH=s||null; try{ s?localStorage.setItem(LF_AUTH_KEY,JSON.stringify(s)):localStorage.removeItem(LF_AUTH_KEY); }catch(e){} }
+const _lfFetch=window.fetch.bind(window);
+let _lfRefreshing=null;
+function lfAuthRefresh(){
+  if(_lfRefreshing) return _lfRefreshing;
+  _lfRefreshing=(async()=>{
+    // Otra pestaña pudo haberla renovado ya
+    try{ const cur=JSON.parse(localStorage.getItem(LF_AUTH_KEY)||'null'); if(cur&&cur.access_token!==LF_AUTH?.access_token&&cur.expires_at*1000-Date.now()>120000){ LF_AUTH=cur; return true; } }catch(e){}
+    if(!LF_AUTH?.refresh_token) return false;
+    const r=await _lfFetch(SB_URL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY},body:JSON.stringify({refresh_token:LF_AUTH.refresh_token})});
+    if(r.ok){ const j=await r.json(); lfAuthSet({access_token:j.access_token,refresh_token:j.refresh_token,expires_at:j.expires_at||Math.floor(Date.now()/1000)+(j.expires_in||3600)}); return true; }
+    if(r.status===400||r.status===401||r.status===403){ lfAuthSet(null); try{ lfSesionVencida(); }catch(e){} }
+    return false;
+  })().catch(()=>false).finally(()=>{ _lfRefreshing=null; });
+  return _lfRefreshing;
+}
+window.fetch=async function(input,init){
+  const url=typeof input==='string'?input:(input&&input.url)||'';
+  if(!url.startsWith(SB_URL+'/rest/v1/')||!LF_AUTH) return _lfFetch(input,init);
+  if(LF_AUTH.expires_at*1000-Date.now()<90000) await lfAuthRefresh();
+  const go=()=>{ const h=new Headers((init&&init.headers)||{}); if(LF_AUTH) h.set('Authorization','Bearer '+LF_AUTH.access_token); return _lfFetch(input,{...(init||{}),headers:h}); };
+  let r=await go();
+  if(r.status===401&&LF_AUTH&&await lfAuthRefresh()) r=await go();
+  return r;
+};
+// Renueva en segundo plano para que la tablet nunca se quede con el token vencido
+setInterval(()=>{ if(LF_AUTH&&navigator.onLine&&LF_AUTH.expires_at*1000-Date.now()<10*60000) lfAuthRefresh(); },60000);
+async function lfLogin(pin,origen){
+  const r=await _lfFetch(SB_URL+'/functions/v1/lf-login',{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY,Authorization:'Bearer '+SB_KEY},body:JSON.stringify({pin,origen})});
+  const j=await r.json().catch(()=>({ok:false,error:'servidor'}));
+  if(j&&j.ok&&j.session) lfAuthSet(j.session);
+  return j||{ok:false};
+}
+
 function nowMX() { return new Date(new Date().toLocaleString('en-US',{timeZone:'America/Mexico_City'})); }
 function fmtMX(d) { return new Date(d).toLocaleString('es-MX',{timeZone:'America/Mexico_City',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}); }
 function timeMX(d) { return new Date(d).toLocaleTimeString('es-MX',{timeZone:'America/Mexico_City',hour:'2-digit',minute:'2-digit',hour12:false}); }
@@ -1468,11 +1509,10 @@ async function pinEnter() {
   // Deshabilitar teclado durante la verificación
   document.querySelectorAll('.pin-btn').forEach(b=>b.disabled=true);
   try {
-    const res = await fetch(`${SB_URL}/rest/v1/rpc/pos_login`,{method:'POST',headers:SB_H,body:JSON.stringify({p_pin:pinBuffer,p_origen:'pos'})});
-    const j = await res.json();
+    const j = await lfLogin(pinBuffer,'pos');
     const users = j&&j.ok ? [j.user] : [];
     if (!users.length) {
-      errEl.textContent = j&&j.error==='bloqueado' ? 'Demasiados intentos. Espera 5 minutos.' : 'PIN incorrecto';
+      errEl.textContent = j&&j.error==='bloqueado' ? 'Demasiados intentos. Espera 5 minutos.' : (j&&j.error==='pin' ? 'PIN incorrecto' : 'No se pudo entrar, intenta otra vez');
       pinBuffer=''; updateDots();
       // Vibración de error en dispositivos que lo soporten
       if(navigator.vibrate) navigator.vibrate([80,30,80]);
@@ -1490,6 +1530,17 @@ async function pinEnter() {
   } finally {
     document.querySelectorAll('.pin-btn').forEach(b=>b.disabled=false);
   }
+}
+
+// La sesión ya no se puede renovar (usuario dado de baja o token revocado): pedir PIN sin perder la orden en curso
+function lfSesionVencida(){
+  if(!currentUser) return;
+  localStorage.removeItem('lf_session');
+  document.getElementById('screen-pos').classList.remove('active');
+  document.getElementById('screen-login').classList.add('active');
+  document.body.classList.remove('pos-active');
+  document.getElementById('login-error').textContent='Tu sesión venció. Pon tu PIN otra vez.';
+  pinBuffer=''; updateDots();
 }
 
 function showPOS() {
@@ -1542,7 +1593,7 @@ async function logout() {
   });
   if (!ok) return;
   currentUser = null; pinBuffer=''; updateDots();
-  localStorage.removeItem('lf_session');
+  localStorage.removeItem('lf_session'); lfAuthSet(null);
   document.getElementById('screen-pos').classList.remove('active');
   document.getElementById('screen-login').classList.add('active');
   document.body.classList.remove('pos-active');
@@ -1566,6 +1617,27 @@ async function logout() {
   },{passive:true});
 })();
 
+
+// ═══════════════════════════════
+// AUTO-ACTUALIZACIÓN: si se publicó una versión nueva del POS, la tablet se recarga sola
+// cuando no hay nada en curso (sin orden, sin ventanas abiertas, sin ventas por subir).
+// ═══════════════════════════════
+let _lfVer=null;
+async function lfChecarVersion(){
+  try{
+    if(!navigator.onLine) return;
+    const r=await _lfFetch(location.pathname+'?v='+Date.now(),{method:'HEAD',cache:'no-store'});
+    const v=r.headers.get('etag')||r.headers.get('last-modified'); if(!r.ok||!v) return;
+    if(_lfVer===null){ _lfVer=v; return; }
+    if(v===_lfVer) return;
+    const ocupado=(typeof order!=='undefined'&&order.length)||(typeof _cobroPending!=='undefined'&&_cobroPending)
+      ||document.querySelector('[id^="ov-"].open, .lf-modal, #success-flash.open')
+      ||(JSON.parse(localStorage.getItem('lf_offline_queue')||'[]').length>0);
+    if(!ocupado) location.reload();
+  }catch(e){}
+}
+setTimeout(lfChecarVersion,20000); setInterval(lfChecarVersion,5*60000);
+
 // Restore sesión del día (al final de la carga, cuando ya existen todas las variables)
 setTimeout(function(){
   try {
@@ -1575,6 +1647,7 @@ setTimeout(function(){
     const savedAt=s.savedAt||0;
     const hoursOld=(Date.now()-savedAt)/(1000*60*60);
     if(hoursOld>16){localStorage.removeItem('lf_session');return;}
+    if(!LF_AUTH){localStorage.removeItem('lf_session');return;} // sesiones de antes del login seguro: pedir PIN otra vez
     currentUser=s.user;
     setTimeout(async()=>{
       await abrirTurnoDB(currentUser);
@@ -2978,7 +3051,7 @@ function finalizarCierre(){
   sales=[]; turnoStartTime=new Date(); turnoId=null; orderN=1;
   document.getElementById('order-num').textContent='001';
   document.getElementById('order-num-2').textContent='001';
-  localStorage.removeItem('lf_session');
+  localStorage.removeItem('lf_session'); lfAuthSet(null);
 
   order=[]; discount=0; discountMonto=0; promoActiva=null; payMethod='efectivo'; svcType='mostrador';
   renderOrderBar(); renderProducts();

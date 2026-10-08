@@ -364,17 +364,11 @@ async function init(){
   const qr=(params.get('qr')||'').toUpperCase().trim();
   if(!qr||!/^[A-Z0-9]{4,16}$/.test(qr)){ showState('error'); return; }
   try {
-    // 1. Datos del cliente
-    const r1=await fetch(`${SB_URL}/rest/v1/lf_loyalty_cliente_resumen?qr_code=eq.${encodeURIComponent(qr)}&select=*&limit=1`,{headers:SB_H});
-    const cli=await r1.json();
-    if(!cli||!cli[0]){ showState('error'); return; }
-    const c=cli[0];
-    // 2. Movimientos recientes
-    const r2=await fetch(`${SB_URL}/rest/v1/lf_loyalty_sellos?cliente_id=eq.${c.id}&select=*&order=created_at.desc&limit=8`,{headers:SB_H});
-    const movs=await r2.json();
-    // 3. Config (para saber el número de sellos requeridos)
-    const r3=await fetch(`${SB_URL}/rest/v1/lf_loyalty_config?id=eq.1&select=sellos_requeridos`,{headers:SB_H});
-    const cfg=(await r3.json())[0]||{sellos_requeridos:10};
+    // Solo los datos de esta tarjeta (la base ya no deja leer la lista de clientas)
+    const r=await fetch(SB_URL+'/rest/v1/rpc/club_tarjeta',{method:'POST',headers:{...SB_H,'Content-Type':'application/json'},body:JSON.stringify({p_qr:qr})});
+    const d=r.ok?await r.json():null;
+    if(!d||!d.cliente){ showState('error'); return; }
+    const c=d.cliente, movs=d.movimientos, cfg=d.config||{sellos_requeridos:10};
     render(c,movs||[],cfg);
   } catch(e){
     console.error(e);
