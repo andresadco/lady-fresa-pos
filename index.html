@@ -351,6 +351,257 @@ html, body {
 .svc-btn.active { background: var(--red-light); border-color: var(--red-mid); color: var(--red-dark); font-weight: 600; }
 .client-input { width: 100%; height: 42px; border: 1.5px solid var(--border-2); border-radius: 10px; padding: 0 12px; font-size: 13px; font-family: 'DM Sans', sans-serif; color: var(--text); outline: none; background: var(--surface); margin-bottom: 12px; }
 .client-input:focus { border-color: var(--red); }
+/* Cliente — píldora colapsable y bloque de lealtad */
+.client-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 999px;
+  background: var(--blue-light); border: none;
+  color: var(--blue); font-size: 12px; cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  margin-bottom: 14px;
+}
+.client-toggle.has-value { background: var(--green-light); color: var(--green); }
+.client-input {
+  width: 100%; height: 42px; border: 1.5px solid var(--border-2);
+  border-radius: 10px; padding: 0 12px; font-size: 13px;
+  font-family: 'DM Sans', sans-serif; color: var(--text);
+  outline: none; background: var(--surface); margin-bottom: 12px;
+  display: none;
+}
+.client-input.open { display: block; }
+.client-input:focus { border-color: var(--red); }
+
+/* Tarjeta del cliente de lealtad */
+.loyalty-card {
+  background: linear-gradient(135deg, #FDEEF1 0%, #FFF 100%);
+  border: 1.5px solid var(--red-mid); border-radius: 14px;
+  padding: 12px 14px; margin-bottom: 14px;
+  display: none;
+}
+.loyalty-card.show { display: block; }
+.lc-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.lc-name-wrap { flex: 1; min-width: 0; }
+.lc-name { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lc-phone { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+.lc-remove {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid var(--border-2); background: var(--surface);
+  color: var(--text-3); font-size: 13px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.lc-progress-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.lc-stamps { display: flex; gap: 3px; flex: 1; }
+.lc-stamp {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 1.5px solid var(--red-mid); background: var(--surface);
+  flex-shrink: 0;
+}
+.lc-stamp.filled { background: var(--red); border-color: var(--red); position: relative; }
+.lc-stamp.filled::after {
+  content: '✓'; position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 9px; font-weight: 700;
+}
+.lc-count { font-size: 11px; color: var(--text-2); font-weight: 600; white-space: nowrap; }
+.lc-hint { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+.lc-canjear-banner {
+  background: var(--green); color: #fff;
+  border-radius: 10px; padding: 10px 12px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin-top: 10px;
+}
+.lc-canjear-banner.applied { background: var(--amber); }
+.lc-cb-text { font-size: 12px; font-weight: 600; }
+.lc-cb-btn {
+  background: #fff; color: var(--green);
+  border: none; border-radius: 8px;
+  padding: 6px 12px; font-size: 11px; font-weight: 700;
+  font-family: 'DM Sans', sans-serif; cursor: pointer;
+  white-space: nowrap;
+}
+.lc-canjear-banner.applied .lc-cb-btn { color: var(--amber); }
+.lc-share-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1.5px dashed var(--red-mid);
+  border-radius: 10px;
+  color: var(--red);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+}
+.lc-share-btn:active { background: var(--red-light); }
+
+/* Sheet de búsqueda de cliente */
+.cliente-search-row {
+  display: flex; gap: 8px; margin-bottom: 14px;
+}
+.cliente-search-input {
+  flex: 1; height: 46px; border: 1.5px solid var(--border-2);
+  border-radius: 12px; padding: 0 14px; font-size: 15px;
+  font-family: 'DM Sans', sans-serif; color: var(--text);
+  outline: none; background: var(--surface);
+}
+.cliente-search-input:focus { border-color: var(--red); }
+.cliente-result {
+  background: var(--surface); border-radius: 12px;
+  padding: 12px 14px; margin-bottom: 8px;
+  border: 0.5px solid var(--border);
+  display: flex; align-items: center; gap: 12px;
+  cursor: pointer;
+}
+.cliente-result:active { background: var(--red-light); }
+.cliente-result-avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--red-light); color: var(--red);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700; flex-shrink: 0;
+}
+.cliente-result-info { flex: 1; min-width: 0; }
+.cliente-result-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.cliente-result-meta { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.cliente-result-sellos {
+  font-size: 11px; font-weight: 700; color: var(--red);
+  padding: 4px 10px; background: var(--red-light);
+  border-radius: 10px; flex-shrink: 0;
+}
+.cliente-result-sellos.full { background: var(--green); color: #fff; }
+
+.cliente-new-card {
+  background: var(--green-light); border-radius: 12px;
+  padding: 14px; border: 1.5px dashed var(--green);
+  margin-top: 6px;
+}
+.cliente-new-title { font-size: 13px; font-weight: 600; color: var(--green); margin-bottom: 8px; }
+.cliente-new-input {
+  width: 100%; height: 42px; border: 1.5px solid rgba(5,58,10,0.2);
+  border-radius: 10px; padding: 0 12px; font-size: 14px;
+  font-family: 'DM Sans', sans-serif; color: var(--text);
+  outline: none; background: var(--surface); margin-bottom: 8px;
+}
+.cliente-new-input:focus { border-color: var(--green); }
+.cliente-new-btn {
+  width: 100%; height: 42px; background: var(--green); color: #fff;
+  border: none; border-radius: 10px; font-size: 13px; font-weight: 700;
+  letter-spacing: 1px; cursor: pointer; font-family: 'DM Sans', sans-serif;
+}
+.cliente-new-btn:disabled { opacity: 0.4; }
+
+/* ── ADMIN DE LEALTAD ── */
+.la-tabs { display: flex; gap: 0; margin-top: 10px; border-bottom: 1px solid var(--border); }
+.la-tab {
+  padding: 9px 14px; font-size: 12px; font-weight: 500;
+  color: var(--text-3); border: none; background: none;
+  border-bottom: 2.5px solid transparent; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; flex-shrink: 0;
+  transition: color 0.15s;
+}
+.la-tab.active { color: var(--red); border-bottom-color: var(--red); font-weight: 600; }
+
+.la-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 14px; }
+.la-stat {
+  background: var(--surface); border-radius: 10px;
+  padding: 10px 6px; text-align: center;
+  border: 0.5px solid rgba(166,24,46,0.08);
+}
+.la-stat-v { font-family: 'Bebas Neue', serif; font-size: 20px; color: var(--red); line-height: 1; }
+.la-stat-l { font-size: 9px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.8px; margin-top: 4px; }
+
+.la-toolbar { display: flex; gap: 6px; margin-bottom: 12px; align-items: center; }
+.la-search {
+  flex: 1; height: 38px; border: 1px solid var(--border-2);
+  border-radius: 10px; padding: 0 12px; font-size: 13px;
+  font-family: 'DM Sans', sans-serif; background: var(--surface);
+  outline: none; color: var(--text);
+}
+.la-search:focus { border-color: var(--red); }
+.la-mini-btn {
+  height: 38px; padding: 0 12px; border-radius: 10px; border: none;
+  background: var(--red); color: #fff; font-size: 12px; font-weight: 600;
+  cursor: pointer; font-family: 'DM Sans', sans-serif; white-space: nowrap;
+}
+.la-mini-btn.ghost { background: transparent; border: 1px solid var(--border-2); color: var(--text-2); }
+
+.la-client {
+  background: var(--surface); border-radius: 12px;
+  padding: 10px 12px; margin-bottom: 6px;
+  display: flex; align-items: center; gap: 10px;
+  border: 0.5px solid rgba(166,24,46,0.08);
+}
+.la-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--red-light); color: var(--red);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 12px; flex-shrink: 0;
+}
+.la-info { flex: 1; min-width: 0; }
+.la-name { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.la-meta { font-size: 10px; color: var(--text-3); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.la-sellos-pill {
+  font-size: 11px; font-weight: 700;
+  padding: 4px 10px; border-radius: 999px;
+  background: var(--red-light); color: var(--red);
+  flex-shrink: 0; white-space: nowrap;
+}
+.la-sellos-pill.canje { background: var(--green); color: #fff; }
+.la-acts { display: flex; gap: 3px; flex-shrink: 0; }
+.la-ic-btn {
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 1px solid var(--border-2); background: transparent;
+  cursor: pointer; font-size: 13px; color: var(--text-2);
+  display: flex; align-items: center; justify-content: center;
+}
+.la-ic-btn:active { background: var(--red-light); }
+
+.la-hist-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; background: var(--surface);
+  border-radius: 10px; margin-bottom: 4px;
+  border: 0.5px solid rgba(166,24,46,0.06);
+}
+.la-hist-tipo {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; flex-shrink: 0;
+}
+.la-hist-tipo.gana { background: var(--green-light); color: var(--green); }
+.la-hist-tipo.canje { background: var(--amber-light); color: var(--amber); }
+.la-hist-tipo.ajuste { background: var(--purple-light); color: var(--purple); }
+.la-hist-tipo.regalo { background: var(--blue-light); color: var(--blue); }
+.la-hist-info { flex: 1; min-width: 0; }
+.la-hist-cli { font-size: 12px; font-weight: 600; color: var(--text); }
+.la-hist-mot { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+.la-hist-when { font-size: 10px; color: var(--text-3); text-align: right; flex-shrink: 0; }
+
+.la-config-row {
+  background: var(--surface); border-radius: 12px;
+  padding: 12px 14px; margin-bottom: 8px;
+  border: 0.5px solid rgba(166,24,46,0.08);
+}
+.la-config-label { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+.la-config-input {
+  width: 100%; height: 38px; border: 1px solid var(--border-2);
+  border-radius: 8px; padding: 0 10px; font-size: 13px;
+  font-family: 'DM Sans', sans-serif; outline: none;
+  background: var(--surface); color: var(--text);
+}
+.la-config-input:focus { border-color: var(--red); }
+.la-config-select { width: 100%; height: 38px; border: 1px solid var(--border-2); border-radius: 8px; padding: 0 10px; font-size: 13px; font-family: inherit; background: var(--surface); color: var(--text); }
+.la-config-save {
+  width: 100%; height: 44px; background: var(--red); color: #fff;
+  border: none; border-radius: 12px; margin-top: 12px;
+  font-family: 'Bebas Neue', serif; font-size: 16px; letter-spacing: 2px;
+  cursor: pointer;
+}
+.la-config-save:active { background: var(--red-dark); }
+
+.la-empty { text-align: center; padding: 30px 14px; color: var(--text-3); font-size: 12px; }
+.la-empty-icon { font-size: 32px; margin-bottom: 8px; }
+
 
 .pay-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
 .pay-btn { padding: 11px 4px; border: 1.5px solid var(--border-2); border-radius: 12px; background: transparent; font-size: 11px; font-weight: 500; color: var(--text-2); cursor: pointer; font-family: 'DM Sans', sans-serif; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; }
@@ -436,6 +687,31 @@ html, body {
 .cierre-kpi { background: var(--bg); border-radius: 12px; padding: 14px; text-align: center; }
 .cierre-kpi-label { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
 .cierre-kpi-val { font-family: 'Bebas Neue', serif; font-size: 26px; color: var(--text); letter-spacing: 0.5px; }
+.hoy-kpis { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 8px; margin-bottom: 6px; }
+.hoy-kpi { background: var(--bg); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+.hoy-kpi span { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: .6px; font-weight: 600; }
+.hoy-kpi b { font-family: 'Bebas Neue', serif; font-size: 26px; color: var(--text); letter-spacing: .5px; font-weight: 400; }
+.hoy-kpi.main { background: var(--red); } .hoy-kpi.main span, .hoy-kpi.main b { color: #fff; }
+.hoy-bars { display: flex; align-items: flex-end; gap: 5px; height: 120px; padding: 6px 2px 0; }
+.hoy-bar { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; }
+.hoy-bar-fill { width: 100%; background: var(--red-mid); border-radius: 6px 6px 2px 2px; min-height: 2px; }
+.hoy-bar.now .hoy-bar-fill { background: var(--red); }
+.hoy-bar span { font-size: 10px; color: var(--text-3); }
+.hoy-row { display: grid; grid-template-columns: minmax(0,1.3fr) 1fr auto; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text-2); }
+.hoy-row span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hoy-row b { color: var(--text); font-size: 13px; }
+.hoy-meter { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; } .hoy-meter i { display: block; height: 100%; background: var(--red); border-radius: 3px; }
+.hoy-empty { font-size: 12px; color: var(--text-3); text-align: center; padding: 8px; }
+.denom-wrap { background: var(--bg); border-radius: 14px; padding: 10px 12px; margin: 10px 0; }
+.denom-wrap summary { font-size: 13px; font-weight: 600; color: var(--text-2); cursor: pointer; padding: 4px 0; }
+.denom-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; margin-top: 8px; }
+.denom-row { display: grid; grid-template-columns: 58px 36px 1fr 36px; align-items: center; gap: 4px; background: var(--surface); border: 1px solid var(--border-2); border-radius: 10px; padding: 4px; }
+.denom-row.coin .denom-val { color: var(--text-3); }
+.denom-val { font-size: 13px; font-weight: 700; color: var(--text); padding-left: 6px; }
+.denom-row button { height: 34px; border: none; border-radius: 8px; background: var(--red-light); color: var(--red); font-size: 18px; font-weight: 700; cursor: pointer; }
+.denom-row input { height: 34px; width: 100%; min-width: 0; border: none; text-align: center; font-size: 16px; font-weight: 700; font-family: 'DM Sans', sans-serif; outline: none; background: transparent; color: var(--text); }
+.denom-total-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 13px; color: var(--text-2); }
+.denom-total-row b { font-size: 17px; color: var(--text); }
 .cierre-section-title { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.7px; margin: 16px 0 8px; }
 .cierre-pay-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
 .cierre-pay-label { font-size: 13px; color: var(--text-2); }
@@ -576,6 +852,8 @@ html, body {
       <button class="tb-btn" onclick="openCierreSheet()" title="Cierre de turno" id="btn-cierre" style="display:none;">🔐</button>
       <button class="tb-btn" onclick="abrirRetiro()" title="Registrar retiro" id="btn-retiro" style="display:none;">💸</button>
       <button class="tb-btn" onclick="openPrinterCfg()" title="Impresora" style="position:relative;">🖨️<span id="printer-dot" style="position:absolute;bottom:4px;right:4px;width:9px;height:9px;border-radius:50%;background:#aaa;border:1.5px solid #fff;"></span><span id="printer-queue-badge" style="display:none;position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;background:#B5860D;color:#fff;font-size:10px;font-weight:700;border-radius:9px;align-items:center;justify-content:center;">0</span></button>
+      <button class="tb-btn" onclick="openHoy()" title="Ventas de hoy" id="btn-hoy" style="display:none;">📊</button>
+      <button class="tb-btn" onclick="openLoyaltyAdmin()" title="Club Lady Fresa" id="btn-loyalty-admin" style="display:none;">🎓</button>
       <a href="admin.html" class="tb-btn" id="btn-admin" style="display:none;text-decoration:none;" title="Admin">⚙️</a>
       <button onclick="openOrderSheet()" id="tb-order-btn" title="Ver orden"
         style="display:none;height:38px;padding:0 14px;border-radius:20px;border:2px solid var(--red);background:var(--red);color:#fff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;align-items:center;gap:5px;white-space:nowrap;">
@@ -658,6 +936,29 @@ html, body {
       <button class="svc-btn" onclick="setSvc('delivery',this)">🛵 Delivery</button>
     </div>
     <input type="text" class="client-input" id="client-input" placeholder="Nombre del cliente (opcional)">
+        <button type="button" class="client-toggle" id="client-toggle" onclick="openClienteSheet()">
+      <span id="client-toggle-text">+ Agregar cliente</span>
+    </button>
+    <!-- Tarjeta del cliente seleccionado (lealtad) -->
+    <div class="loyalty-card" id="loyalty-card">
+      <div class="lc-top">
+        <div class="lc-name-wrap">
+          <div class="lc-name" id="lc-name">—</div>
+          <div class="lc-phone" id="lc-phone">—</div>
+        </div>
+        <button type="button" class="lc-remove" onclick="clearClienteLealtad()" title="Quitar cliente">✕</button>
+      </div>
+      <div class="lc-progress-row">
+        <div class="lc-stamps" id="lc-stamps"></div>
+        <div class="lc-count" id="lc-count">0/10</div>
+      </div>
+      <div class="lc-hint" id="lc-hint">+1 sello al cobrar esta venta</div>
+      <div class="lc-canjear-banner" id="lc-canjear-banner" style="display:none;">
+        <span class="lc-cb-text" id="lc-cb-text">🎁 ¡Puede canjear su regalo!</span>
+        <button class="lc-cb-btn" id="lc-cb-btn" onclick="toggleCanje()">Aplicar canje</button>
+      </div>
+      <button type="button" class="lc-share-btn" id="lc-share-btn" onclick="compartirTarjetaCliente()">📤 Compartir tarjeta digital</button>
+    </div>
     <div id="order-items-list"></div>
     <div id="disc-section" style="margin-top:12px;display:none;">
       <div class="promo-code-row">
@@ -690,6 +991,59 @@ html, body {
     </div>
     <button class="cobrar-btn" id="cobrar-btn" onclick="openCobro()">COBRAR</button>
   </div>
+</div>
+
+<!-- CLIENTE LEALTAD SHEET -->
+<div class="sheet-overlay" id="ov-cliente" onclick="if(event.target===this)closeClienteSheet()"></div>
+<div class="sheet" id="sheet-cliente">
+  <div class="sheet-drag"><div></div></div>
+  <div class="sheet-header">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button onclick="closeClienteSheet()" style="width:38px;height:38px;border-radius:50%;border:1.5px solid var(--border-2);background:var(--bg);color:var(--text-2);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">‹</button>
+      <div>
+        <div class="sheet-title">Club Lady Fresa</div>
+        <div class="sheet-sub">Busca por teléfono o crea nuevo</div>
+      </div>
+    </div>
+  </div>
+  <div class="sheet-body">
+    <div class="cliente-search-row">
+      <input type="text" inputmode="text" class="cliente-search-input" id="cliente-search-input" placeholder="🔍 Teléfono o nombre" maxlength="40" oninput="onClienteSearchInput()" autocomplete="off">
+    </div>
+    <div id="cliente-results"></div>
+    <div id="cliente-new-form" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- LOYALTY ADMIN SHEET -->
+<div class="sheet-overlay" id="ov-loyaltyadm" onclick="if(event.target===this)closeLoyaltyAdmin()"></div>
+<div class="sheet" id="sheet-loyaltyadm" style="max-height:96vh;">
+  <div class="sheet-drag"><div></div></div>
+  <div class="sheet-header">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div><div class="sheet-title">🎓 Club Lady Fresa</div><div class="sheet-sub" id="la-sub">Panel de gerente</div></div>
+      <button onclick="closeLoyaltyAdmin()" style="font-size:20px;background:none;border:none;color:var(--text-3);cursor:pointer;">✕</button>
+    </div>
+    <div class="la-tabs">
+      <button class="la-tab active" onclick="laTab('clientes',this)">Clientes</button>
+      <button class="la-tab" onclick="laTab('historial',this)">Historial</button>
+      <button class="la-tab" onclick="laTab('config',this)">Configuración</button>
+    </div>
+  </div>
+  <div class="sheet-body" id="la-body" style="padding-top:8px;"></div>
+</div>
+
+<!-- HOY (DASHBOARD DEL DÍA) -->
+<div class="sheet-overlay" id="ov-hoy" onclick="if(event.target===this)closeHoy()"></div>
+<div class="sheet" id="sheet-hoy" style="max-height:96vh;">
+  <div class="sheet-drag"><div></div></div>
+  <div class="sheet-header">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div><div class="sheet-title">📊 Hoy</div><div class="sheet-sub" id="hoy-sub">—</div></div>
+      <button onclick="closeHoy()" aria-label="Cerrar" style="font-size:20px;background:none;border:none;color:var(--text-3);cursor:pointer;width:38px;height:38px;">✕</button>
+    </div>
+  </div>
+  <div class="sheet-body" id="hoy-body"></div>
 </div>
 
 <!-- COBRO SHEET -->
@@ -1034,6 +1388,9 @@ function showPOS() {
   document.getElementById('btn-cierre').style.display = p.cierre ? 'flex' : 'none';
   document.getElementById('btn-retiro').style.display = p.discount ? 'flex' : 'none';
   document.getElementById('btn-admin').style.display = p.dashboard ? 'flex' : 'none';
+  document.getElementById('btn-loyalty-admin').style.display = p.dashboard ? 'flex' : 'none';
+  document.getElementById('btn-hoy').style.display = p.dashboard ? 'flex' : 'none';
+  loadLoyaltyConfig();
   loadCategoriasPos();
   loadCatalog();
   cargarPromos();
@@ -1113,6 +1470,33 @@ async function logout() {
 // ═══════════════════════════════
 // CATALOG
 // ═══════════════════════════════
+// Config general del POS (fondo de caja, envío al app de gastos)
+const posCfg={};
+const GASTOS_URL='https://tnspshptvqvhhwwckzcc.supabase.co';
+const GASTOS_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRuc3BzaHB0dnF2aGh3d2NremNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyOTE4MzYsImV4cCI6MjA4Nzg2NzgzNn0.VYO6LMiRfv9pTCO-jRrz4ph2S_uKgX-kqYRCyVKCwdU';
+async function loadPosConfig(){
+  try{
+    const r=await fetch(SB_URL+'/rest/v1/config?key=in.(fondo_caja,enviar_venta_gastos)',{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}});
+    if(r.ok){ (await r.json()).forEach(c=>{ posCfg[c.key]=c.value; }); }
+  }catch(e){}
+}
+function gastosActivoPara(suc){
+  const v=(posCfg.enviar_venta_gastos||'').toLowerCase();
+  if(!v) return false; if(v==='todas'||v==='true') return true;
+  return v.split(',').map(x=>x.trim()).includes((suc||'').toLowerCase());
+}
+async function enviarVentaGastos(d){
+  // Registra (o actualiza) la venta del día en el app de gastos: efectivo cobrado y retiros
+  const fecha=new Date(d.inicio).toLocaleDateString('en-CA',{timeZone:'America/Mexico_City'});
+  const res=await fetch(GASTOS_URL+'/rest/v1/rpc/pos_registrar_venta',{method:'POST',
+    headers:{'Content-Type':'application/json',apikey:GASTOS_KEY,Authorization:'Bearer '+GASTOS_KEY},
+    body:JSON.stringify({p_fecha:fecha,p_sucursal:d.sucursal,p_efectivo:d.efectivo,p_salidas:d.total_retiros||0,
+      p_nota:'Corte POS · '+(d.cajero_name||'')+' [POS]',p_quien:'POS · '+(d.cajero_name||'')})});
+  if(!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+loadPosConfig();
+
 async function loadTicketComandaConfig() {
   try {
     const [r1,r2] = await Promise.all([
@@ -1494,9 +1878,17 @@ function calcTotals(){
   let descMonto=discountMonto>0?Math.min(discountMonto,sub):0;
   const descPct=Math.round(sub*discount/100);
   const desc=discountMonto>0?descMonto:descPct;
-  const total=sub-desc;
+  // Canje del Club Lady Fresa: se regala el producto más barato (o hasta el precio máximo configurado)
+  let canjeAmt=0;
+  if(typeof loyaltyAplicarCanje!=='undefined'&&loyaltyAplicarCanje&&loyaltyCliente&&loyaltyCliente.puede_canjear&&order.length){
+    const precios=order.flatMap(i=>Array(i.qty).fill(i.unitPrice));
+    if(precios.length) canjeAmt=Math.min(...precios);
+    const max=loyaltyConfig?.premio_precio_max;
+    if(loyaltyConfig?.premio_tipo==='precio_max'&&max>0) canjeAmt=Math.min(canjeAmt,max);
+  }
+  const total=Math.max(0,sub-desc-canjeAmt);
   const iva=Math.round(total-total/1.16);
-  return{sub,desc,iva,total,descMonto:discountMonto>0};
+  return{sub,desc,iva,total,descMonto:discountMonto>0,canjeAmt};
 }
 
 function renderOrderBar(){
@@ -1564,6 +1956,9 @@ function renderOrderItems(){
   let descRow='';
   if(descMonto&&desc>0) descRow=`<div class="ot-row" style="color:var(--green)"><span>Descuento ($)</span><span>-$${desc.toFixed(2)}</span></div>`;
   else if(desc>0) descRow=`<div class="ot-row" style="color:var(--green)"><span>Descuento (${discount}%)</span><span>-$${desc}</span></div>`;
+  const{canjeAmt}=calcTotals();
+  if(canjeAmt>0) descRow+=`<div class="ot-row" style="color:var(--green)"><span>🎁 Canje Club LF</span><span>-$${canjeAmt}</span></div>`;
+  if(typeof renderLoyaltyCard==='function') renderLoyaltyCard();
   totEl.innerHTML=descRow
     +`<div class="ot-row" style="font-size:11px;color:var(--text-3);"><span>IVA incluido</span><span>$${iva}</span></div>`
     +`<div class="ot-row"><span>Total</span><span style="color:var(--red)">$${total.toLocaleString('es-MX',{minimumFractionDigits:2})}</span></div>`;
@@ -1621,6 +2016,7 @@ async function cancelOrder(){
   });
   if(!ok) return;
   order=[]; discount=0; discountMonto=0; promoActiva=null; payMethod='efectivo'; svcType='mostrador';
+  loyaltyCliente=null; loyaltyAplicarCanje=false; if(typeof clearClienteLealtad==='function') clearClienteLealtad();
   document.getElementById('promo-applied-bar').classList.add('hidden');
   document.getElementById('disc-row').style.display='flex';
   const discMonto=document.getElementById('disc-monto-input');
@@ -1700,14 +2096,16 @@ async function confirmarPago(){
     return;
   }
 
-  const{total,sub,desc,iva}=calcTotals();
+  const{total,sub,desc,iva,canjeAmt}=calcTotals();
   const con=parseFloat(document.getElementById('efec-input').value)||total;
   const cambio=payMethod==='efectivo'?con-total:0;
-  const client=document.getElementById('client-input').value.trim();
+  const client=document.getElementById('client-input').value.trim()||(loyaltyCliente?.nombre||'');
   const saleData={
     id:orderN, date:nowMX(), items:[...order], sub,desc,iva,total,
     payMethod,svcType,client,cambio,discount:discountMonto>0?0:discount,discountMonto:discountMonto>0?discountMonto:0,
     cashReceived:con, paid_at:new Date().toISOString(),
+    loyaltyClienteId:loyaltyCliente?.id||null, loyaltyClienteQR:loyaltyCliente?.qr_code||null,
+    loyaltyCanje:!!loyaltyAplicarCanje, canjeAmt:canjeAmt||0,
   };
 
   try {
@@ -1716,6 +2114,11 @@ async function confirmarPago(){
     if(!saveOk && navigator.onLine){
       // Falla real de red — mostrar error, no avanzar
       throw new Error('No se pudo guardar la venta en el servidor.');
+    }
+    // Club Lady Fresa: +1 sello (y canje si aplica) cuando la venta ya quedó guardada
+    if(saveOk&&saleData.loyaltyClienteId){
+      saleData.savedOrderId=saleData._server_id||null;
+      registrarSellosVenta(saleData).catch(e=>console.warn('[sellos]',e));
     }
     // Si está offline, la offline queue ya lo manejó — continuar
     sales.push(saleData);
@@ -1745,6 +2148,8 @@ async function confirmarPago(){
     document.getElementById('order-num-2').textContent=String(orderN).padStart(3,'0');
     localStorage.setItem('lf_order_n_'+(currentUser?.sucursal||'x'),orderN);
     document.getElementById('client-input').value='';
+    loyaltyCliente=null; loyaltyAplicarCanje=false; if(typeof renderLoyaltyCard==='function') renderLoyaltyCard();
+    { const t=document.getElementById('client-toggle-text'), b=document.getElementById('client-toggle'); if(t) t.textContent='+ Agregar cliente'; if(b) b.classList.remove('has-value'); }
     document.getElementById('promo-applied-bar').classList.add('hidden');
     document.getElementById('disc-row').style.display='flex';
     const discMonto=document.getElementById('disc-monto-input');
@@ -1827,6 +2232,8 @@ async function saveToSupabase(saleData){
       cash_received:saleData.payMethod==='efectivo'?saleData.cashReceived:null,
       change_given:saleData.payMethod==='efectivo'?saleData.cambio:null,
       paid_at:saleData.paid_at,
+      loyalty_cliente_id:saleData.loyaltyClienteId||null,
+      loyalty_canje:saleData.loyaltyCanje||false,
     };
     const res=await fetch(SB_URL+'/rest/v1/orders',{method:'POST',headers:SB_H,body:JSON.stringify(orderPayload)});
     if(!res.ok){
@@ -2085,6 +2492,28 @@ function buildCierreData(){
   };
 }
 
+const DENOMS=[1000,500,200,100,50,20,10,5,2,1,0.5];
+let denomCount={};
+function denomChange(v,delta,abs){
+  const cur=denomCount[v]||0;
+  denomCount[v]=Math.max(0, abs!==undefined?abs:cur+delta);
+  const el=document.getElementById('dn-'+String(v).replace('.','_')); if(el&&abs===undefined) el.value=denomCount[v]||'';
+  const total=DENOMS.reduce((s,d)=>s+d*(denomCount[d]||0),0);
+  const inp=document.getElementById('cierre-conteo'); if(inp) inp.value=total?total.toFixed(total%1?2:0):'';
+  const t=document.getElementById('denom-total'); if(t) t.textContent='$'+total.toLocaleString('es-MX',{minimumFractionDigits:2});
+  calcCuadre();
+}
+function denomHtml(){
+  return `<div class="denom-grid">${DENOMS.map(v=>{const id='dn-'+String(v).replace('.','_');return `
+    <div class="denom-row${v<20?' coin':''}">
+      <span class="denom-val">$${v<1?'0.50':v}</span>
+      <button type="button" onclick="denomChange(${v},-1)" aria-label="menos">−</button>
+      <input id="${id}" type="number" inputmode="numeric" min="0" placeholder="0" value="${denomCount[v]||''}" oninput="denomChange(${v},0,parseInt(this.value)||0)">
+      <button type="button" onclick="denomChange(${v},1)" aria-label="más">+</button>
+    </div>`;}).join('')}</div>
+    <div class="denom-total-row"><span>Total contado</span><b id="denom-total">$0.00</b></div>`;
+}
+
 function calcCuadre(){
   const fondo=parseFloat(document.getElementById('cierre-fondo')?.value)||0;
   const conteo=parseFloat(document.getElementById('cierre-conteo')?.value)||0;
@@ -2120,8 +2549,9 @@ function renderCierreModal(){
     {label:'📲 Transferencia',amt:d.transferencia,color:'var(--purple)'},
   ].filter(r=>r.amt>0);
 
-  // Fondo guardado del turno anterior (si existe)
-  const fondoGuardado=parseFloat(localStorage.getItem('lf_fondo_caja')||'0');
+  // Fondo de caja: el último que usó esta tablet, o el de configuración (default $2,000 como en Parrot)
+  const fondoGuardado=parseFloat(localStorage.getItem('lf_fondo_caja')||posCfg.fondo_caja||'2000');
+  denomCount={};
 
   document.getElementById('cierre-body').innerHTML=`
 
@@ -2181,11 +2611,15 @@ function renderCierreModal(){
       <div>
         <div style="font-size:11px;color:var(--text-3);margin-bottom:5px;">Dinero contado en caja</div>
         <input id="cierre-conteo" type="number" placeholder="0" min="0" step="1"
-          oninput="calcCuadre();"
+          oninput="denomCount={};document.querySelectorAll('.denom-row input').forEach(i=>i.value='');document.getElementById('denom-total').textContent='—';calcCuadre();"
           style="width:100%;height:46px;border:1.5px solid var(--border-2);border-radius:10px;padding:0 12px;font-size:18px;font-weight:700;font-family:'DM Sans',sans-serif;outline:none;text-align:right;color:var(--text);">
       </div>
     </div>
     <div id="cierre-cuadre-result"></div>
+    <details class="denom-wrap" open>
+      <summary>🧮 Contar billetes y monedas</summary>
+      ${denomHtml()}
+    </details>
 
     ${d.productos.length?`
     <div class="cierre-section-title">Productos vendidos</div>
@@ -2230,6 +2664,7 @@ async function confirmarCierre(){
   cierreData.conteo_fisico=conteo;
   cierreData.diferencia_caja=conteo-(fondo+cierreData.efectivo-cierreData.total_retiros);
   cierreData.cerrado_at=new Date().toISOString();
+  cierreData.denominaciones=Object.keys(denomCount).length?{...denomCount}:null;
 
   const btn=document.getElementById('btn-cierre-ok');
   btn.disabled=true; btn.textContent='Guardando...';
@@ -2245,6 +2680,7 @@ async function confirmarCierre(){
       fondo_inicial:cierreData.fondo_inicial,
       conteo_fisico:cierreData.conteo_fisico,
       diferencia_caja:cierreData.diferencia_caja,
+      denominaciones:cierreData.denominaciones,
     };
     let res;
     if(turnoId){
@@ -2253,6 +2689,15 @@ async function confirmarCierre(){
       res=await sbPost('turnos',payload);
     }
     if(!res.ok) throw new Error('Error guardando turno');
+    // Mandar la venta del día al app de gastos (solo sucursales activadas en Configuración)
+    let gastosMsg='';
+    if(gastosActivoPara(cierreData.sucursal)){
+      try{
+        const g=await enviarVentaGastos(cierreData);
+        gastosMsg='📒 Venta '+(g.accion||'registrada')+' en el app de gastos';
+        if(turnoId) sbPatch('turnos','id=eq.'+turnoId,{enviado_gastos:true}).catch(()=>{});
+      }catch(e){ gastosMsg='⚠️ No se pudo mandar al app de gastos — avisa a Andrés'; }
+    }
     if(turnoId&&currentUser){
       const hoyISO=new Date().toISOString().slice(0,10);
       localStorage.removeItem('lf_turno_'+hoyISO+'_'+currentUser.id);
@@ -2267,6 +2712,7 @@ async function confirmarCierre(){
         <div style="font-size:56px;margin-bottom:12px;">${dif===0?'✅':dif>0?'🔵':'⚠️'}</div>
         <div style="font-family:'Bebas Neue',serif;font-size:28px;color:var(--green);letter-spacing:1px;">Turno cerrado</div>
         <div style="font-size:14px;color:var(--text-3);margin-top:8px;">${difTxt}</div>
+        ${gastosMsg?`<div style="font-size:12px;color:var(--text-2);margin-top:8px;">${gastosMsg}</div>`:''}
       </div>
       <div style="background:var(--bg);border-radius:14px;padding:14px;">
         <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;color:var(--text-2);border-bottom:1px solid var(--border);">
@@ -2358,6 +2804,623 @@ function quitarPromo(){
   document.getElementById('disc-row').style.display='flex';
   document.querySelectorAll('.disc-btn').forEach((b,i)=>{if(i===0) b.classList.add('active'); else b.classList.remove('active');});
   renderOrderItems(); renderOrderBar();
+}
+
+// ═══════════════════════════════
+// LEALTAD — CLIENTE Y SELLOS
+// ═══════════════════════════════
+let loyaltyCliente=null;     // cliente actualmente asociado a la orden
+let loyaltyConfig=null;      // config (sellos_requeridos, etc.) cacheado
+let loyaltyAplicarCanje=false; // si el cajero decidió aplicar el canje
+
+// Cargar config una sola vez al iniciar
+async function loadLoyaltyConfig(){
+  try {
+    const rows=await sbGet('lf_loyalty_config','id=eq.1&select=*');
+    if(rows && rows[0]) loyaltyConfig=rows[0];
+  } catch(e){ console.warn('[loyalty config]',e); }
+  if(!loyaltyConfig) loyaltyConfig={sellos_requeridos:10,activo:true,premio_tipo:'cualquier'};
+}
+
+// Abrir el sheet de buscar/crear cliente
+function openClienteSheet(){
+  if(loyaltyCliente){ // si ya hay cliente, vuelve a mostrarlo en el order sheet
+    return;
+  }
+  const inp=document.getElementById('cliente-search-input');
+  if(inp){inp.value='';setTimeout(()=>inp.focus(),100);}
+  document.getElementById('cliente-results').innerHTML='';
+  document.getElementById('cliente-new-form').style.display='none';
+  closeOrderSheet();
+  openSheet('cliente');
+}
+function closeClienteSheet(){
+  closeSheet('cliente');
+  setTimeout(()=>openOrderSheet(),120);
+}
+
+// Búsqueda en tiempo real conforme se teclea
+let _clienteSearchTimer=null;
+function onClienteSearchInput(){
+  const val=document.getElementById('cliente-search-input').value.trim();
+  if(_clienteSearchTimer) clearTimeout(_clienteSearchTimer);
+  if(val.length<2){
+    document.getElementById('cliente-results').innerHTML='';
+    document.getElementById('cliente-new-form').style.display='none';
+    return;
+  }
+  _clienteSearchTimer=setTimeout(()=>buscarCliente(val),250);
+}
+
+async function buscarCliente(query){
+  if(!navigator.onLine){
+    document.getElementById('cliente-results').innerHTML='<div class="empty-state"><div class="e-icon">📵</div><p>Sin conexión. No se puede buscar clientes.</p></div>';
+    return;
+  }
+  try {
+    const clean=query.replace(/\D/g,''); // solo dígitos
+    const hasDigits=clean.length>=3;
+    const hasLetters=/[a-záéíóúñ]/i.test(query);
+    // Buscar simultáneamente en teléfono y en nombre usando 'or'
+    const parts=[];
+    if(hasDigits) parts.push(`telefono.ilike.*${encodeURIComponent(clean)}*`);
+    if(hasLetters || !hasDigits) parts.push(`nombre.ilike.*${encodeURIComponent(query)}*`);
+    if(!parts.length) return;
+    const q=`or=(${parts.join(',')})&select=*&limit=10&order=ultima_actividad.desc.nullslast`;
+    const rows=await sbGet('lf_loyalty_cliente_resumen',q);
+    renderClienteResults(rows||[],query,clean);
+  } catch(e){
+    console.error('[buscarCliente]',e);
+    document.getElementById('cliente-results').innerHTML='<div style="text-align:center;padding:14px;color:var(--text-3);font-size:12px;">Error de búsqueda</div>';
+  }
+}
+
+function renderClienteResults(rows,query,cleanDigits){
+  const container=document.getElementById('cliente-results');
+  const req=loyaltyConfig?.sellos_requeridos||10;
+  if(rows.length){
+    container.innerHTML=rows.map(c=>{
+      const initials=(c.nombre||'?').trim().split(/\s+/).slice(0,2).map(p=>p[0]).join('').toUpperCase();
+      const selloLabel=c.sellos_actuales>=req?'🎁 ¡CANJE!':c.sellos_actuales+'/'+req;
+      const selloCls=c.sellos_actuales>=req?'full':'';
+      return `<div class="cliente-result" onclick='selectCliente(${JSON.stringify(c).replace(/'/g,"&#39;")})'>
+        <div class="cliente-result-avatar">${initials||'?'}</div>
+        <div class="cliente-result-info">
+          <div class="cliente-result-name">${sanitize(c.nombre)}</div>
+          <div class="cliente-result-meta">${sanitize(c.telefono)}</div>
+        </div>
+        <div class="cliente-result-sellos ${selloCls}">${selloLabel}</div>
+      </div>`;
+    }).join('');
+  } else {
+    container.innerHTML='<div style="text-align:center;padding:14px;color:var(--text-3);font-size:12px;">Sin coincidencias</div>';
+  }
+  // Mostrar form de "crear nuevo" siempre que el input parezca un teléfono completo
+  const newForm=document.getElementById('cliente-new-form');
+  if(cleanDigits && cleanDigits.length>=10){
+    const yaExiste=rows.some(c=>(c.telefono||'').replace(/\D/g,'').endsWith(cleanDigits));
+    if(!yaExiste){
+      newForm.style.display='block';
+      newForm.innerHTML=`<div class="cliente-new-card">
+        <div class="cliente-new-title">📱 Cliente nuevo · ${sanitize(cleanDigits)}</div>
+        <input type="text" class="cliente-new-input" id="cliente-new-nombre" placeholder="Nombre del cliente" oninput="document.getElementById('cliente-new-btn').disabled=!this.value.trim();">
+        <button class="cliente-new-btn" id="cliente-new-btn" onclick="createCliente('${cleanDigits}')" disabled>CREAR Y SELECCIONAR</button>
+      </div>`;
+    } else { newForm.style.display='none'; }
+  } else { newForm.style.display='none'; }
+}
+
+async function createCliente(telefonoDigits){
+  const nombre=document.getElementById('cliente-new-nombre')?.value.trim();
+  if(!nombre) return;
+  const btn=document.getElementById('cliente-new-btn');
+  if(btn){btn.disabled=true; btn.textContent='Creando...';}
+  try {
+    const payload={
+      telefono:'+52'+telefonoDigits.slice(-10),
+      nombre:nombre,
+      sucursal_alta:currentUser?.sucursal||'Principal'
+    };
+    const r=await sbPost('lf_loyalty_clientes',payload);
+    if(!r.ok){
+      const err=await r.json().catch(()=>({}));
+      throw new Error(err.message||'Error al crear cliente');
+    }
+    const rows=await r.json();
+    const created=Array.isArray(rows)?rows[0]:rows;
+    // Lo convertimos al formato de la vista para selectCliente
+    const cliResumen={
+      id:created.id, telefono:created.telefono, nombre:created.nombre,
+      qr_code:created.qr_code, sellos_actuales:0,
+      sellos_faltantes:loyaltyConfig?.sellos_requeridos||10,
+      puede_canjear:false
+    };
+    selectCliente(cliResumen);
+    showToast('Cliente creado ✓');
+  } catch(e){
+    console.error('[createCliente]',e);
+    showToast('Error: '+(e.message||'no se pudo crear'));
+    if(btn){btn.disabled=false; btn.textContent='CREAR Y SELECCIONAR';}
+  }
+}
+
+function selectCliente(c){
+  loyaltyCliente=c;
+  loyaltyAplicarCanje=false;
+  renderLoyaltyCard();
+  closeClienteSheet();
+  if(navigator.vibrate) navigator.vibrate(15);
+}
+
+function clearClienteLealtad(){
+  loyaltyCliente=null;
+  loyaltyAplicarCanje=false;
+  renderLoyaltyCard();
+  if(order.length){ renderOrderItems(); renderOrderBar(); }
+}
+
+// Compartir tarjeta del Club (WhatsApp/Share)
+function compartirTarjetaCliente(){
+  if(!loyaltyCliente||!loyaltyCliente.qr_code) return;
+  // Construir URL del club a partir del origin actual
+  const base=window.location.href.replace(/\/[^/]*$/,'/'); // quita "pos.html" o similar
+  const url=base+'club.html?qr='+loyaltyCliente.qr_code;
+  const req=loyaltyConfig?.sellos_requeridos||10;
+  const cur=loyaltyCliente.sellos_actuales||0;
+  const msg=`🍓 ¡Hola ${loyaltyCliente.nombre}! Esta es tu tarjeta del Club Lady Fresa.\n\nLlevas ${cur}/${req} sellos. ${cur>=req?'¡Ya puedes canjear tu regalo! 🎁':'Faltan '+(req-cur)+' visitas para tu fresa de regalo.'}\n\nVe tus sellos aquí: ${url}`;
+
+  // Intentar Web Share API primero
+  if(navigator.share){
+    navigator.share({title:'Tu tarjeta Lady Fresa',text:msg,url:url}).catch(()=>{
+      // Si falla, fallback a WhatsApp
+      _fallbackWhatsApp(loyaltyCliente.telefono,msg);
+    });
+    return;
+  }
+  _fallbackWhatsApp(loyaltyCliente.telefono,msg);
+}
+
+function _fallbackWhatsApp(telefono,msg){
+  // limpiar teléfono a solo dígitos (incluyendo +52)
+  const tel=String(telefono||'').replace(/\D/g,'');
+  if(tel.length>=10){
+    const url=`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`;
+    window.open(url,'_blank');
+  } else {
+    // Copiar al clipboard
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(msg).then(()=>showToast('Mensaje copiado'));
+    } else {
+      prompt('Copia este mensaje:',msg);
+    }
+  }
+}
+
+function toggleCanje(){
+  if(!loyaltyCliente||!loyaltyCliente.puede_canjear) return;
+  loyaltyAplicarCanje=!loyaltyAplicarCanje;
+  renderLoyaltyCard();
+  renderOrderItems(); // recalcula total con el canje aplicado
+}
+
+function renderLoyaltyCard(){
+  const card=document.getElementById('loyalty-card');
+  const toggle=document.getElementById('client-toggle');
+  const togText=document.getElementById('client-toggle-text');
+  if(!card||!toggle) return;
+  if(!loyaltyCliente){
+    card.classList.remove('show');
+    toggle.style.display='inline-flex';
+    toggle.classList.remove('has-value');
+    togText.textContent='+ Agregar cliente';
+    return;
+  }
+  toggle.style.display='none';
+  card.classList.add('show');
+  document.getElementById('lc-name').textContent=loyaltyCliente.nombre||'—';
+  document.getElementById('lc-phone').textContent=loyaltyCliente.telefono||'—';
+  const req=loyaltyConfig?.sellos_requeridos||10;
+  const cur=loyaltyCliente.sellos_actuales||0;
+  // pintar sellos
+  const stampsEl=document.getElementById('lc-stamps');
+  let stampsHtml='';
+  for(let i=0;i<req;i++){
+    const filled=i<cur;
+    stampsHtml+=`<div class="lc-stamp${filled?' filled':''}"></div>`;
+  }
+  stampsEl.innerHTML=stampsHtml;
+  document.getElementById('lc-count').textContent=cur+'/'+req;
+  // banner de canje
+  const banner=document.getElementById('lc-canjear-banner');
+  const cbBtn=document.getElementById('lc-cb-btn');
+  const cbText=document.getElementById('lc-cb-text');
+  const hint=document.getElementById('lc-hint');
+  if(loyaltyCliente.puede_canjear){
+    banner.style.display='flex';
+    if(loyaltyAplicarCanje){
+      banner.classList.add('applied');
+      cbText.textContent='🎁 Canje aplicado · descuenta el producto más barato';
+      cbBtn.textContent='Quitar';
+      hint.textContent='Tras cobrar: -10 sellos y +1 sello nuevo';
+    } else {
+      banner.classList.remove('applied');
+      cbText.textContent='🎁 ¡Puede canjear su regalo!';
+      cbBtn.textContent='Aplicar canje';
+      hint.textContent='+1 sello al cobrar esta venta';
+    }
+  } else {
+    banner.style.display='none';
+    banner.classList.remove('applied');
+    hint.textContent='+1 sello al cobrar esta venta · faltan '+(loyaltyCliente.sellos_faltantes||0)+' para regalo';
+  }
+}
+
+// ═══════════════════════════════
+// ADMIN DE LEALTAD (gerente/admin)
+// ═══════════════════════════════
+let _laTab='clientes';
+let _laClientes=[];
+let _laHistorial=[];
+
+async function openLoyaltyAdmin(){
+  _laTab='clientes';
+  document.querySelectorAll('.la-tab').forEach((b,i)=>b.classList.toggle('active',i===0));
+  await loadLoyaltyConfig(); // por si cambió
+  await renderLaTab();
+  openSheet('loyaltyadm');
+}
+function closeLoyaltyAdmin(){closeSheet('loyaltyadm');}
+
+function laTab(tab,btn){
+  _laTab=tab;
+  document.querySelectorAll('.la-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderLaTab();
+}
+
+async function renderLaTab(){
+  const body=document.getElementById('la-body');
+  body.innerHTML='<div class="la-empty"><div class="la-empty-icon">⏳</div>Cargando...</div>';
+  if(_laTab==='clientes') await renderLaClientes();
+  else if(_laTab==='historial') await renderLaHistorial();
+  else if(_laTab==='config') renderLaConfig();
+}
+
+async function renderLaClientes(filter=''){
+  const body=document.getElementById('la-body');
+  try {
+    // Si es la primera vez o filtro vacío, recarga la lista
+    if(!filter || !_laClientes.length){
+      const rows=await sbGet('lf_loyalty_cliente_resumen',
+        'select=*&order=ultima_actividad.desc.nullslast&limit=200');
+      _laClientes=rows||[];
+    }
+    // Stats
+    const total=_laClientes.length;
+    const req=loyaltyConfig?.sellos_requeridos||10;
+    const listosCanjear=_laClientes.filter(c=>c.sellos_actuales>=req).length;
+    // Cargar conteos del mes
+    const desde=new Date(); desde.setDate(1); desde.setHours(0,0,0,0);
+    const desdeISO=desde.toISOString();
+    let sellosMes=0, canjesMes=0;
+    try {
+      const movs=await sbGet('lf_loyalty_sellos',`select=tipo&created_at=gte.${desdeISO}`);
+      sellosMes=(movs||[]).filter(m=>m.tipo==='gana').length;
+      canjesMes=(movs||[]).filter(m=>m.tipo==='canje').length;
+    } catch{}
+    // Filtrar visualmente
+    const q=filter.trim().toLowerCase();
+    const filtered=q
+      ? _laClientes.filter(c=>(c.nombre||'').toLowerCase().includes(q) || (c.telefono||'').includes(q))
+      : _laClientes;
+    // Render
+    let html=`
+      <div class="la-stats">
+        <div class="la-stat"><div class="la-stat-v">${total}</div><div class="la-stat-l">Clientes</div></div>
+        <div class="la-stat"><div class="la-stat-v">${sellosMes}</div><div class="la-stat-l">Sellos mes</div></div>
+        <div class="la-stat"><div class="la-stat-v">${canjesMes}</div><div class="la-stat-l">Canjes mes</div></div>
+        <div class="la-stat"><div class="la-stat-v">${listosCanjear}</div><div class="la-stat-l">Listos canje</div></div>
+      </div>
+      <div class="la-toolbar">
+        <input class="la-search" id="la-search-input" placeholder="🔍 Buscar nombre o teléfono" oninput="renderLaClientes(this.value)" value="${sanitize(filter)}">
+        <button class="la-mini-btn" onclick="laReload()">↻</button>
+      </div>
+    `;
+    if(!filtered.length){
+      html+=`<div class="la-empty"><div class="la-empty-icon">🍓</div>${q?'Sin coincidencias':'Aún no hay clientes en el club'}</div>`;
+    } else {
+      html+=filtered.map(c=>{
+        const initials=(c.nombre||'?').trim().split(/\s+/).slice(0,2).map(p=>p[0]||'').join('').toUpperCase()||'?';
+        const ultima=c.ultima_actividad?fmtMX(c.ultima_actividad):'sin actividad';
+        const pillCls=c.sellos_actuales>=req?'canje':'';
+        const pillText=c.sellos_actuales>=req?'🎁 CANJE':c.sellos_actuales+' / '+req;
+        return `<div class="la-client">
+          <div class="la-avatar">${initials}</div>
+          <div class="la-info">
+            <div class="la-name">${sanitize(c.nombre)}</div>
+            <div class="la-meta">${sanitize(c.telefono)} · ${ultima}</div>
+          </div>
+          <span class="la-sellos-pill ${pillCls}">${pillText}</span>
+          <div class="la-acts">
+            <button class="la-ic-btn" onclick="laAjustarSellos('${c.id}','${sanitize(c.nombre)}',1)" title="+1 sello">＋</button>
+            <button class="la-ic-btn" onclick="laAjustarSellos('${c.id}','${sanitize(c.nombre)}',-1)" title="−1 sello">−</button>
+            <button class="la-ic-btn" onclick="laVerCliente('${c.id}')" title="Historial">📋</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+    body.innerHTML=html;
+    // Restaurar foco al input si estaba escribiendo
+    if(filter){
+      const inp=document.getElementById('la-search-input');
+      if(inp){ inp.focus(); inp.setSelectionRange(filter.length,filter.length); }
+    }
+  } catch(e){
+    body.innerHTML=`<div class="la-empty"><div class="la-empty-icon">⚠️</div>Error: ${sanitize(e.message||'')}</div>`;
+  }
+}
+
+async function laReload(){
+  _laClientes=[];
+  await renderLaClientes();
+  showToast('Lista actualizada');
+}
+
+async function laAjustarSellos(clienteId,clienteName,delta){
+  const motivo=prompt(`${delta>0?'Sumar':'Restar'} ${Math.abs(delta)} sello a ${clienteName}.\nMotivo (opcional):`);
+  if(motivo===null) return; // canceló
+  try {
+    const r=await sbPost('lf_loyalty_sellos',{
+      cliente_id:clienteId,
+      tipo:'ajuste',
+      cantidad:delta,
+      motivo:motivo||(delta>0?'Ajuste manual +':'Ajuste manual -'),
+      sucursal:currentUser?.sucursal||'Principal',
+      cajero_name:currentUser?.name||'Admin'
+    });
+    if(!r.ok){const e=await r.json().catch(()=>({})); throw new Error(e.message||'error');}
+    showToast(`Sello ${delta>0?'sumado':'restado'} ✓`);
+    _laClientes=[]; // forzar recarga
+    await renderLaClientes();
+    if(navigator.vibrate) navigator.vibrate(15);
+  } catch(e){
+    alert('No se pudo: '+(e.message||''));
+  }
+}
+
+async function laVerCliente(clienteId){
+  const cli=_laClientes.find(c=>c.id===clienteId);
+  if(!cli) return;
+  try {
+    const movs=await sbGet('lf_loyalty_sellos',
+      `cliente_id=eq.${clienteId}&select=*&order=created_at.desc&limit=50`);
+    let html=`<div class="la-empty" style="padding:14px 0; text-align:left;">
+      <div style="font-size:15px; font-weight:600; color:var(--text);">${sanitize(cli.nombre)}</div>
+      <div style="font-size:12px; color:var(--text-3); margin-top:2px;">${sanitize(cli.telefono)} · QR: ${sanitize(cli.qr_code||'—')}</div>
+      <div style="font-size:12px; color:var(--text-2); margin-top:8px;">
+        ${cli.sellos_actuales} sellos actuales · ${cli.sellos_ganados_total} ganados de por vida · ${cli.canjes_hechos} canjes
+      </div>
+    </div>
+    <div class="la-toolbar">
+      <button class="la-mini-btn ghost" onclick="renderLaClientes()">← Volver</button>
+    </div>`;
+    if(!movs.length){
+      html+=`<div class="la-empty"><div class="la-empty-icon">📋</div>Sin movimientos aún</div>`;
+    } else {
+      html+=movs.map(m=>{
+        const sign=m.cantidad>0?'+'+m.cantidad:m.cantidad;
+        const ic={gana:'+',canje:'🎁',ajuste:'⚙',regalo:'🎀',expira:'⏱'}[m.tipo]||'•';
+        return `<div class="la-hist-row">
+          <div class="la-hist-tipo ${m.tipo}">${ic}</div>
+          <div class="la-hist-info">
+            <div class="la-hist-cli">${sign} sello${Math.abs(m.cantidad)!==1?'s':''} · ${m.tipo}</div>
+            <div class="la-hist-mot">${sanitize(m.motivo||'—')} · ${sanitize(m.cajero_name||'')}</div>
+          </div>
+          <div class="la-hist-when">${fmtMX(m.created_at)}</div>
+        </div>`;
+      }).join('');
+    }
+    document.getElementById('la-body').innerHTML=html;
+  } catch(e){
+    alert('No se pudo cargar historial: '+(e.message||''));
+  }
+}
+
+async function renderLaHistorial(){
+  const body=document.getElementById('la-body');
+  try {
+    const movs=await sbGet('lf_loyalty_sellos',
+      'select=*&order=created_at.desc&limit=80');
+    if(!movs.length){
+      body.innerHTML=`<div class="la-empty"><div class="la-empty-icon">📋</div>Sin movimientos aún</div>`;
+      return;
+    }
+    // Cargar nombres en una sola query
+    const ids=[...new Set(movs.map(m=>m.cliente_id))];
+    const clientes=await sbGet('lf_loyalty_clientes',
+      `id=in.(${ids.join(',')})&select=id,nombre,telefono`);
+    const cliMap={};
+    (clientes||[]).forEach(c=>{cliMap[c.id]=c;});
+    let html='';
+    movs.forEach(m=>{
+      const cli=cliMap[m.cliente_id]||{nombre:'?',telefono:''};
+      const sign=m.cantidad>0?'+'+m.cantidad:m.cantidad;
+      const ic={gana:'+',canje:'🎁',ajuste:'⚙',regalo:'🎀',expira:'⏱'}[m.tipo]||'•';
+      html+=`<div class="la-hist-row">
+        <div class="la-hist-tipo ${m.tipo}">${ic}</div>
+        <div class="la-hist-info">
+          <div class="la-hist-cli">${sanitize(cli.nombre)} · ${sign} sello${Math.abs(m.cantidad)!==1?'s':''}</div>
+          <div class="la-hist-mot">${sanitize(m.motivo||'—')} · ${sanitize(m.cajero_name||'')} · ${sanitize(m.sucursal||'')}</div>
+        </div>
+        <div class="la-hist-when">${fmtMX(m.created_at)}</div>
+      </div>`;
+    });
+    body.innerHTML=html;
+  } catch(e){
+    body.innerHTML=`<div class="la-empty"><div class="la-empty-icon">⚠️</div>Error: ${sanitize(e.message||'')}</div>`;
+  }
+}
+
+function renderLaConfig(){
+  const cfg=loyaltyConfig||{sellos_requeridos:10,activo:true,premio_tipo:'cualquier',premio_precio_max:90,programa_nombre:'Club Lady Fresa',mensaje_canje:'¡Felicidades! Disfruta tu Fresa de regalo 🍓'};
+  const body=document.getElementById('la-body');
+  body.innerHTML=`
+    <div class="la-config-row">
+      <div class="la-config-label">Programa activo</div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer;">
+        <input type="checkbox" id="la-cfg-activo" ${cfg.activo?'checked':''} style="width:18px;height:18px;accent-color:var(--red);">
+        ${cfg.activo?'El programa está activo':'Programa pausado'}
+      </label>
+    </div>
+    <div class="la-config-row">
+      <div class="la-config-label">Sellos requeridos para canje</div>
+      <input type="number" min="1" max="50" class="la-config-input" id="la-cfg-sellos" value="${cfg.sellos_requeridos}">
+      <div style="font-size:10px;color:var(--text-3);margin-top:4px;">Cuántas compras hacen falta para el regalo</div>
+    </div>
+    <div class="la-config-row">
+      <div class="la-config-label">Tipo de premio</div>
+      <select class="la-config-select" id="la-cfg-tipo">
+        <option value="cualquier" ${cfg.premio_tipo==='cualquier'?'selected':''}>Cualquier producto (el más barato)</option>
+        <option value="precio_max" ${cfg.premio_tipo==='precio_max'?'selected':''}>Producto hasta precio máximo</option>
+      </select>
+    </div>
+    <div class="la-config-row" id="la-cfg-precio-wrap" style="display:${cfg.premio_tipo==='precio_max'?'block':'none'};">
+      <div class="la-config-label">Precio máximo del producto regalo</div>
+      <input type="number" min="0" step="5" class="la-config-input" id="la-cfg-precio-max" value="${cfg.premio_precio_max||90}">
+    </div>
+    <div class="la-config-row">
+      <div class="la-config-label">Nombre del programa</div>
+      <input type="text" class="la-config-input" id="la-cfg-nombre" value="${sanitize(cfg.programa_nombre||'')}" maxlength="40">
+    </div>
+    <div class="la-config-row">
+      <div class="la-config-label">Mensaje al canjear</div>
+      <input type="text" class="la-config-input" id="la-cfg-msg" value="${sanitize(cfg.mensaje_canje||'')}" maxlength="120">
+    </div>
+    <button class="la-config-save" onclick="laGuardarConfig()">💾 GUARDAR CONFIG</button>
+  `;
+  // Mostrar/ocultar campo precio cuando cambia tipo
+  document.getElementById('la-cfg-tipo').addEventListener('change',e=>{
+    document.getElementById('la-cfg-precio-wrap').style.display=e.target.value==='precio_max'?'block':'none';
+  });
+}
+
+async function laGuardarConfig(){
+  const payload={
+    activo:document.getElementById('la-cfg-activo').checked,
+    sellos_requeridos:parseInt(document.getElementById('la-cfg-sellos').value)||10,
+    premio_tipo:document.getElementById('la-cfg-tipo').value,
+    premio_precio_max:parseFloat(document.getElementById('la-cfg-precio-max')?.value)||90,
+    programa_nombre:document.getElementById('la-cfg-nombre').value.trim()||'Club Lady Fresa',
+    mensaje_canje:document.getElementById('la-cfg-msg').value.trim(),
+    updated_at:new Date().toISOString(),
+    updated_by:currentUser?.name||'Admin'
+  };
+  if(payload.sellos_requeridos<1||payload.sellos_requeridos>50){
+    alert('Los sellos requeridos deben ser entre 1 y 50');
+    return;
+  }
+  try {
+    const r=await sbPatch('lf_loyalty_config','id=eq.1',payload);
+    if(!r.ok){const e=await r.json().catch(()=>({})); throw new Error(e.message||'error');}
+    // Refrescar config en memoria
+    await loadLoyaltyConfig();
+    showToast('Configuración guardada ✓');
+    if(navigator.vibrate) navigator.vibrate(20);
+  } catch(e){
+    alert('No se pudo guardar: '+(e.message||''));
+  }
+}
+
+// Registrar sello (+1) y/o canje (-N) en la tabla lf_loyalty_sellos
+async function registrarSellosVenta(saleData){
+  if(!saleData.loyaltyClienteId) return;
+  const movs=[];
+  const sucursal=currentUser?.sucursal||'Principal';
+  const cajero=currentUser?.name||'POS';
+  const orderId=saleData.savedOrderId||null;
+  // Si se aplicó canje, restamos los sellos requeridos
+  if(saleData.loyaltyCanje){
+    const req=loyaltyConfig?.sellos_requeridos||10;
+    movs.push({
+      cliente_id:saleData.loyaltyClienteId,
+      tipo:'canje',
+      cantidad:-req,
+      order_id:orderId,
+      sucursal:sucursal,
+      motivo:'Canje de premio · '+(saleData.canjeAmt?('-$'+saleData.canjeAmt):''),
+      cajero_name:cajero
+    });
+  }
+  // Siempre +1 sello por la venta (incluso si se canjeó, sigue contando como visita)
+  movs.push({
+    cliente_id:saleData.loyaltyClienteId,
+    tipo:'gana',
+    cantidad:1,
+    order_id:orderId,
+    sucursal:sucursal,
+    motivo:'Venta orden #'+saleData.id,
+    cajero_name:cajero
+  });
+  try {
+    await sbPost('lf_loyalty_sellos',movs);
+  } catch(e){
+    console.warn('[registrarSellosVenta]',e);
+  }
+}
+
+
+// ═══════════════════════════════
+// HOY — resumen del día de la sucursal (ventas por hora, top productos, métodos de pago)
+// ═══════════════════════════════
+function closeHoy(){ closeSheet('hoy'); }
+async function openHoy(){
+  const body=document.getElementById('hoy-body');
+  body.innerHTML='<div class="empty-state"><div class="e-icon">⏳</div><p>Cargando...</p></div>';
+  openSheet('hoy');
+  const suc=currentUser?.sucursal||'Balbuena';
+  const hoy=new Date().toLocaleDateString('en-CA',{timeZone:'America/Mexico_City'});
+  document.getElementById('hoy-sub').textContent=suc+' · '+new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',timeZone:'America/Mexico_City'});
+  try{
+    const desde=new Date(hoy+'T00:00:00-06:00').toISOString();
+    const orders=await sbGet('orders',`sucursal=eq.${encodeURIComponent(suc)}&created_at=gte.${desde}&select=id,total,pay_method,cajero_name,created_at,service_type&order=created_at.asc&limit=1000`);
+    const ords=Array.isArray(orders)?orders:[];
+    let items=[];
+    if(ords.length){
+      const ids=ords.map(o=>o.id);
+      for(let i=0;i<ids.length;i+=150){
+        const r=await sbGet('order_items',`order_id=in.(${ids.slice(i,i+150).join(',')})&select=product_name,qty,subtotal,size`);
+        if(Array.isArray(r)) items=items.concat(r);
+      }
+    }
+    renderHoy(ords,items);
+  }catch(e){ body.innerHTML='<div class="empty-state"><div class="e-icon">⚠️</div><p>No se pudo cargar. Revisa el internet.</p></div>'; }
+}
+function renderHoy(ords,items){
+  const f=n=>'$'+Math.round(n).toLocaleString('es-MX');
+  const total=ords.reduce((s,o)=>s+(+o.total||0),0), n=ords.length, prom=n?total/n:0;
+  const horas={}; for(let h=12;h<=22;h++) horas[h]=0;
+  ords.forEach(o=>{ const h=+new Date(o.created_at).toLocaleString('en-US',{hour:'numeric',hour12:false,timeZone:'America/Mexico_City'}); horas[h]=(horas[h]||0)+(+o.total||0); });
+  const hmax=Math.max(1,...Object.values(horas));
+  const pay={}; ords.forEach(o=>{ const k=o.pay_method||'otro'; pay[k]=(pay[k]||0)+(+o.total||0); });
+  const payLbl={efectivo:'💵 Efectivo',tarjeta:'💳 Tarjeta Santander',transferencia:'📲 Transferencia'};
+  const prods={}; items.forEach(i=>{ const k=i.product_name||'—'; prods[k]=prods[k]||{q:0,r:0}; prods[k].q+=(+i.qty||0); prods[k].r+=(+i.subtotal||0); });
+  const top=Object.entries(prods).sort((a,b)=>b[1].q-a[1].q).slice(0,8); const tmax=Math.max(1,...top.map(t=>t[1].q));
+  const caj={}; ords.forEach(o=>{ const k=o.cajero_name||'—'; caj[k]=(caj[k]||0)+(+o.total||0); });
+  const ahora=+new Date().toLocaleString('en-US',{hour:'numeric',hour12:false,timeZone:'America/Mexico_City'});
+  document.getElementById('hoy-body').innerHTML=`
+    <div class="hoy-kpis">
+      <div class="hoy-kpi main"><span>Vendido hoy</span><b>${f(total)}</b></div>
+      <div class="hoy-kpi"><span>Órdenes</span><b>${n}</b></div>
+      <div class="hoy-kpi"><span>Ticket promedio</span><b>${f(prom)}</b></div>
+    </div>
+    <div class="cierre-section-title">Ventas por hora</div>
+    <div class="hoy-bars">${Object.entries(horas).map(([h,v])=>`<div class="hoy-bar${+h===ahora?' now':''}" title="${h}:00 · ${f(v)}"><div class="hoy-bar-fill" style="height:${Math.round(v/hmax*100)}%"></div><span>${h}</span></div>`).join('')}</div>
+    <div class="cierre-section-title">Métodos de pago</div>
+    ${Object.keys(pay).length?Object.entries(pay).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="hoy-row"><span>${payLbl[k]||k}</span><div class="hoy-meter"><i style="width:${Math.round(v/Math.max(1,total)*100)}%"></i></div><b>${f(v)}</b></div>`).join(''):'<div class="hoy-empty">Sin ventas todavía</div>'}
+    <div class="cierre-section-title">Lo más vendido</div>
+    ${top.length?top.map(([k,v])=>`<div class="hoy-row"><span>${pEmoji(k)} ${sanitize(k)}</span><div class="hoy-meter"><i style="width:${Math.round(v.q/tmax*100)}%"></i></div><b>${v.q}</b></div>`).join(''):'<div class="hoy-empty">Sin productos todavía</div>'}
+    ${Object.keys(caj).length>1?`<div class="cierre-section-title">Por cajero</div>${Object.entries(caj).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="hoy-row"><span>${sanitize(k)}</span><div></div><b>${f(v)}</b></div>`).join('')}`:''}
+    <div class="hoy-empty" style="margin-top:14px;">Solo ventas del POS en ${sanitize(currentUser?.sucursal||'')}. Delivery de apps no está incluido todavía.</div>`;
 }
 
 // ═══════════════════════════════
@@ -2618,6 +3681,9 @@ function buildTicketXML(saleData,type='ticket'){
     if(ig) xml+=center(ig);
     if(wa) xml+=center('WhatsApp: '+wa);
     if(web) xml+=center(web);
+    if(saleData.loyaltyClienteQR){
+      xml+=divider(); xml+=center('CLUB LADY FRESA',true); xml+=center('Tus sellos en linea:'); xml+=center('club: '+saleData.loyaltyClienteQR);
+    }
     if(footer){xml+=divider();footer.split('\n').forEach(ln=>{if(ln.trim()) xml+=center(ln.trim());});}
   }
   xml+=`<cut type="feed"/></epos-print></s:Body></s:Envelope>`;
