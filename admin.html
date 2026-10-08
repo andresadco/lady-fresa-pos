@@ -801,7 +801,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
         <button class="btn btn-ghost btn-sm" id="cfg-tab-general" onclick="setCfgTab('general',this)">🔧 Avanzado</button>
         <button class="btn btn-ghost btn-sm" id="cfg-tab-ticket" onclick="setCfgTab('ticket',this)">🧾 Ticket</button>
         <button class="btn btn-ghost btn-sm" id="cfg-tab-comanda" onclick="setCfgTab('comanda',this)">🍳 Comanda</button>
-        <button class="btn btn-ghost btn-sm" id="cfg-tab-sucursales-cfg" onclick="setCfgTab('sucursales-cfg',this)">🏪 Sucursales</button>
+
       </div>
 
       <!-- Caja -->
@@ -1402,14 +1402,16 @@ function renderCategorias() {
     var activo = cat.activo !== false;
     return '<div class="cat-drag-item" data-id="' + cat.id + '" draggable="true" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px;cursor:grab;transition:opacity 0.15s,box-shadow 0.15s;">'
       + '<div style="color:var(--text-3);font-size:18px;padding:0 4px;cursor:grab;flex-shrink:0;">⠿</div>'
-      + '<div style="font-size:26px;width:36px;text-align:center;opacity:' + (activo?1:0.55) + ';">' + (cat.emoji||'📁') + '</div>'
+      + '<div style="font-size:26px;width:36px;text-align:center;opacity:' + (activo?1:0.55) + ';">' + escH(cat.emoji||'📁') + '</div>'
       + '<div style="flex:1;opacity:' + (activo?1:0.55) + ';">'
-      + '<div style="font-size:14px;font-weight:600;">' + cat.nombre + '</div>'
+      + '<div style="font-size:14px;font-weight:600;">' + escH(cat.nombre) + '</div>'
       + '<div style="font-size:11px;color:var(--text-3);margin-top:2px;">'
-      + (cat.descripcion||'') + (cat.descripcion?' · ':'')
+      + escH(cat.descripcion||'') + (cat.descripcion?' · ':'')
       + '<span style="background:' + (activo?'var(--green-light)':'var(--red-light)') + ';color:' + (activo?'var(--green)':'var(--red)') + ';padding:1px 8px;border-radius:8px;font-weight:600;">' + (activo?'Activa':'Inactiva') + '</span>'
       + '</div></div>'
       + '<div style="display:flex;gap:6px;">'
+      + '<button class="btn btn-secondary btn-sm" onclick="moverCategoria(this,-1)" title="Subir">↑</button>'
+      + '<button class="btn btn-secondary btn-sm" onclick="moverCategoria(this,1)" title="Bajar">↓</button>'
       + '<button class="btn btn-secondary btn-sm" onclick="openModalCategoria(' + cat.id + ')">✏️</button>'
       + '<button class="btn btn-sm btn-danger" onclick="eliminarCategoria(' + cat.id + ')">🗑</button>'
       + '</div></div>';
@@ -1468,6 +1470,13 @@ function setupDragDrop() {
   });
 }
 
+function moverCategoria(btn, dir){
+  const it=btn.closest('.cat-drag-item'), par=it.parentNode;
+  if(dir<0&&it.previousElementSibling) par.insertBefore(it, it.previousElementSibling);
+  else if(dir>0&&it.nextElementSibling) par.insertBefore(it.nextElementSibling, it);
+  else return;
+  guardarOrdenCategorias();
+}
 async function guardarOrdenCategorias() {
   var items = document.querySelectorAll('.cat-drag-item');
   var updates = [];
@@ -1599,17 +1608,18 @@ async function loadOverview() {
   document.getElementById('dash-fecha').textContent=sel.options[sel.selectedIndex].text+(esActual?' · al día '+diaCorte:'')+' · todas las sucursales';
   ['dash-kpis','ov-suc','ov-dias','ov-gastos','ov-stock','ov-ll','overview-turnos'].forEach(id=>{ document.getElementById(id).innerHTML='<div class="empty">Cargando…</div>'; });
   const [ord, ordPrev, turnos, gastos, cats, stock, niveles, insumos, llc, llm] = await Promise.all([
-    sbGetAll('orders','select=id,total,sucursal,discount_amt,canje_monto,pay_method,created_at,status&'+rangoMX(ini,fin)),
-    sbGetAll('orders','select=total,status&'+rangoMX(pmes+'-01',pfin)),
+    sbGetAll('orders','select=id,total,sucursal,discount_amt,canje_monto,pay_method,created_at,status&'+rangoMX(ini,fin)).catch(()=>null),
+    sbGetAll('orders','select=total,status&'+rangoMX(pmes+'-01',pfin)).catch(()=>[]),
     sbGet('turnos','cerrado_at=not.is.null&order=cerrado_at.desc&limit=6&select=*'),
     appGet('gastos','fecha=gte.'+ini+'&fecha=lte.'+fin+'&select=monto,cat,sucursal_id,fecha'),
     appGet('categorias','select=cat_key,nombre,emoji'),
-    sbGetAll('lfi_stock','select=sucursal,insumo_id,cantidad'),
-    sbGetAll('lfi_niveles','select=sucursal,insumo_id,min_nivel'),
-    sbGetAll('lfi_insumos','select=id,nombre,unidad,min_tienda,activo'),
-    sbGetAll('lf_loyalty_cliente_resumen','select=puede_canjear,activo,ultima_actividad,fecha_alta'),
-    sbGetAll('lf_loyalty_sellos','select=tipo,cantidad&'+rangoMX(ini,fin)),
+    sbGetAll('lfi_stock','select=sucursal,insumo_id,cantidad').catch(()=>[]),
+    sbGetAll('lfi_niveles','select=sucursal,insumo_id,min_nivel').catch(()=>[]),
+    sbGetAll('lfi_insumos','select=id,nombre,unidad,min_tienda,activo').catch(()=>[]),
+    sbGetAll('lf_loyalty_cliente_resumen','select=puede_canjear,activo,ultima_actividad,fecha_alta').catch(()=>[]),
+    sbGetAll('lf_loyalty_sellos','select=tipo,cantidad&'+rangoMX(ini,fin)).catch(()=>[]),
   ]);
+  if(ord===null){ document.getElementById('dash-kpis').innerHTML='<div class="alert bad">No se pudieron cargar las ventas. Revisa la conexión y toca ↻.</div>'; }
   const O=(ord||[]).filter(o=>o.status!=='cancelada'), canc=(ord||[]).filter(o=>o.status==='cancelada');
   const P=(ordPrev||[]).filter(o=>o.status!=='cancelada');
   const sum=(a,k)=>a.reduce((s,o)=>s+(+o[k]||0),0);
@@ -1771,9 +1781,9 @@ async function loadSucursales() {
   document.getElementById('tbody-sucursales').innerHTML = !suc.length ?
     '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text-3);">Sin sucursales</td></tr>' :
     suc.map(s=>`<tr>
-      <td style="font-weight:500;">🏪 ${s.name}</td>
-      <td style="color:var(--text-3)">${s.direccion||'—'}</td>
-      <td style="color:var(--text-3)">${s.telefono||'—'}</td>
+      <td style="font-weight:500;">🏪 ${escH(s.name)}</td>
+      <td style="color:var(--text-3);white-space:normal;">${escH(s.direccion||'—')}</td>
+      <td style="color:var(--text-3)">${escH(s.telefono||'—')}</td>
       <td><span class="badge ${s.active?'badge-active':'badge-inactive'}">${s.active?'Activa':'Inactiva'}</span></td>
       <td style="display:flex;gap:6px;">
         <button class="btn btn-secondary btn-sm" onclick="openModalSucursalById(${s.id})">Editar</button>
@@ -1786,6 +1796,8 @@ function openModalSucursal(suc) { if(suc===undefined) suc=null;
   editingSucId = suc ? suc.id : null;
   document.getElementById('modal-suc-title').textContent = suc ? 'Editar sucursal' : 'Nueva sucursal';
   document.getElementById('s-name').value = (suc&&suc.name) || '';
+  document.getElementById('s-name').disabled = !!suc;
+  document.getElementById('s-name').title = suc ? 'El nombre no se cambia porque amarra ventas, turnos y usuarios' : '';
   document.getElementById('s-dir').value = (suc&&suc.direccion) || '';
   document.getElementById('s-tel').value = (suc&&suc.telefono) || '';
   document.getElementById('modal-sucursal').classList.add('open');
@@ -2035,7 +2047,8 @@ async function saveProducto() {
     let prodId = editingProdId;
     if (prodId) {
       const antes = productsData.find(x=>x.id===prodId);
-      await sbPatch('productos', prodId, data);
+      const rp = await sbPatch('productos', prodId, data);
+      if (rp && rp.ok === false) throw new Error('patch');
       if (antes && antes.name && antes.name !== data.nombre) {
         // mantener ligadas las recetas de inventario al nuevo nombre
         await fetch(`${SB_URL}/rest/v1/pos_recetas_venta?producto=eq.${encodeURIComponent(antes.name)}`, { method:'PATCH', headers:SB_H, body: JSON.stringify({ producto: data.nombre }) });
@@ -2114,7 +2127,7 @@ var turnosSuc='all', turnosEstado='cerrados', turnosData=[], turnosRango='30';
 async function loadTurnos() {
   let q='order=created_at.desc&select=*';
   if(turnosRango!=='todo'){ const d=new Date(); if(turnosRango==='mes') q+='&created_at=gte.'+encodeURIComponent(hoyMX().slice(0,8)+'01T00:00:00-06:00'); else { d.setDate(d.getDate()-parseInt(turnosRango)); q+='&created_at=gte.'+encodeURIComponent(d.toISOString()); } }
-  const t = await sbGetAll('turnos',q);
+  const t = await sbGetAll('turnos',q).catch(()=>{ toast('⚠ No se pudieron cargar los cortes'); return []; });
   turnosData = Array.isArray(t)?t:[];
   renderTurnos();
 }
@@ -2176,7 +2189,7 @@ var repRango='hoy', repSuc='all', repOrders=[], repItems=[], repCanceladas=[], r
 // Costo de insumos por pieza vendida, con las recetas de inventario y el costo del app de inventario
 async function cargarCostos(){
   if(_costos) return _costos;
-  const [r,i]=await Promise.all([sbGetAll('pos_recetas_venta','select=producto,opcion,insumo_id,cantidad'), sbGetAll('lfi_insumos','select=id,costo')]);
+  const [r,i]=await Promise.all([sbGetAll('pos_recetas_venta','select=producto,opcion,insumo_id,cantidad').catch(()=>[]), sbGetAll('lfi_insumos','select=id,costo').catch(()=>[])]);
   const c={}; (i||[]).forEach(x=>c[x.id]=+x.costo||0);
   const k={}; (r||[]).forEach(x=>{ const key=x.producto+'|'+x.opcion; k[key]=(k[key]||0)+(+x.cantidad||0)*(c[x.insumo_id]||0); });
   _costos=k; return k;
@@ -2211,9 +2224,12 @@ async function repSucursales(){
   const s=await sbGet('sucursales','select=name&order=name.asc'); const names=(Array.isArray(s)?s:[]).map(x=>x.name);
   document.getElementById('rep-suc').innerHTML=['all',...names].map(n=>`<button class="chip ${repSuc===n?'on':''}" onclick="repSuc=${escH(JSON.stringify(n))};repSucursales();loadReportes()">${n==='all'?'Todas las sucursales':escH(n)}</button>`).join('');
 }
+const _ORDEN_SIN_ID={lfi_stock:'sucursal.asc,insumo_id.asc',lfi_niveles:'sucursal.asc,insumo_id.asc',pos_recetas_venta:'id.asc'};
 async function sbGetAll(table, query){
+  if(!/(^|&)order=/.test(query||'')) query=(query?query+'&':'')+'order='+(_ORDEN_SIN_ID[table]||'id.asc');   // orden estable para paginar
   let out=[], from=0, step=1000;
   for(;;){ const r=await fetch(`${SB_URL}/rest/v1/${table}?${query}`,{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Range-Unit':'items',Range:`${from}-${from+step-1}`}});
+    if(!r.ok && r.status!==416) throw new Error('No se pudieron cargar '+table+' ('+r.status+')');
     const j=await r.json(); if(!Array.isArray(j)) break; out=out.concat(j); if(j.length<step) break; from+=step; if(from>50000) break; }
   return out;
 }
@@ -2430,13 +2446,13 @@ function llDias(d){ return d?Math.max(0,Math.floor((Date.now()-new Date(d))/864e
 function llTel(t){ const d=String(t||'').replace(/\D/g,'').slice(-10); return d.length===10?d.slice(0,2)+' '+d.slice(2,6)+' '+d.slice(6):t||''; }
 async function loadLovers(){
   const [c,cfg,suc]=await Promise.all([
-    sbGetAll('lf_loyalty_cliente_resumen','select=*&order=ultima_actividad.desc.nullslast'),
+    sbGetAll('lf_loyalty_cliente_resumen','select=*&order=ultima_actividad.desc.nullslast,id.asc').catch(()=>{ toast('⚠ No se pudieron cargar las clientas'); return []; }),
     sbGet('lf_loyalty_config','id=eq.1&select=*'),
     sbGet('sucursales','select=name&active=eq.true&order=name.asc')]);
   llCli=Array.isArray(c)?c:[]; llCfg=(Array.isArray(cfg)&&cfg[0])||{sellos_requeridos:10};
   llSucs=(Array.isArray(suc)?suc:[]).map(x=>x.name);
   document.getElementById('ll-titulo').textContent=llCfg.programa_nombre||'Lady Lovers';
-  const m=await sbGetAll('lf_loyalty_sellos',`select=tipo,cantidad,sucursal,created_at&created_at=gte.${encodeURIComponent(hoyMX().slice(0,8)+'01T00:00:00-06:00')}`);
+  const m=await sbGetAll('lf_loyalty_sellos',`select=tipo,cantidad,sucursal,created_at&created_at=gte.${encodeURIComponent(hoyMX().slice(0,8)+'01T00:00:00-06:00')}`).catch(()=>[]);
   llMovs=Array.isArray(m)?m:[];
   renderLovers();
 }
@@ -4268,11 +4284,10 @@ function renderPromos() {
   var tipoColor = { porcentaje:'var(--pink)', monto_fijo:'var(--green)', codigo:'var(--purple)', '2x1':'var(--amber)', hora:'var(--blue)', cumpleanos:'var(--pink)' };
 
   document.getElementById('promos-list').innerHTML = allPromos.map(function(p) {
-    var valorStr = p.tipo === 'porcentaje' ? p.valor + '%' :
-                   p.tipo === 'monto_fijo' ? '$' + p.valor :
-                   p.tipo === 'codigo' ? 'Codigo: ' + (p.codigo||'-') + ' - ' + p.valor + '%' :
-                   p.tipo === 'hora' ? (p.hora_inicio||'--') + ' a ' + (p.hora_fin||'--') + ' - ' + p.valor + '%' :
-                   p.valor + '%';
+    var val = (p.es_monto || p.tipo === 'monto_fijo') ? '$' + p.valor : p.valor + '%';
+    var valorStr = p.tipo === 'codigo' ? 'Código ' + escH(p.codigo||'—') + ' · ' + val + ' de descuento' :
+                   p.tipo === 'hora' ? String(p.hora_inicio||'--').slice(0,5) + ' a ' + String(p.hora_fin||'--').slice(0,5) + ' · ' + val + ' de descuento' :
+                   val;
     var vigencia = p.fecha_fin ? ' · Hasta ' + p.fecha_fin : '';
     var usos = p.usos_max ? ' · ' + (p.usos_actuales||0) + '/' + p.usos_max + ' usos' : '';
     var activoColor = p.activo ? 'var(--green-light)' : 'var(--red-light)';
@@ -4286,12 +4301,12 @@ function renderPromos() {
       + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">'
       + '<div style="flex:1;">'
       + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
-      + '<span style="font-size:14px;font-weight:600;">' + p.nombre + '</span>'
+      + '<span style="font-size:14px;font-weight:600;">' + escH(p.nombre) + '</span>'
       + '<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:8px;background:' + tipoBg + ';color:white;">' + tipoText + '</span>'
       + '<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:8px;background:' + activoColor + ';color:' + activoTextColor + ';">' + activoLabel + '</span>'
       + '</div>'
       + '<div style="font-size:13px;color:var(--pink);font-weight:600;">' + valorStr + '</div>'
-      + '<div style="font-size:11px;color:var(--text-3);margin-top:3px;">' + (p.descripcion||'') + vigencia + usos + '</div>'
+      + '<div style="font-size:11px;color:var(--text-3);margin-top:3px;">' + escH(p.descripcion||'') + vigencia + usos + '</div>'
       + '</div>'
       + '<div style="display:flex;gap:6px;flex-shrink:0;">'
       + '<button class="btn btn-secondary btn-sm" onclick="openModalPromo(' + p.id + ')">Editar</button>'
@@ -4392,6 +4407,7 @@ async function deletePromo(id) {
 // ═══════════════════════════════════════════════════
 let allConfig = {};
 
+function toggleCfgBtn(b){ b.classList.toggle('on'); if(typeof renderTicketPreview==='function') try{ renderTicketPreview(); }catch(e){} }
 function setCfgTab(tab, btn) {
   document.querySelectorAll('[id^="cfg-tab-"]').forEach(function(b){ b.style.cssText = ''; });
   btn.style.background = 'var(--pink-light)'; btn.style.color = 'var(--pink)';

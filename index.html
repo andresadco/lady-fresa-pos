@@ -343,7 +343,7 @@ html, body {
 .oi-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
 .oi-price { font-size: 13px; font-weight: 700; color: var(--text); }
 .qty-row { display: flex; align-items: center; gap: 6px; }
-.qty-btn { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--border-2); background: transparent; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; color: var(--text-2); }
+.qty-btn { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--border-2); background: transparent; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; color: var(--text-2); }
 .qty-btn:active { background: var(--red-light); border-color: var(--red); }
 .qty-num { font-size: 15px; font-weight: 700; min-width: 22px; text-align: center; }
 
@@ -1293,7 +1293,7 @@ let turnoAbiertoPor='';
 async function abrirTurnoDB(user) {
   const suc=user.sucursal||'Principal';
   const key='lf_turno_suc_'+suc;
-  const buscar=()=>sbGet('turnos','sucursal=eq.'+encodeURIComponent(suc)+'&cerrado_at=is.null&select=id,created_at,cajero_name&order=created_at.desc&limit=1');
+  const buscar=async()=>{ const r=await fetch(SB_URL+'/rest/v1/turnos?sucursal=eq.'+encodeURIComponent(suc)+'&cerrado_at=is.null&select=id,created_at,cajero_name&order=created_at.desc&limit=1',{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}}); if(!r.ok) throw new Error('turnos '+r.status); return r.json(); };
   try {
     let rows=await buscar();
     if(!Array.isArray(rows)) throw new Error('sin respuesta');
@@ -1392,8 +1392,11 @@ async function verificarTurnoAbierto(){
   if(!turnoId) return {ok:false,reason:'no_turno'};
   if(!navigator.onLine) return {ok:true}; // confiar en cache si offline
   try{
-    const rows=await sbGet('turnos','id=eq.'+turnoId+'&select=cerrado_at&limit=1');
-    if(!Array.isArray(rows)||!rows.length) return {ok:false,reason:'no_existe'};
+    const r=await fetch(SB_URL+'/rest/v1/turnos?id=eq.'+turnoId+'&select=cerrado_at&limit=1',{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}});
+    if(!r.ok) return {ok:true};
+    const rows=await r.json();
+    if(!Array.isArray(rows)) return {ok:true};
+    if(!rows.length) return {ok:false,reason:'no_existe'};
     if(rows[0].cerrado_at) return {ok:false,reason:'cerrado'};
     return {ok:true};
   }catch(e){
@@ -1407,7 +1410,7 @@ async function reconstruirTurnoDesdeDB() {
   try {
     const [dbOrders, dbRetiros] = await Promise.all([
       sbGet('orders', 'turno_id=eq.'+turnoId+'&status=neq.cancelada&select=id,order_number,total,iva,pay_method,created_at,cajero_name&order=created_at.asc'),
-      sbGet('gastos_operativos', 'or=(turno_id.eq.'+turnoId+',nota.eq.'+encodeURIComponent('Turno: '+turnoId)+')&categoria=eq.'+encodeURIComponent('Retiro de caja')+'&select=monto,concepto,quien,fecha,created_at&order=created_at.asc'),
+      fetch(SB_URL+'/rest/v1/gastos_operativos?or=(turno_id.eq.'+turnoId+',nota.eq.'+encodeURIComponent('"Turno: '+turnoId+'"')+')&categoria=eq.'+encodeURIComponent('Retiro de caja')+'&select=monto,concepto,quien,fecha,created_at&order=created_at.asc',{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}}).then(r=>r.ok?r.json():null).catch(()=>null),
     ]);
     if(Array.isArray(dbRetiros)){
       retiros = dbRetiros.map(r=>({ monto:parseFloat(r.monto)||0, motivo:(r.concepto||'').replace('[RETIRO] ',''), hora:r.created_at||r.fecha||'', nombre:r.quien||'—' }));
@@ -1547,8 +1550,8 @@ async function logout() {
   },{passive:true});
 })();
 
-// Restore sesión del día
-(function(){
+// Restore sesión del día (al final de la carga, cuando ya existen todas las variables)
+setTimeout(function(){
   try {
     const s=JSON.parse(localStorage.getItem('lf_session')||'null');
     if(!s) return;
@@ -1564,7 +1567,7 @@ async function logout() {
     },500);
     showPOS();
   } catch{localStorage.removeItem('lf_session');}
-})();
+},0);
 
 // ═══════════════════════════════
 // CATALOG
@@ -2069,7 +2072,7 @@ function renderOrderItems(){
 
 function chgQty(idx,d){
   order[idx].qty+=d;
-  if(order[idx].qty<=0) order.splice(idx,1);
+  if(order[idx].qty<=0){ order.splice(idx,1); if(canjeIdx!=null){ if(idx===canjeIdx) canjeIdx=null; else if(idx<canjeIdx) canjeIdx--; } }
   renderOrderItems(); renderOrderBar(); renderProducts();
 }
 
@@ -2183,7 +2186,8 @@ async function confirmarPago(){
   document.getElementById('cobro-error-banner').classList.remove('show');
 
   // CAMBIO v3: verificar que el turno siga abierto antes de cobrar
-  const tv=await verificarTurnoAbierto();
+  let tv=await verificarTurnoAbierto();
+  if(!tv.ok&&currentUser){ turnoId=null; await abrirTurnoDB(currentUser); if(turnoId){ sales=[]; retiros=[]; tv={ok:true}; showToast('Se abrió un turno nuevo en '+(currentUser.sucursal||'')); } }
   if(!tv.ok){
     const errBanner=document.getElementById('cobro-error-banner');
     let msg='No se puede cobrar.';
@@ -2370,7 +2374,14 @@ async function flushOfflineQueue(manual){
   try{
     for(const s of [...offlineQueue]){
       const ok=await saveToSupabase(s);
-      if(!ok) break;   // sigue sin conexión: se queda en la cola
+      if(!ok&&s._netErr) break;   // sigue sin conexión: se queda en la cola
+      if(!ok){ // el servidor la rechazó: se aparta para revisarla y la cola sigue
+        try{ const f=JSON.parse(localStorage.getItem('lf_offline_failed')||'[]'); f.push(s); localStorage.setItem('lf_offline_failed',JSON.stringify(f)); }catch(e){}
+        offlineQueue=offlineQueue.filter(x=>x.idempotency_key!==s.idempotency_key);
+        localStorage.setItem('lf_offline_queue',JSON.stringify(offlineQueue));
+        showToast('⚠️ Una venta sin internet no se pudo subir ($'+s.total+'). Avisa al gerente.');
+        continue;
+      }
       offlineQueue=offlineQueue.filter(x=>x.idempotency_key!==s.idempotency_key);
       localStorage.setItem('lf_offline_queue',JSON.stringify(offlineQueue));
       despuesDeGuardar(s); subidas++;
@@ -2425,7 +2436,7 @@ let _histOrders=[];
 async function openHist(){
   const body=document.getElementById('hist-body');
   body.innerHTML='<div class="empty-state"><p>Cargando...</p></div>';
-  openSheet('hist');
+  if(!document.getElementById('sheet-hist').classList.contains('open')) openSheet('hist');
   try {
     const suc=currentUser?.sucursal||'Principal', hoy=fechaMX();
     const [orders, gastos]=await Promise.all([
@@ -2863,6 +2874,7 @@ async function confirmarCierre(){
     if(!ok) return;
   }
 
+  await reconstruirTurnoDesdeDB(); buildCierreData();   // por si cobraron en otra tablet mientras se contaba
   cierreData.notas=notas;
   cierreData.fondo_inicial=fondo;
   cierreData.conteo_fisico=conteo;
@@ -4278,7 +4290,7 @@ function showToast(msg){
   if(!t){
     t=document.createElement('div');
     t.id='_toast';
-    t.style.cssText='position:fixed;bottom:calc(90px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(20px);background:#1a0508;color:#fff;padding:11px 22px;border-radius:20px;font-size:13px;opacity:0;transition:all 0.3s;pointer-events:none;z-index:600;white-space:nowrap;font-family:DM Sans,sans-serif;box-shadow:0 4px 20px rgba(26,5,8,0.3);';
+    t.style.cssText='position:fixed;bottom:calc(90px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(20px);background:#1a0508;color:#fff;padding:11px 22px;border-radius:20px;font-size:13px;opacity:0;transition:all 0.3s;pointer-events:none;z-index:700;white-space:normal;text-align:center;max-width:min(92vw,520px);font-family:DM Sans,sans-serif;box-shadow:0 4px 20px rgba(26,5,8,0.3);';
     document.body.appendChild(t);
   }
   t.textContent=msg;
