@@ -845,6 +845,10 @@ html, body {
 #disc-details[open] > summary { border-style:solid; }
 #disc-details > summary .dd-arrow { transition:transform .2s; }
 #disc-details[open] > summary .dd-arrow { transform:rotate(180deg); }
+
+/* iPhone/iPad: sin zoom por doble toque (PIN rápido) ni al enfocar un campo */
+html,body,button,.pin-btn{touch-action:manipulation;}
+@supports (-webkit-touch-callout:none){ input,select,textarea{font-size:16px!important;} }
 </style>
 <link rel="icon" type="image/png" href="img/marca/icono-192.png"><link rel="apple-touch-icon" href="img/marca/icono-512.png"><meta name="theme-color" content="#A6182E">
 <style>@font-face{font-family:'Lilita One';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/lilita-one-latin-400-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}@font-face{font-family:'Lilita One';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/lilita-one-latin-ext-400-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}</style>
@@ -1699,25 +1703,52 @@ async function loadTicketComandaConfig() {
   } catch(e){}
 }
 
+// El menú se guarda en la tablet: al abrir el POS se pinta al instante y luego se actualiza con lo del servidor
+function _lfCache(k,v){ try{ if(v===undefined) return JSON.parse(localStorage.getItem('lf_cache_'+k)||'null'); localStorage.setItem('lf_cache_'+k,JSON.stringify(v)); }catch(e){ return null; } }
+function pintarCategorias(cats){
+  const tabsEl = document.getElementById('cat-tabs');
+  const todosBtn = tabsEl.querySelector('.cat-tab');
+  tabsEl.innerHTML='';
+  tabsEl.appendChild(todosBtn);
+  cats.forEach(cat=>{
+    const btn=document.createElement('button');
+    btn.className='cat-tab'+(catFilter===cat.nombre?' active':'');
+    btn.textContent=(cat.emoji?cat.emoji+' ':'')+cat.nombre;
+    btn.onclick=()=>filterCat(cat.nombre,btn);
+    tabsEl.appendChild(btn);
+  });
+  if(catFilter!=='all'&&!cats.some(c=>c.nombre===catFilter)){ catFilter='all'; todosBtn.classList.add('active'); }
+}
 async function loadCategoriasPos() {
+  const c0=_lfCache('categorias'); if(Array.isArray(c0)&&c0.length) pintarCategorias(c0);
   try {
     const cats = await sbGet('categorias','activo=eq.true&order=orden.asc,nombre.asc&select=*');
     if(!Array.isArray(cats)||!cats.length) return;
-    const tabsEl = document.getElementById('cat-tabs');
-    const todosBtn = tabsEl.querySelector('.cat-tab');
-    tabsEl.innerHTML='';
-    tabsEl.appendChild(todosBtn);
-    cats.forEach(cat=>{
-      const btn=document.createElement('button');
-      btn.className='cat-tab';
-      btn.textContent=(cat.emoji?cat.emoji+' ':'')+cat.nombre;
-      btn.onclick=()=>filterCat(cat.nombre,btn);
-      tabsEl.appendChild(btn);
-    });
+    _lfCache('categorias',cats);
+    pintarCategorias(cats);
   } catch(e){}
 }
 
+function construirCatalogo(prods,grupos,opciones,pm){
+  if(!Array.isArray(prods)||!prods.length) return false;
+  grupos=Array.isArray(grupos)?grupos:[];
+  grupos.forEach(g=>{
+    MODS[g.nombre]={required:g.requerido,min:g.min_seleccion,max:g.max_seleccion,label:g.label||g.nombre,
+      options:(Array.isArray(opciones)?opciones.filter(o=>o.grupo_id===g.id):[]).map(o=>({name:o.nombre,extra:parseFloat(o.precio_extra)||0}))};
+  });
+  PRODUCTS.length=0;
+  prods.forEach(p=>{
+    const mods=(Array.isArray(pm)?pm.filter(x=>x.producto_id===p.id).sort((a,b)=>a.orden-b.orden):[])
+      .map(x=>grupos.find(g=>g.id===x.grupo_id)?.nombre).filter(Boolean);
+    PRODUCTS.push({id:p.id,name:p.nombre,cat:p.categoria,price:parseFloat(p.precio),desc:p.descripcion||'',emoji:p.emoji||'🍓',img:p.imagen||'',mods});
+    EMOJI_MAP[p.nombre]=p.emoji||'🍓';
+  });
+  return true;
+}
 async function loadCatalog() {
+  const c0=_lfCache('catalogo');
+  const desdeCache=!!(c0&&construirCatalogo(c0.prods,c0.grupos,c0.opciones,c0.pm));
+  if(desdeCache) renderProducts();
   try {
     const [prods,grupos,opciones,pm] = await Promise.all([
       sbGet('productos','activo=eq.true&order=orden.asc&select=*'),
@@ -1725,22 +1756,9 @@ async function loadCatalog() {
       sbGet('modificadores_opciones','activo=eq.true&order=orden.asc&select=*'),
       sbGet('productos_modificadores','order=orden.asc&select=*'),
     ]);
-    if(Array.isArray(prods)&&prods.length){
-      if(Array.isArray(grupos)&&grupos.length){
-        grupos.forEach(g=>{
-          MODS[g.nombre]={required:g.requerido,min:g.min_seleccion,max:g.max_seleccion,label:g.label||g.nombre,
-            options:(Array.isArray(opciones)?opciones.filter(o=>o.grupo_id===g.id):[]).map(o=>({name:o.nombre,extra:parseFloat(o.precio_extra)||0}))};
-        });
-      }
-      PRODUCTS.length=0;
-      prods.forEach(p=>{
-        const mods=(Array.isArray(pm)?pm.filter(x=>x.producto_id===p.id).sort((a,b)=>a.orden-b.orden):[])
-          .map(x=>grupos.find(g=>g.id===x.grupo_id)?.nombre).filter(Boolean);
-        PRODUCTS.push({id:p.id,name:p.nombre,cat:p.categoria,price:parseFloat(p.precio),desc:p.descripcion||'',emoji:p.emoji||'🍓',img:p.imagen||'',mods});
-        EMOJI_MAP[p.nombre]=p.emoji||'🍓';
-      });
-    } else { PRODUCTS.push(...PRODUCTS_FALLBACK); }
-  } catch { PRODUCTS.push(...PRODUCTS_FALLBACK); }
+    if(construirCatalogo(prods,grupos,opciones,pm)) _lfCache('catalogo',{prods,grupos,opciones,pm});
+    else if(!desdeCache){ PRODUCTS.length=0; PRODUCTS.push(...PRODUCTS_FALLBACK); }
+  } catch { if(!desdeCache){ PRODUCTS.length=0; PRODUCTS.push(...PRODUCTS_FALLBACK); } }
   renderProducts();
 }
 
@@ -2218,7 +2236,11 @@ async function cancelOrder(){
   if(discMonto) discMonto.value='';
   document.querySelectorAll('.svc-btn')[0].click();
   document.querySelectorAll('.pay-btn')[0].click();
-  closeSheet('order'); renderOrderBar(); renderProducts();
+  { const t=document.getElementById('client-toggle-text'), b=document.getElementById('client-toggle'); if(t) t.textContent='+ Agregar cliente'; if(b) b.classList.remove('has-value'); }
+  // Cerrar todo y dejar la pantalla limpia (en tablet horizontal el panel de la orden siempre está visible: hay que vaciarlo)
+  if(document.getElementById('ov-cobro')?.classList.contains('open')) closeSheet('cobro');
+  closeSheet('order'); renderOrderItems(); renderOrderBar(); renderProducts();
+  showToast('Orden cancelada');
 }
 
 function closeOrderSheet(){
@@ -3274,36 +3296,56 @@ async function createCliente(telefonoDigits){
 }
 
 function esCumpleHoy(c){ if(!c||!c.cumple) return false; const h=fechaMX(); return String(c.cumple).slice(5,10)===h.slice(5,10); }
+// Lector de QR: usa el lector del navegador si existe (Android/Chrome) y si no (iPhone/Safari) carga jsQR
+let _jsqrCarga=null;
+function cargarJsQR(){
+  if(window.jsQR) return Promise.resolve(true);
+  if(!_jsqrCarga) _jsqrCarga=new Promise(res=>{ const sc=document.createElement('script'); sc.src='js/jsQR.js'; sc.onload=()=>res(!!window.jsQR); sc.onerror=()=>{ _jsqrCarga=null; res(false); }; document.head.appendChild(sc); });
+  return _jsqrCarga;
+}
 async function escanearQR(){
-  if(!('BarcodeDetector' in window)||!navigator.mediaDevices){ showToast('Esta tablet no puede escanear. Escribe el teléfono o el código de la tarjeta.'); return; }
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ showToast('Este equipo no deja usar la cámara. Escribe el teléfono o el código de la tarjeta.'); return; }
   let stream=null, vivo=true;
   const div=document.createElement('div');
   div.className='lf-modal';
   div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:600;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;';
-  div.innerHTML='<video playsinline muted style="width:min(90vw,420px);border-radius:18px;background:#000;"></video><div style="color:#fff;font-size:14px;">Apunta a la tarjeta Lady Lovers</div><button style="height:48px;padding:0 28px;border-radius:14px;border:none;font-weight:700;">Cerrar</button>';
+  div.innerHTML='<video playsinline muted autoplay style="width:min(90vw,420px);border-radius:18px;background:#000;"></video><div style="color:#fff;font-size:14px;">Apunta a la tarjeta Lady Lovers</div><button style="height:48px;padding:0 28px;border-radius:14px;border:none;font-weight:700;">Cerrar</button>';
   const parar=()=>{ vivo=false; if(stream) stream.getTracks().forEach(t=>t.stop()); div.remove(); };
   div.querySelector('button').onclick=parar;
   document.body.appendChild(div);
   try{
+    let det=null;
+    if('BarcodeDetector' in window){ try{ det=new BarcodeDetector({formats:['qr_code']}); }catch(e){ det=null; } }
+    if(!det&&!(await cargarJsQR())){ parar(); showToast('No se pudo cargar el lector. Revisa el internet o escribe el código.'); return; }
     stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
     const v=div.querySelector('video'); v.srcObject=stream; await v.play();
-    const det=new BarcodeDetector({formats:['qr_code']});
+    const cv=document.createElement('canvas'), ctx=cv.getContext('2d',{willReadFrequently:true});
+    const leer=async()=>{
+      if(det){ const r=await det.detect(v); return r&&r.length?(r[0].rawValue||''):null; }
+      const w=v.videoWidth, h=v.videoHeight; if(!w||!h) return null;
+      const k=Math.min(1,640/Math.max(w,h)); cv.width=Math.round(w*k); cv.height=Math.round(h*k);
+      ctx.drawImage(v,0,0,cv.width,cv.height);
+      const img=ctx.getImageData(0,0,cv.width,cv.height);
+      const r=window.jsQR(img.data,cv.width,cv.height,{inversionAttempts:'dontInvert'});
+      return r?r.data:null;
+    };
     const loop=async()=>{
       if(!vivo||!document.body.contains(div)){ parar(); return; }
       try{
-        const r=await det.detect(v);
-        if(r&&r.length){
-          const raw=r[0].rawValue||''; let code=raw;
+        const raw=await leer();
+        if(raw){
+          let code=raw;
           try{ const u=new URL(raw); code=u.searchParams.get('qr')||raw; }catch(e){}
           code=String(code).trim().toUpperCase(); parar();
+          if(navigator.vibrate) navigator.vibrate(30);
           const inp=document.getElementById('cliente-search-input'); if(inp) inp.value=code;
           buscarCliente(code); return;
         }
       }catch(e){}
-      setTimeout(loop,300);
+      setTimeout(loop,250);
     };
     loop();
-  }catch(e){ parar(); showToast('No se pudo abrir la cámara. Revisa el permiso del navegador.'); }
+  }catch(e){ parar(); showToast('No se pudo abrir la cámara. Dale permiso de cámara al navegador.'); }
 }
 function selectCliente(c){
   loyaltyCliente=c;
