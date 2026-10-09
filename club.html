@@ -339,6 +339,15 @@ html, body { background: var(--bg); color: var(--text); font-family: 'DM Sans', 
     <div class="qr-hint">El cajero lo escaneará o escribirá tu código para sumar el sello automáticamente.</div>
   </div>
 
+  <!-- GOOGLE WALLET (Android) -->
+  <div id="gw-box" style="display:none;margin:12px 16px 0;text-align:center;">
+    <button id="gw-btn" onclick="agregarGoogleWallet()" style="display:inline-flex;align-items:center;justify-content:center;gap:10px;height:52px;padding:0 22px;border-radius:26px;border:none;background:#1f1f1f;color:#fff;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;">
+      <svg width="26" height="20" viewBox="0 0 26 20" aria-hidden="true"><rect x="1" y="2" width="24" height="16" rx="3" fill="#fff"/><rect x="1" y="2" width="24" height="5" rx="2" fill="#4285F4"/><rect x="1" y="6" width="24" height="4" fill="#34A853"/><rect x="1" y="9" width="24" height="4" fill="#FBBC04"/><rect x="1" y="12" width="24" height="3" fill="#EA4335"/></svg>
+      <span>Agregar a Google Wallet</span>
+    </button>
+    <div class="xsmall" id="gw-msg" style="margin-top:6px;">Tus sellos siempre a la mano y avisos de tus promos.</div>
+  </div>
+
   <!-- HISTORY -->
   <div class="section-title">Tus últimas visitas</div>
   <div class="history" id="history"></div>
@@ -511,6 +520,19 @@ function pintarExtras(c,cfg,d){
       <button class="xbtn" onclick="invitarAmiga()">Mandar invitación</button></div>`;
   }
   ex.innerHTML=h;
+}
+// Google Wallet: solo se ofrece fuera de iPhone (en iPhone será Apple Wallet)
+if(!/iphone|ipad|ipod/i.test(navigator.userAgent)){ const gb=document.getElementById('gw-box'); if(gb) gb.style.display='block'; }
+async function agregarGoogleWallet(){
+  const btn=document.getElementById('gw-btn'), msg=document.getElementById('gw-msg');
+  btn.disabled=true; btn.style.opacity=.6; msg.textContent='Preparando tu pase…';
+  try{
+    const r=await fetch(SB_URL+'/functions/v1/lf-wallet-google',{method:'POST',headers:{...SB_H,'Content-Type':'application/json'},body:JSON.stringify({qr:QR})});
+    const j=await r.json().catch(()=>({}));
+    if(j&&j.ok&&j.url){ msg.textContent='Abriendo Google Wallet…'; location.href=j.url; return; }
+    msg.textContent=/secreto|GOOGLE_WALLET_SA/.test(j&&j.error||'')?'Muy pronto podrás agregarla a Google Wallet 💕':'No se pudo preparar tu pase. Intenta otra vez.';
+  }catch(e){ msg.textContent='No se pudo preparar tu pase. Revisa tu internet.'; }
+  btn.disabled=false; btn.style.opacity=1;
 }
 async function guardarCumple(){
   const dia=parseInt(document.getElementById('c-dia').value), mes=parseInt(document.getElementById('c-mes').value);
