@@ -10,7 +10,7 @@
 <title>Lady Lovers · Lady Fresa</title>
 <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkNsdWIgTGFkeSBGcmVzYSIsCiAgInNob3J0X25hbWUiOiAiQ2x1YiBMRiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgInRoZW1lX2NvbG9yIjogIiNBNjE4MkUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiNGREY2RjciCn0=">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="js/qrcode.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 :root {
@@ -248,6 +248,26 @@ html, body { background: var(--bg); color: var(--text); font-family: 'DM Sans', 
 
 /* HIDE / SHOW */
 .hidden { display: none !important; }
+
+#extras:not(:empty){margin-bottom:12px}
+/* Enganche: nivel, cumple, promos, invita */
+.hero-nivel{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.18);font-size:12px;font-weight:700;letter-spacing:.5px}
+.xcard{margin:12px 16px 0;background:#fff;border-radius:20px;padding:16px;box-shadow:0 4px 16px rgba(166,24,46,.08)}
+.xcard h3{font-family:'Lilita One',sans-serif;font-weight:400;color:var(--red);font-size:20px;letter-spacing:.5px;margin-bottom:4px}
+.xcard p{font-size:13.5px;color:var(--text-2);line-height:1.45}
+.xcard.cumple-hoy{background:linear-gradient(140deg,#A6182E,#c41f38);color:#fff;text-align:center}
+.xcard.cumple-hoy h3,.xcard.cumple-hoy p{color:#fff}
+.xbar{height:8px;border-radius:99px;background:var(--red-light);overflow:hidden;margin:10px 0 6px}
+.xbar i{display:block;height:100%;background:var(--red);border-radius:99px}
+.xsmall{font-size:12px;color:var(--text-3)}
+.xbtn{width:100%;height:48px;border:none;border-radius:14px;background:var(--red);color:#fff;font-weight:700;font-size:15px;margin-top:12px;font-family:inherit;cursor:pointer}
+.xbtn.sec{background:#fff;color:var(--red);border:1.5px solid var(--red)}
+.xsel{display:grid;grid-template-columns:1fr 1.6fr;gap:8px;margin-top:10px}
+.xsel select{height:46px;border:1.5px solid #ecc6cf;border-radius:12px;padding:0 10px;font-size:16px;font-family:inherit;background:#fff;color:var(--text)}
+.promo{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px;border:1.5px dashed var(--red-mid);border-radius:14px;margin-top:10px}
+.promo b{display:block;font-size:14px;color:var(--text)}
+.promo small{font-size:12px;color:var(--text-3)}
+.promo .code{font-family:'Lilita One',sans-serif;font-size:20px;color:var(--red);letter-spacing:1.5px;background:var(--red-light);padding:6px 10px;border-radius:10px;white-space:nowrap}
 </style>
 <link rel="icon" type="image/png" href="img/marca/icono-192.png"><link rel="apple-touch-icon" href="img/marca/icono-512.png"><meta name="theme-color" content="#A6182E">
 <style>@font-face{font-family:'Lilita One';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/lilita-one-latin-400-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}@font-face{font-family:'Lilita One';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/lilita-one-latin-ext-400-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}</style>
@@ -278,6 +298,7 @@ html, body { background: var(--bg); color: var(--text); font-family: 'DM Sans', 
     <div class="hero-name" id="name">—</div>
     <div class="hero-phone" id="phone">—</div>
     <div class="hero-since" id="since">—</div>
+    <div class="hero-nivel" id="nivel" style="display:none"></div>
   </div>
 
   <!-- PROGRESS -->
@@ -291,6 +312,8 @@ html, body { background: var(--bg); color: var(--text); font-family: 'DM Sans', 
       <span class="sub" id="canje-sub">Muestra esta pantalla en la sucursal</span>
     </div>
   </div>
+
+  <div id="extras"></div>
 
   <!-- STATS -->
   <div class="stats-row">
@@ -328,8 +351,8 @@ html, body { background: var(--bg); color: var(--text); font-family: 'DM Sans', 
   </div>
 
   <div class="cta">
-    <button class="cta-btn share" onclick="shareTarjeta()">
-      📤 Compartir mi tarjeta
+    <button class="cta-btn share" onclick="invitarAmiga()">
+      💌 Invita a una amiga
     </button>
     <div class="cta-hint">Agrega esta página a tu pantalla de inicio para acceso rápido</div>
   </div>
@@ -371,19 +394,21 @@ async function init(){
     const d=r.ok?await r.json():null;
     if(!d||!d.cliente){ showState('error'); return; }
     const c=d.cliente, movs=d.movimientos, cfg=d.config||{sellos_requeridos:10};
-    render(c,movs||[],cfg);
+    render(c,movs||[],cfg,d);
   } catch(e){
     console.error(e);
     showState('error');
   }
 }
 
-function render(c,movs,cfg){
+let _D=null;
+function render(c,movs,cfg,d){
+  _D=d||{};
   try{ if(c.qr_code) localStorage.setItem('lf_mi_tarjeta',c.qr_code); }catch(e){}
   if(new URLSearchParams(location.search).get('bienvenida')==='1'&&!document.getElementById('bienvenida')){
     const b=document.createElement('div'); b.id='bienvenida';
     b.style.cssText='margin:14px 18px 0;padding:14px 16px;border-radius:16px;background:#053A0A;color:#fff;font-size:14px;line-height:1.45;text-align:center;';
-    b.innerHTML='<b style="font-size:16px;">¡Ya eres Lady Lover! 💕</b><br>Enseña esta pantalla en caja para tu primer sello. Guárdala en tu pantalla de inicio para tenerla a la mano.';
+    b.innerHTML='<b style="font-size:16px;">¡Ya eres Lady Lover! 💕</b><br>'+((c.sellos_actuales||0)>0?'Ya tienes tu primer sello de regalo. ':'')+'Enseña esta pantalla en caja en cada compra para sumar sellos. Guárdala en tu pantalla de inicio para tenerla a la mano.';
     const card=document.querySelector('#content .card'); if(card) card.parentNode.insertBefore(b,card.nextSibling);
     try{ history.replaceState(null,'',location.pathname+'?qr='+encodeURIComponent(c.qr_code)); }catch(e){}
   }
@@ -420,14 +445,10 @@ function render(c,movs,cfg){
   // QR
   const qrText=c.qr_code||'';
   document.getElementById('qr-text').textContent=qrText;
-  if(window.QRCode){
+  if(window.qrcode){
     try {
-      new QRCode(document.getElementById('qrcode'),{
-        text:window.location.href,
-        width:160, height:160,
-        colorDark:'#A6182E', colorLight:'#FFFFFF',
-        correctLevel:QRCode.CorrectLevel.M
-      });
+      const q=qrcode(0,'M'); q.addData(location.origin+location.pathname+'?qr='+encodeURIComponent(qrText)); q.make();
+      document.getElementById('qrcode').innerHTML='<div style="width:160px;margin:0 auto;">'+q.createSvgTag({cellSize:4,margin:0,scalable:true}).replace(/fill="black"|fill="#000000"/g,'fill="#A6182E"')+'</div>';
     } catch(e){ console.warn('QR error',e); }
   }
   // Historial
@@ -437,14 +458,77 @@ function render(c,movs,cfg){
   } else {
     histEl.innerHTML=movs.map(m=>{
       const icon={gana:'➕',canje:'🎁',ajuste:'⚙️',regalo:'🎀',expira:'⏱'}[m.tipo]||'•';
-      const txt={gana:'+1 sello',canje:'Premio canjeado',ajuste:m.cantidad>0?'+'+m.cantidad+' sellos':m.cantidad+' sellos',regalo:'+'+m.cantidad+' de regalo',expira:'Sellos expirados'}[m.tipo]||m.tipo;
+      const txt={gana:'+1 sello',canje:'Premio canjeado',ajuste:m.cantidad>0?'+'+m.cantidad+' sellos':m.cantidad+' sellos',regalo:'+'+m.cantidad+' · '+(m.motivo||'de regalo'),expira:'Sellos expirados'}[m.tipo]||m.tipo;
       return `<div class="h-row">
         <span class="h-l"><span class="h-icon">${icon}</span>${sanitize(txt)} · ${sanitize(m.sucursal||'')}</span>
         <span class="h-r">${fmtFecha(m.created_at)}</span>
       </div>`;
     }).join('');
   }
+  pintarExtras(c,cfg,_D);
   showState('content');
+}
+
+const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function pintarExtras(c,cfg,d){
+  const ex=document.getElementById('extras'); let h='';
+  const niv=d.nivel||{}, cum=d.cumple||{}, inv=d.invitadas||{}, promos=d.promos||[];
+  const regalo=sanitize(cfg.regalo_cumple||'una sorpresa');
+  // Nivel en el hero
+  const nv=document.getElementById('nivel');
+  if(niv.nombre){ nv.style.display='inline-flex'; nv.textContent=(niv.n===3?'👑 ':niv.n===2?'⭐ ':'💕 ')+niv.nombre; }
+  // Cumpleaños
+  if(cum.tiene&&cum.es_hoy){
+    h+=`<div class="xcard cumple-hoy"><h3>¡FELIZ CUMPLEAÑOS! 🎂</h3><p>Hoy te toca ${regalo}. Enseña esta pantalla en caja y pide tu regalo.</p></div>`;
+  } else if(cum.tiene&&cum.dias!=null&&cum.dias<=30){
+    h+=`<div class="xcard"><h3>Tu cumple ya viene 🎂</h3><p>Faltan <b>${cum.dias} día${cum.dias===1?'':'s'}</b>. Ese día te espera ${regalo}.</p></div>`;
+  } else if(!cum.tiene){
+    h+=`<div class="xcard" id="cumple-card"><h3>¿Cuándo es tu cumple? 🎂</h3><p>Dínoslo y ese día te espera ${regalo}.</p>
+      <div class="xsel"><select id="c-dia"><option value="">Día</option>${Array.from({length:31},(_,i)=>`<option>${i+1}</option>`).join('')}</select>
+      <select id="c-mes"><option value="">Mes</option>${MESES.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('')}</select></div>
+      <button class="xbtn" onclick="guardarCumple()">Guardar mi cumpleaños</button></div>`;
+  }
+  // Promos solo para ella
+  if(promos.length){
+    h+=`<div class="xcard"><h3>Promos solo para ti 💌</h3><p>Dile el código a la cajera al pagar.</p>${promos.map(p=>{
+      const v=p.es_monto?'$'+Number(p.valor)+' de descuento':Number(p.valor)+'% de descuento';
+      const fin=p.fecha_fin?' · hasta el '+new Date(p.fecha_fin+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'long'}):'';
+      return `<div class="promo"><div><b>${sanitize(v)}</b><small>${sanitize((p.nombre||'').replace(/^Aviso:\s*/,''))}${fin}</small></div><span class="code">${sanitize(p.codigo)}</span></div>`; }).join('')}</div>`;
+  }
+  // Nivel: progreso al siguiente
+  if(niv.siguiente&&niv.meta){
+    const pct=Math.min(100,Math.round((niv.total||0)/niv.meta*100));
+    h+=`<div class="xcard"><h3>${niv.n===2?'⭐':'💕'} ${sanitize(niv.nombre)}</h3>${niv.beneficio?`<p>Tu beneficio: ${sanitize(niv.beneficio)}.</p>`:''}
+      <div class="xbar"><i style="width:${pct}%"></i></div>
+      <div class="xsmall">Te faltan <b>${niv.faltan}</b> sellos para ser <b>${sanitize(niv.siguiente)}</b>${d.siguiente_beneficio?'':''}</div></div>`;
+  } else if(niv.n===3){
+    h+=`<div class="xcard"><h3>👑 ${sanitize(niv.nombre)}</h3><p>Eres de nuestras consentidas.${niv.beneficio?' Tu beneficio: '+sanitize(niv.beneficio)+'.':''}</p></div>`;
+  }
+  // Invita a una amiga
+  if(cfg.referidos_activo!==false){
+    h+=`<div class="xcard"><h3>Invita a una amiga 💌</h3><p>Mándale tu link. Cuando haga su primera compra, <b>las dos ganan un sello extra</b>.</p>
+      ${inv.total?`<div class="xsmall" style="margin-top:8px;">Has invitado a ${inv.total} amiga${inv.total===1?'':'s'}${inv.compraron?` · ${inv.compraron} ya ${inv.compraron===1?'compró':'compraron'} 🎉`:''}</div>`:''}
+      <button class="xbtn" onclick="invitarAmiga()">Mandar invitación</button></div>`;
+  }
+  ex.innerHTML=h;
+}
+async function guardarCumple(){
+  const dia=parseInt(document.getElementById('c-dia').value), mes=parseInt(document.getElementById('c-mes').value);
+  if(!dia||!mes){ alert('Elige día y mes'); return; }
+  try{
+    const r=await fetch(SB_URL+'/rest/v1/rpc/club_set_cumple',{method:'POST',headers:{...SB_H,'Content-Type':'application/json'},body:JSON.stringify({p_qr:QR,p_dia:dia,p_mes:mes})});
+    const j=r.ok?await r.json():null;
+    if(j&&j.ok){ document.getElementById('cumple-card').innerHTML='<h3>¡Listo! 🎂</h3><p>Ya tenemos tu cumple. Ese día te va a esperar algo rico.</p>'; }
+    else alert('No se pudo guardar. Intenta otra vez.');
+  }catch(e){ alert('No se pudo guardar. Revisa tu internet.'); }
+}
+async function invitarAmiga(){
+  const base=location.href.replace(/[?#].*$/,'').replace(/[^/]*$/,'');
+  const url=base+'registro.html?ref='+encodeURIComponent(QR);
+  const nombre=(document.getElementById('name').textContent||'').split(' ')[0];
+  const text=`🍓 ¡Hazte Lady Lover en Lady Fresa! Te regalan tu primer sello y en tu primera compra las dos ganamos uno extra. Regístrate aquí:`;
+  if(navigator.share){ try{ await navigator.share({title:'Hazte Lady Lover',text,url}); return; }catch(e){ if(e&&e.name==='AbortError') return; } }
+  location.href='https://wa.me/?text='+encodeURIComponent(text+' '+url);
 }
 
 async function shareTarjeta(){

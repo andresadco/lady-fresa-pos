@@ -2579,6 +2579,14 @@ function llRenderPrograma(){
     <div class="set-row"><div><b>Nombre</b><small>Sale en el ticket y en la tarjeta digital.</small></div><input class="form-input" id="llp-nombre" value="${escH(c.programa_nombre||'Lady Lovers')}" style="width:200px;"></div>
     <div class="set-row"><div><b>Sellos para premio</b><small>Un sello por cada compra.</small></div><div class="money-in"><input class="form-input" id="llp-req" type="number" min="1" max="50" value="${c.sellos_requeridos||10}"><span>sellos</span></div></div>
     <div class="set-row"><div><b>Valor máximo del premio</b><small>El canje descuenta hasta este monto.</small></div><div class="money-in"><span>$</span><input class="form-input" id="llp-max" type="number" min="0" value="${c.premio_precio_max||0}"></div></div>
+    <div class="set-row"><div><b>Sello de bienvenida</b><small>Al registrarse (en caja o por QR) empiezan con 1 sello. No aplica a las importadas.</small></div><button class="toggle ${c.sello_bienvenida!==false?'on':''}" id="llp-bien-sello" onclick="this.classList.toggle('on')"></button></div>
+    <div class="set-row"><div><b>Invita a una amiga</b><small>En la primera compra de la invitada, las dos ganan 1 sello extra.</small></div><button class="toggle ${c.referidos_activo!==false?'on':''}" id="llp-ref" onclick="this.classList.toggle('on')"></button></div>
+    <div class="set-row"><div><b>Regalo de cumpleaños</b><small>Así sale en su tarjeta: "ese día te espera …"</small></div><input class="form-input" id="llp-cumple" value="${escH(c.regalo_cumple||'una sorpresa')}" style="width:220px;"></div>
+    <div style="margin-top:14px;font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;">Niveles (por sellos ganados de por vida)</div>
+    ${[2,3].map(n=>`<div class="set-row" style="align-items:flex-start;"><div style="flex:1;display:grid;grid-template-columns:1fr 90px;gap:8px;">
+      <input class="form-input" id="llp-n${n}-nombre" value="${escH(c['nivel'+n+'_nombre']||(n===2?'Super Lover':'Lady VIP'))}" placeholder="Nombre del nivel">
+      <input class="form-input" id="llp-n${n}-sellos" type="number" min="1" value="${c['nivel'+n+'_sellos']||(n===2?20:50)}" title="Sellos de por vida">
+      <input class="form-input" id="llp-n${n}-benef" value="${escH(c['nivel'+n+'_beneficio']||'')}" placeholder="Beneficio (ej. topping extra gratis cada mes)" style="grid-column:1/-1;"></div></div>`).join('')}
     <div class="form-group" style="margin-top:12px;"><label class="form-label">Mensaje de bienvenida</label><input class="form-input" id="llp-bien" value="${escH(c.mensaje_bienvenida||'')}"></div>
     <div class="form-group" style="margin-top:12px;"><label class="form-label">Mensaje al canjear</label><input class="form-input" id="llp-canje" value="${escH(c.mensaje_canje||'')}"></div>
     <div style="text-align:right;margin-top:16px;"><button class="btn btn-primary" onclick="llGuardarPrograma()">Guardar</button></div></div>
@@ -2596,6 +2604,10 @@ async function llGuardarPrograma(){
   if(!(req>0)){ toast('⚠ Sellos inválidos'); return; }
   const data={ activo:document.getElementById('llp-activo').classList.contains('on'), programa_nombre:document.getElementById('llp-nombre').value.trim()||'Lady Lovers',
     sellos_requeridos:req, premio_precio_max:isNaN(max)?null:max, mensaje_bienvenida:document.getElementById('llp-bien').value.trim(), mensaje_canje:document.getElementById('llp-canje').value.trim(),
+    sello_bienvenida:document.getElementById('llp-bien-sello').classList.contains('on'), referidos_activo:document.getElementById('llp-ref').classList.contains('on'),
+    regalo_cumple:document.getElementById('llp-cumple').value.trim()||'una sorpresa',
+    nivel2_nombre:document.getElementById('llp-n2-nombre').value.trim()||'Super Lover', nivel2_sellos:parseInt(document.getElementById('llp-n2-sellos').value)||20, nivel2_beneficio:document.getElementById('llp-n2-benef').value.trim()||null,
+    nivel3_nombre:document.getElementById('llp-n3-nombre').value.trim()||'Lady VIP', nivel3_sellos:parseInt(document.getElementById('llp-n3-sellos').value)||50, nivel3_beneficio:document.getElementById('llp-n3-benef').value.trim()||null,
     updated_at:new Date().toISOString(), updated_by:(currentUser&&currentUser.name)||'admin' };
   const r=await fetch(`${SB_URL}/rest/v1/lf_loyalty_config?id=eq.1`,{method:'PATCH',headers:SB_H,body:JSON.stringify(data)});
   toast(r.ok?'✓ Programa guardado':'⚠ No se guardó'); if(r.ok) loadLovers();
@@ -2699,7 +2711,7 @@ async function llImportar(inp){
     const nombre=[r[iN],iA>=0?r[iA]:''].join(' ').trim(); if(!nombre) return;
     let cumple=iC>=0?String(r[iC]||'').trim():''; const m=cumple.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
     if(m) cumple=`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; if(!/^\d{4}-\d{2}-\d{2}$/.test(cumple)) cumple=null;
-    nuevos.push({nombre,telefono:'+52'+tel,email:iE>=0&&r[iE]?String(r[iE]).trim():null,cumple,sucursal_alta:(iSuc>=0&&llSucs.find(x=>x.toLowerCase()===String(r[iSuc]||'').trim().toLowerCase()))||(llSuc!=='all'?llSuc:null),notas:'Importada '+hoyMX()});
+    nuevos.push({nombre,telefono:'+52'+tel,email:iE>=0&&r[iE]?String(r[iE]).trim():null,cumple,sucursal_alta:(iSuc>=0&&llSucs.find(x=>x.toLowerCase()===String(r[iSuc]||'').trim().toLowerCase()))||(llSuc!=='all'?llSuc:null),notas:'Importada '+hoyMX(),origen:'import'});
     const sv=iS>=0?parseInt(r[iS]):0; if(sv>0) sellos['+52'+tel]=Math.min(sv,200);
   });
   if(!nuevos.length){ toast('No hay clientas nuevas (ya estaban o sin teléfono)'); return; }
@@ -2787,10 +2799,11 @@ function cpExportar(){
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=`lady-lovers_${_cpSeg.replace(':','-')}_${hoyMX()}.csv`; a.click();
 }
 async function cpEnviar(){
-  const lista=cpClientas(_cpSeg), ids=lista.filter(c=>_llPush.has(c.id)).map(c=>c.id);
+  const lista=cpClientas(_cpSeg), ids=lista.filter(c=>_llPush.has(c.id)).map(c=>c.id), todas=lista.map(c=>c.id);
   let tit=document.getElementById('cp-tit').value.trim(), msg=document.getElementById('cp-msg').value.trim();
   if(!tit||!msg){ toast('⚠ Escribe título y mensaje'); return; }
-  if(!ids.length){ toast('Nadie de este grupo tiene avisos activos todavía'); return; }
+  const conPromo=document.getElementById('cp-promo').checked;
+  if(!ids.length&&!conPromo){ toast('Nadie de este grupo tiene avisos activos todavía. Activa la promo para que al menos la vean en su tarjeta.'); return; }
   let promo=null;
   if(document.getElementById('cp-promo').checked){
     const valor=parseFloat(document.getElementById('cp-p-valor').value), monto=document.getElementById('cp-p-tipo').value==='monto', dias=parseInt(document.getElementById('cp-p-dias').value);
@@ -2800,15 +2813,15 @@ async function cpEnviar(){
     promo={ nombre:'Aviso: '+tit, tipo:'codigo', codigo, valor, es_monto:monto, fecha_inicio:hoyMX(), fecha_fin:fin.toLocaleDateString('en-CA',{timeZone:'America/Mexico_City'}), activo:true, descripcion:'Creada desde Campañas Lady Lovers' };
     msg+=` Usa el código ${codigo} (${monto?'$'+valor:valor+'%'} de descuento, vale ${dias} días).`;
   }
-  if(!confirm(`¿Mandar este aviso a ${ids.length} clienta${ids.length>1?'s':''}?\n\n${tit}\n${msg}`)) return;
+  if(!confirm((ids.length?`¿Mandar este aviso a ${ids.length} clienta${ids.length>1?'s':''}?`:'Nadie de este grupo tiene avisos activos: la promo solo aparecerá en su tarjeta.')+(promo?`\n\nLa promo también aparece en la tarjeta de las ${todas.length} clientas del grupo.`:'')+`\n\n${tit}\n${msg}`)) return;
   let promo_id=null;
   if(promo){ const r=await sbPost('promociones',promo); if(!r.ok){ toast('⚠ No se pudo crear la promo'); return; } const j=await r.json(); promo_id=(Array.isArray(j)?j[0]:j).id; }
   try{
     const r=await fetch(SB_URL+'/functions/v1/lf-push-clientas',{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY,Authorization:'Bearer '+SB_KEY},
-      body:JSON.stringify({admin_pin:currentUser&&currentUser._pin,titulo:tit,mensaje:msg,cliente_ids:ids,segmento:_cpSeg,promo_id,promo_codigo:promo&&promo.codigo,base_url:location.href.replace(/admin\.html.*$/,'')})});
+      body:JSON.stringify({admin_pin:currentUser&&currentUser._pin,titulo:tit,mensaje:msg,cliente_ids:ids,todas_ids:todas,segmento:_cpSeg,promo_id,promo_codigo:promo&&promo.codigo,base_url:location.href.replace(/admin\.html.*$/,'')})});
     const j=await r.json();
     if(!r.ok||!j.ok) throw new Error(j.error||r.status);
-    toast(`📣 Enviado a ${j.clientas} clienta${j.clientas===1?'':'s'}`+(j.fallas?` · ${j.fallas} sin entregar`:''));
+    toast((ids.length?`📣 Enviado a ${j.clientas} clienta${j.clientas===1?'':'s'}`+(j.fallas?` · ${j.fallas} sin entregar`:''):'✓ Promo publicada')+(promo?` · visible en ${todas.length} tarjetas`:''));
     _llPush=null; llRenderCampanas();
   }catch(e){ toast('⚠ No se pudo enviar: '+e.message); }
 }

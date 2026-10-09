@@ -3530,7 +3530,7 @@ function renderLoyaltyCard(){
   }
   toggle.style.display='none';
   card.classList.add('show');
-  document.getElementById('lc-name').textContent=loyaltyCliente.nombre||'—';
+  document.getElementById('lc-name').textContent=(loyaltyCliente.nombre||'—')+(nivelCliente(loyaltyCliente)?' · '+nivelCliente(loyaltyCliente):'');
   document.getElementById('lc-phone').textContent=loyaltyCliente.telefono||'—';
   const req=loyaltyConfig?.sellos_requeridos||10;
   const cur=loyaltyCliente.sellos_actuales||0;
@@ -3855,6 +3855,14 @@ async function registrarSellosVenta(saleData){
   if(!r.ok){ showToast('⚠️ No se registró el sello de '+(saleData.client||'la clienta')+'. Agrégalo en Lady Lovers.'); return; }
   const j=await r.json();
   if(j&&j.canje_rechazado) showToast('⚠️ El canje no se descontó: ya no tenía sellos suficientes. Revisa con el gerente.');
+  else if(j&&j.invitacion) setTimeout(()=>showToast('🎉 Primera compra de una invitada: ella y su amiga ganaron 1 sello extra'),1200);
+}
+// Nivel de la clienta según sus sellos de por vida (se configura en el admin)
+function nivelCliente(c){
+  const t=Number(c?.sellos_ganados_total)||0, k=loyaltyConfig||{};
+  if(t>=(k.nivel3_sellos||50)) return '👑 '+(k.nivel3_nombre||'Lady VIP');
+  if(t>=(k.nivel2_sellos||20)) return '⭐ '+(k.nivel2_nombre||'Super Lover');
+  return '';
 }
 
 

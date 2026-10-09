@@ -55,8 +55,8 @@ input.i:focus,select.i:focus{border-color:var(--red)}
   <div class="card" id="form-card">
     <div class="beneficios">
       <div><b id="b-sellos">10</b>sellos y tu fresa es gratis</div>
+      <div id="b-bien"><b>1</b>sello de regalo al unirte</div>
       <div><b>🎂</b>sorpresa en tu cumple</div>
-      <div><b>🔔</b>promos solo para ti</div>
     </div>
     <form id="f" onsubmit="enviar(event)" novalidate>
       <div id="modo-nuevo">
@@ -90,21 +90,23 @@ const SB_URL='https://ngpumyxxxlafuzcsaepy.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ncHVteXh4eGxhZnV6Y3NhZXB5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyNjkzNzYsImV4cCI6MjA4OTg0NTM3Nn0.u4WHkOXLrNn4WSKHJedXXNDYrCMdfaDNK8KlvJNfXLg';
 const params=new URLSearchParams(location.search);
 const SUC=(params.get('suc')||'').slice(0,40);
+const REF=(params.get('ref')||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,16);
 let recuperar=params.get('recuperar')==='1';
 const $=id=>document.getElementById(id);
 const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 for(let d=1;d<=31;d++) $('dia').insertAdjacentHTML('beforeend',`<option value="${d}">${d}</option>`);
 MESES.forEach((m,i)=>$('mes').insertAdjacentHTML('beforeend',`<option value="${i+1}">${m}</option>`));
 // Si ya se registró en este teléfono, mandarla directo a su tarjeta
-try{ const q=localStorage.getItem('lf_mi_tarjeta'); if(q&&!params.has('nuevo')&&!recuperar) location.replace('club.html?qr='+encodeURIComponent(q)); }catch(e){}
-fetch(SB_URL+'/rest/v1/lf_loyalty_config?id=eq.1&select=sellos_requeridos,programa_nombre',{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}})
-  .then(r=>r.ok?r.json():[]).then(r=>{ if(r&&r[0]&&r[0].sellos_requeridos) $('b-sellos').textContent=r[0].sellos_requeridos; }).catch(()=>{});
+try{ const q=localStorage.getItem('lf_mi_tarjeta'); if(q&&!params.has('nuevo')&&!recuperar&&!REF) location.replace('club.html?qr='+encodeURIComponent(q)); }catch(e){}
+fetch(SB_URL+'/rest/v1/lf_loyalty_config?id=eq.1&select=sellos_requeridos,programa_nombre,sello_bienvenida',{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}})
+  .then(r=>r.ok?r.json():[]).then(r=>{ const c=r&&r[0]; if(!c) return; if(c.sellos_requeridos) $('b-sellos').textContent=c.sellos_requeridos;
+    if(c.sello_bienvenida===false){ const b=$('b-bien'); if(b) b.style.display='none'; if(!REF&&!recuperar) $('hero-p').textContent='Junta sellos con cada compra y llévate tu fresa de regalo.'; } }).catch(()=>{});
 function pintarModo(){
   $('modo-nuevo').style.display=recuperar?'none':'block';
   $('modo-nuevo-2').style.display=recuperar?'none':'block';
   $('btn').textContent=recuperar?'VER MI TARJETA':'QUIERO MI TARJETA';
   $('toggle').textContent=recuperar?'¿Todavía no tienes tarjeta? Regístrate':'¿Ya tienes tarjeta? Recupérala aquí';
-  $('hero-p').textContent=recuperar?'Pon tu WhatsApp y tu cumpleaños para ver tus sellos.':'Junta sellos con cada compra y llévate tu fresa de regalo.';
+  $('hero-p').textContent=recuperar?'Pon tu WhatsApp y tu cumpleaños para ver tus sellos.':(REF?'Una amiga te invitó 💕 Regístrate y en tu primera compra las dos ganan un sello extra.':'Te regalamos tu primer sello. Junta los demás y llévate tu fresa gratis.');
   $('cumple-hint').textContent=recuperar?'(el que diste al registrarte)':'(para tu sorpresa; también sirve para recuperar tu tarjeta)';
   $('err').textContent='';
 }
@@ -122,8 +124,8 @@ async function enviar(e){
   if(recuperar&&(!dia||!mes)){ err.textContent='Elige tu día y mes de cumpleaños'; return; }
   const btn=$('btn'); btn.disabled=true; const txt=btn.textContent; btn.textContent='UN MOMENTO…';
   try{
-    const r=await fetch(SB_URL+'/rest/v1/rpc/club_registro',{method:'POST',headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'},
-      body:JSON.stringify({p_nombre:recuperar?'':nombre,p_telefono:tel,p_dia:dia,p_mes:mes,p_sucursal:SUC,p_acepta:!recuperar&&$('acepta').checked})});
+    const r=await fetch(SB_URL+'/rest/v1/rpc/club_alta',{method:'POST',headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({p:{nombre:recuperar?'':nombre,telefono:tel,dia,mes,sucursal:SUC,acepta:!recuperar&&$('acepta').checked,ref:REF}})});
     const j=r.ok?await r.json():null;
     if(j&&j.ok&&j.qr){
       try{ localStorage.setItem('lf_mi_tarjeta',j.qr); }catch(e){}
