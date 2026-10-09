@@ -263,7 +263,9 @@ html, body { background: var(--bg); color: var(--text); font-family: 'DM Sans', 
 <div id="error" class="state hidden">
   <div class="state-icon">😔</div>
   <div class="state-title">TARJETA NO ENCONTRADA</div>
-  <div class="state-sub">El código de tu tarjeta no es válido o el cliente fue dado de baja. Pide al cajero que te genere una nueva tarjeta en tu próxima visita.</div>
+  <div class="state-sub">El link de tu tarjeta no es válido o se dio de baja.</div>
+  <a href="registro.html?recuperar=1" style="display:inline-block;margin-top:18px;padding:14px 22px;border-radius:14px;background:#A6182E;color:#fff;text-decoration:none;font-weight:700;">Recuperar mi tarjeta</a>
+  <a href="registro.html?nuevo=1" style="display:block;margin-top:12px;color:#A6182E;font-weight:600;">Hacerme Lady Lover</a>
 </div>
 
 <div id="content" class="wrap hidden">
@@ -377,6 +379,14 @@ async function init(){
 }
 
 function render(c,movs,cfg){
+  try{ if(c.qr_code) localStorage.setItem('lf_mi_tarjeta',c.qr_code); }catch(e){}
+  if(new URLSearchParams(location.search).get('bienvenida')==='1'&&!document.getElementById('bienvenida')){
+    const b=document.createElement('div'); b.id='bienvenida';
+    b.style.cssText='margin:14px 18px 0;padding:14px 16px;border-radius:16px;background:#053A0A;color:#fff;font-size:14px;line-height:1.45;text-align:center;';
+    b.innerHTML='<b style="font-size:16px;">¡Ya eres Lady Lover! 💕</b><br>Enseña esta pantalla en caja para tu primer sello. Guárdala en tu pantalla de inicio para tenerla a la mano.';
+    const card=document.querySelector('#content .card'); if(card) card.parentNode.insertBefore(b,card.nextSibling);
+    try{ history.replaceState(null,'',location.pathname+'?qr='+encodeURIComponent(c.qr_code)); }catch(e){}
+  }
   const req=cfg.sellos_requeridos||10;
   // Hero
   document.getElementById('name').textContent=c.nombre||'—';

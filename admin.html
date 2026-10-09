@@ -2581,7 +2581,15 @@ function llRenderPrograma(){
     <div class="set-row"><div><b>Valor máximo del premio</b><small>El canje descuenta hasta este monto.</small></div><div class="money-in"><span>$</span><input class="form-input" id="llp-max" type="number" min="0" value="${c.premio_precio_max||0}"></div></div>
     <div class="form-group" style="margin-top:12px;"><label class="form-label">Mensaje de bienvenida</label><input class="form-input" id="llp-bien" value="${escH(c.mensaje_bienvenida||'')}"></div>
     <div class="form-group" style="margin-top:12px;"><label class="form-label">Mensaje al canjear</label><input class="form-input" id="llp-canje" value="${escH(c.mensaje_canje||'')}"></div>
-    <div style="text-align:right;margin-top:16px;"><button class="btn btn-primary" onclick="llGuardarPrograma()">Guardar</button></div></div>`;
+    <div style="text-align:right;margin-top:16px;"><button class="btn btn-primary" onclick="llGuardarPrograma()">Guardar</button></div></div>
+  <div class="card" style="margin-top:14px;">
+    <div class="card-title">QR para que se registren solas</div>
+    <div style="font-size:13px;color:var(--text-2);line-height:1.5;margin-bottom:12px;">Imprime el cartel y ponlo junto a la caja. La clienta escanea, pone su nombre, WhatsApp y cumpleaños, y le sale su tarjeta al momento. Si ya tenía tarjeta, la recupera con su WhatsApp y su cumpleaños. Quedan marcadas como <b>autoregistro</b>.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      ${(typeof allSucursales!=='undefined'&&allSucursales.length?allSucursales.map(s=>s.name):['Balbuena','Moctezuma','Narvarte']).map(n=>`<a class="btn btn-secondary btn-sm" href="cartel-registro.html?suc=${encodeURIComponent(n)}" target="_blank" rel="noopener">🖨️ Cartel ${escH(n)}</a>`).join('')}
+      <button class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(location.href.replace(/[^/]*$/,'')+'registro.html').then(()=>toast('✓ Link copiado'))">🔗 Copiar link de registro</button>
+    </div>
+  </div>`;
 }
 async function llGuardarPrograma(){
   const req=parseInt(document.getElementById('llp-req').value), max=parseFloat(document.getElementById('llp-max').value);

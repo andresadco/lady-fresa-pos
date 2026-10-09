@@ -1427,6 +1427,7 @@ function abrirMenuPOS(){
   if(p.discount) add('💸','Retiro de caja','Sacar efectivo con motivo','cerrarMenuPOS();abrirRetiro()');
   if(p.cierre) add('🔐','Corte de caja','Cerrar turno y contar billetes','cerrarMenuPOS();openCierreSheet()');
   add('🖨️','Impresora','Conectar y probar ticket','cerrarMenuPOS();openPrinterCfg()');
+  add('📲','QR Lady Lovers','Que la clienta se registre sola','cerrarMenuPOS();mostrarQRRegistro()');
   if(p.dashboard) add('📊','Ventas de hoy','Cómo va la sucursal','cerrarMenuPOS();openHoy()');
   if(p.dashboard) add('<img src="img/marca/sello.png" alt="" style="width:28px;height:28px;border-radius:50%;">',(loyaltyConfig?.programa_nombre||'Lady Lovers'),'Clientas y sellos','cerrarMenuPOS();openLoyaltyAdmin()');
   if(puedeCambiarSucursal()) add('📍','Cambiar sucursal','Ahora: '+sanitize(currentUser?.sucursal||'—'),'cerrarMenuPOS();abrirCambioSucursal()');
@@ -3352,6 +3353,35 @@ async function createCliente(telefonoDigits){
 }
 
 function esCumpleHoy(c){ if(!c||!c.cumple) return false; const h=fechaMX(); return String(c.cumple).slice(5,10)===h.slice(5,10); }
+
+// QR en pantalla para que la clienta se registre sola (o recupere su tarjeta) desde su celular
+let _qrLibCarga=null;
+function cargarQRLib(){
+  if(window.qrcode) return Promise.resolve(true);
+  if(!_qrLibCarga) _qrLibCarga=new Promise(res=>{ const sc=document.createElement('script'); sc.src='js/qrcode.js'; sc.onload=()=>res(!!window.qrcode); sc.onerror=()=>{ _qrLibCarga=null; res(false); }; document.head.appendChild(sc); });
+  return _qrLibCarga;
+}
+async function mostrarQRRegistro(){
+  if(!(await cargarQRLib())){ showToast('No se pudo cargar el QR. Revisa el internet.'); return; }
+  const suc=currentUser?.sucursal||'';
+  const base=location.href.replace(/[?#].*$/,'').replace(/[^/]*$/,'');
+  const url=base+'registro.html'+(suc?'?suc='+encodeURIComponent(suc):'');
+  const q=qrcode(0,'M'); q.addData(url); q.make();
+  const div=document.createElement('div');
+  div.className='lf-modal';
+  div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px;';
+  div.onclick=e=>{ if(e.target===div) div.remove(); };
+  div.innerHTML=`<div style="background:#fff;border-radius:24px;padding:22px;max-width:380px;width:100%;text-align:center;">
+    <div style="font-family:'Lilita One',serif;font-size:26px;color:#A6182E;letter-spacing:1px;">HAZTE LADY LOVER</div>
+    <div style="font-size:13px;color:#5a2830;margin:4px 0 14px;">Que la clienta escanee con su celular</div>
+    <div style="width:min(70vw,260px);margin:0 auto;padding:10px;border:3px solid #A6182E;border-radius:18px;">${q.createSvgTag({cellSize:8,margin:0,scalable:true})}</div>
+    <div style="font-size:12px;color:#9a7075;margin-top:12px;line-height:1.4;">Pone su nombre, WhatsApp y cumpleaños y le sale su tarjeta. Luego búscala aquí por su teléfono para darle su sello.</div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <a href="cartel-registro.html?suc=${encodeURIComponent(suc)}" target="_blank" rel="noopener" style="flex:1;height:46px;display:flex;align-items:center;justify-content:center;border-radius:14px;border:1.5px solid #e0c0c8;color:#A6182E;font-weight:700;text-decoration:none;font-size:14px;">🖨️ Cartel</a>
+      <button onclick="this.closest('.lf-modal').remove()" style="flex:1;height:46px;border-radius:14px;border:none;background:#A6182E;color:#fff;font-weight:700;font-size:14px;">Listo</button>
+    </div></div>`;
+  document.body.appendChild(div);
+}
 // Lector de QR: usa el lector del navegador si existe (Android/Chrome) y si no (iPhone/Safari) carga jsQR
 let _jsqrCarga=null;
 function cargarJsQR(){

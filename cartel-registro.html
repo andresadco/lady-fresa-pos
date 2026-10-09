@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cartel Lady Lovers · Lady Fresa</title>
+<link rel="icon" href="img/marca/icono-192.png">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>@font-face{font-family:'Lilita One';font-style:normal;font-weight:400;font-display:block;src:url(fonts/lilita-one-latin-400-normal.woff2) format('woff2')}</style>
+<script src="js/qrcode.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--red:#A6182E;--red-light:#FDEEF1;--text-2:#5a2830}
+body{font-family:'DM Sans',sans-serif;background:#eee;color:#1a0508}
+.bar{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;padding:14px 16px;background:#fff;border-bottom:1px solid #ddd;font-size:14px}
+.bar select,.bar button{height:40px;border-radius:10px;border:1.5px solid #e0c0c8;padding:0 12px;font-size:14px;font-family:inherit;background:#fff}
+.bar button.p{background:var(--red);color:#fff;border:none;font-weight:700;padding:0 18px}
+.hoja{width:min(100%,148mm);margin:18px auto;background:#fff;border-radius:6px;box-shadow:0 4px 24px rgba(0,0,0,.12);overflow:hidden;position:relative}
+.top{background:var(--red);color:#fff;text-align:center;padding:26px 20px 30px;position:relative;overflow:hidden}
+.top img.logo{width:52%;display:block;margin:0 auto}
+.top h1{font-family:'Lilita One',sans-serif;font-weight:400;font-size:40px;letter-spacing:1.5px;margin-top:10px;line-height:1}
+.top p{font-size:17px;margin-top:8px;opacity:.95;padding:0 18%}
+.top img.masc{position:absolute;right:-18px;bottom:-22px;width:20%}
+.qr{width:62%;margin:26px auto 8px;padding:10px;border:3px solid var(--red);border-radius:18px}
+.qr svg{display:block;width:100%;height:auto}
+.esc{text-align:center;font-family:'Lilita One',sans-serif;font-size:24px;color:var(--red);letter-spacing:1px}
+.pasos{display:flex;gap:8px;margin:18px 18px 8px}
+.pasos div{flex:1;background:var(--red-light);border-radius:12px;padding:10px 6px;text-align:center;font-size:12.5px;color:var(--text-2);line-height:1.3}
+.pasos b{display:block;font-family:'Lilita One',sans-serif;font-weight:400;color:var(--red);font-size:22px}
+.pie{text-align:center;font-size:12px;color:#9a7075;padding:10px 16px 18px}
+@media print{
+  @page{size:A5;margin:0}
+  body{background:#fff}
+  .bar{display:none}
+  .hoja{width:148mm;height:210mm;margin:0;box-shadow:none;border-radius:0}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<div class="bar">
+  <label>Sucursal <select id="suc" onchange="pintar()"></select></label>
+  <button class="p" onclick="window.print()">🖨️ Imprimir</button>
+  <span style="color:#9a7075">Sale en tamaño media carta (A5). Ponlo junto a la caja.</span>
+</div>
+<div class="hoja">
+  <div class="top">
+    <img class="logo" src="img/marca/logo-blanco.png" alt="Lady Fresa">
+    <h1>HAZTE LADY LOVER</h1>
+    <p><b id="n-sellos">10</b> sellos y tu fresa es gratis 🍓</p>
+    <img class="masc" src="img/marca/mascota-hola.png" alt="">
+  </div>
+  <div class="qr" id="qr"></div>
+  <div class="esc">ESCANÉAME CON TU CELULAR</div>
+  <div class="pasos">
+    <div><b>1</b>Escanea el código</div>
+    <div><b>2</b>Pon tu nombre y WhatsApp</div>
+    <div><b>3</b>Enseña tu tarjeta en caja</div>
+  </div>
+  <div class="pie">Cada compra suma un sello · Sorpresa en tu cumpleaños · Promos solo para Lady Lovers</div>
+</div>
+<script>
+const SB_URL='https://ngpumyxxxlafuzcsaepy.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ncHVteXh4eGxhZnV6Y3NhZXB5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyNjkzNzYsImV4cCI6MjA4OTg0NTM3Nn0.u4WHkOXLrNn4WSKHJedXXNDYrCMdfaDNK8KlvJNfXLg';
+const H={apikey:SB_KEY,Authorization:'Bearer '+SB_KEY};
+const pre=new URLSearchParams(location.search).get('suc')||'';
+const base=location.href.replace(/[^/]*$/,'');
+function pintar(){
+  const suc=document.getElementById('suc').value;
+  const url=base+'registro.html'+(suc?'?suc='+encodeURIComponent(suc):'');
+  const q=qrcode(0,'M'); q.addData(url); q.make();
+  document.getElementById('qr').innerHTML=q.createSvgTag({cellSize:8,margin:0,scalable:true});
+}
+const sel=document.getElementById('suc');
+sel.innerHTML=pre?`<option>${pre.replace(/[<>&"]/g,'')}</option>`:'<option value="">General</option>';
+pintar();
+fetch(SB_URL+'/rest/v1/sucursales?select=name,active&order=id.asc',{headers:H}).then(r=>r.ok?r.json():[]).then(rows=>{
+  const n=(rows||[]).filter(r=>r.active!==false).map(r=>r.name);
+  if(!n.length) return;
+  sel.innerHTML=n.map(x=>`<option${x===pre?' selected':''}>${x.replace(/[<>&"]/g,'')}</option>`).join('');
+  pintar();
+}).catch(()=>{});
+fetch(SB_URL+'/rest/v1/lf_loyalty_config?id=eq.1&select=sellos_requeridos',{headers:H}).then(r=>r.ok?r.json():[]).then(r=>{ if(r&&r[0]) document.getElementById('n-sellos').textContent=r[0].sellos_requeridos; }).catch(()=>{});
+</script>
+</body>
+</html>

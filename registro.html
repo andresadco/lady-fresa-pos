@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#A6182E">
+<title>Hazte Lady Lover · Lady Fresa</title>
+<link rel="icon" href="img/marca/icono-192.png">
+<link rel="apple-touch-icon" href="img/marca/icono-192.png">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>@font-face{font-family:'Lilita One';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/lilita-one-latin-400-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}@font-face{font-family:'Lilita One';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/lilita-one-latin-ext-400-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}</style>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--red:#A6182E;--red-dark:#672626;--red-light:#FDEEF1;--red-mid:#FD9CB3;--text:#1a0508;--text-2:#5a2830;--text-3:#9a7075;--bg:#FDF6F7;--surface:#fff;--green:#053A0A}
+html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;-webkit-font-smoothing:antialiased;min-height:100vh;touch-action:manipulation}
+.wrap{max-width:440px;margin:0 auto;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+.hero{position:relative;overflow:hidden;background:linear-gradient(160deg,#672626 0%,#A6182E 50%,#c41f38 100%);padding:calc(30px + env(safe-area-inset-top,0px)) 24px 46px;text-align:center;color:#fff}
+.hero img.logo{width:170px;max-width:55%;display:block;margin:0 auto}
+.hero .mascota{position:absolute;right:-22px;bottom:-18px;width:84px;pointer-events:none;opacity:.95}
+.hero h1{font-family:'Lilita One',sans-serif;font-weight:400;font-size:28px;letter-spacing:1px;margin-top:14px;position:relative;z-index:1}
+.hero p{font-size:14px;opacity:.9;margin-top:6px;line-height:1.4;padding:0 44px;position:relative;z-index:1}
+.card{background:var(--surface);margin:-26px 16px 14px;border-radius:22px;padding:22px 18px;box-shadow:0 6px 22px rgba(166,24,46,.10);position:relative}
+.beneficios{display:flex;gap:8px;margin-bottom:18px}
+.beneficios div{flex:1;background:var(--red-light);border-radius:14px;padding:10px 6px;text-align:center;font-size:12px;color:var(--text-2);line-height:1.3}
+.beneficios b{display:block;font-family:'Lilita One',sans-serif;font-weight:400;color:var(--red);font-size:20px;margin-bottom:2px}
+label.l{display:block;font-size:13px;font-weight:600;color:var(--text-2);margin:14px 0 6px}
+label.l small{font-weight:400;color:var(--text-3)}
+input.i,select.i{width:100%;height:50px;border:1.5px solid #ecc6cf;border-radius:14px;padding:0 14px;font-size:16px;font-family:inherit;color:var(--text);background:#fff;outline:none}
+input.i:focus,select.i:focus{border-color:var(--red)}
+.tel{display:flex;gap:8px}.tel span{height:50px;display:flex;align-items:center;padding:0 12px;border-radius:14px;background:var(--red-light);color:var(--text-2);font-weight:600}
+.cumple{display:grid;grid-template-columns:1fr 1.6fr;gap:8px}
+.check{display:flex;gap:10px;align-items:flex-start;margin-top:16px;font-size:13px;color:var(--text-2);line-height:1.4}
+.check input{width:20px;height:20px;accent-color:var(--red);flex-shrink:0;margin-top:1px}
+.btn{width:100%;height:56px;border:none;border-radius:16px;background:var(--red);color:#fff;font-family:'Lilita One',sans-serif;font-size:20px;letter-spacing:1.5px;margin-top:20px;cursor:pointer}
+.btn:disabled{opacity:.55}
+.err{min-height:18px;margin-top:10px;font-size:13px;color:#b3261e;text-align:center}
+.aviso{font-size:11px;color:var(--text-3);line-height:1.5;margin:6px 18px 0;text-align:center}
+.aviso details summary{cursor:pointer;color:var(--text-2);text-decoration:underline}
+.aviso details p{margin-top:6px;text-align:left}
+.link{background:none;border:none;color:var(--red);font-weight:600;font-size:14px;text-decoration:underline;margin-top:14px;width:100%;cursor:pointer;font-family:inherit}
+.ok{text-align:center;padding:10px 4px}
+.ok .big{font-family:'Lilita One',sans-serif;font-size:28px;color:var(--red);margin:8px 0}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <img src="img/marca/logo-blanco.png" alt="Lady Fresa" class="logo">
+    <h1>HAZTE LADY LOVER</h1>
+    <p id="hero-p">Junta sellos con cada compra y llévate tu fresa de regalo.</p>
+    <img src="img/marca/mascota-coqueta.png" alt="" class="mascota">
+  </div>
+
+  <div class="card" id="form-card">
+    <div class="beneficios">
+      <div><b id="b-sellos">10</b>sellos y tu fresa es gratis</div>
+      <div><b>🎂</b>sorpresa en tu cumple</div>
+      <div><b>🔔</b>promos solo para ti</div>
+    </div>
+    <form id="f" onsubmit="enviar(event)" novalidate>
+      <div id="modo-nuevo">
+        <label class="l" for="nombre">¿Cómo te llamas?</label>
+        <input class="i" id="nombre" autocomplete="given-name" maxlength="60" placeholder="Tu nombre">
+      </div>
+      <label class="l" for="tel">Tu WhatsApp <small>(10 dígitos)</small></label>
+      <div class="tel"><span>+52</span><input class="i" id="tel" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="14" placeholder="55 1234 5678"></div>
+      <label class="l">Tu cumpleaños <small id="cumple-hint">(para tu sorpresa; también sirve para recuperar tu tarjeta)</small></label>
+      <div class="cumple">
+        <select class="i" id="dia"><option value="">Día</option></select>
+        <select class="i" id="mes"><option value="">Mes</option></select>
+      </div>
+      <div id="modo-nuevo-2">
+        <label class="check"><input type="checkbox" id="acepta" checked><span>Quiero recibir promos y avisos de Lady Fresa (puedes quitarlo cuando quieras).</span></label>
+      </div>
+      <div class="hp" aria-hidden="true"><input id="web" tabindex="-1" autocomplete="off"></div>
+      <button class="btn" id="btn" type="submit">QUIERO MI TARJETA</button>
+      <div class="err" id="err"></div>
+      <button class="link" type="button" id="toggle" onclick="cambiarModo()">¿Ya tienes tarjeta? Recupérala aquí</button>
+    </form>
+  </div>
+  <div class="aviso">
+    <details><summary>Aviso de privacidad</summary>
+      <p>Lady Fresa usa tu nombre, teléfono y cumpleaños solo para tu tarjeta Lady Lovers y, si lo aceptas, para mandarte promociones. No vendemos ni compartimos tus datos. Puedes pedir que corrijamos o borremos tus datos en cualquier sucursal o por WhatsApp.</p>
+    </details>
+  </div>
+</div>
+<script>
+const SB_URL='https://ngpumyxxxlafuzcsaepy.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ncHVteXh4eGxhZnV6Y3NhZXB5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyNjkzNzYsImV4cCI6MjA4OTg0NTM3Nn0.u4WHkOXLrNn4WSKHJedXXNDYrCMdfaDNK8KlvJNfXLg';
+const params=new URLSearchParams(location.search);
+const SUC=(params.get('suc')||'').slice(0,40);
+let recuperar=params.get('recuperar')==='1';
+const $=id=>document.getElementById(id);
+const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+for(let d=1;d<=31;d++) $('dia').insertAdjacentHTML('beforeend',`<option value="${d}">${d}</option>`);
+MESES.forEach((m,i)=>$('mes').insertAdjacentHTML('beforeend',`<option value="${i+1}">${m}</option>`));
+// Si ya se registró en este teléfono, mandarla directo a su tarjeta
+try{ const q=localStorage.getItem('lf_mi_tarjeta'); if(q&&!params.has('nuevo')&&!recuperar) location.replace('club.html?qr='+encodeURIComponent(q)); }catch(e){}
+fetch(SB_URL+'/rest/v1/lf_loyalty_config?id=eq.1&select=sellos_requeridos,programa_nombre',{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}})
+  .then(r=>r.ok?r.json():[]).then(r=>{ if(r&&r[0]&&r[0].sellos_requeridos) $('b-sellos').textContent=r[0].sellos_requeridos; }).catch(()=>{});
+function pintarModo(){
+  $('modo-nuevo').style.display=recuperar?'none':'block';
+  $('modo-nuevo-2').style.display=recuperar?'none':'block';
+  $('btn').textContent=recuperar?'VER MI TARJETA':'QUIERO MI TARJETA';
+  $('toggle').textContent=recuperar?'¿Todavía no tienes tarjeta? Regístrate':'¿Ya tienes tarjeta? Recupérala aquí';
+  $('hero-p').textContent=recuperar?'Pon tu WhatsApp y tu cumpleaños para ver tus sellos.':'Junta sellos con cada compra y llévate tu fresa de regalo.';
+  $('cumple-hint').textContent=recuperar?'(el que diste al registrarte)':'(para tu sorpresa; también sirve para recuperar tu tarjeta)';
+  $('err').textContent='';
+}
+function cambiarModo(){ recuperar=!recuperar; pintarModo(); }
+pintarModo();
+async function enviar(e){
+  e.preventDefault();
+  const err=$('err'); err.textContent='';
+  if($('web').value) return; // bots
+  const tel=$('tel').value.replace(/\D/g,'').slice(-10);
+  const nombre=$('nombre').value.trim();
+  const dia=parseInt($('dia').value)||null, mes=parseInt($('mes').value)||null;
+  if(!recuperar&&nombre.length<2){ err.textContent='Escribe tu nombre'; $('nombre').focus(); return; }
+  if(tel.length!==10){ err.textContent='Tu WhatsApp debe tener 10 dígitos'; $('tel').focus(); return; }
+  if(recuperar&&(!dia||!mes)){ err.textContent='Elige tu día y mes de cumpleaños'; return; }
+  const btn=$('btn'); btn.disabled=true; const txt=btn.textContent; btn.textContent='UN MOMENTO…';
+  try{
+    const r=await fetch(SB_URL+'/rest/v1/rpc/club_registro',{method:'POST',headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({p_nombre:recuperar?'':nombre,p_telefono:tel,p_dia:dia,p_mes:mes,p_sucursal:SUC,p_acepta:!recuperar&&$('acepta').checked})});
+    const j=r.ok?await r.json():null;
+    if(j&&j.ok&&j.qr){
+      try{ localStorage.setItem('lf_mi_tarjeta',j.qr); }catch(e){}
+      location.replace('club.html?qr='+encodeURIComponent(j.qr)+(j.nuevo?'&bienvenida=1':''));
+      return;
+    }
+    const e2=j&&j.error;
+    err.textContent= e2==='existe' ? (j.tiene_cumple?'Ese WhatsApp ya tiene tarjeta. Revisa tu cumpleaños o pídela en caja.':'Ese WhatsApp ya tiene tarjeta. Pídela en caja y te la mandamos por WhatsApp.')
+      : e2==='telefono' ? 'Revisa tu WhatsApp (10 dígitos).'
+      : e2==='nombre' ? 'Escribe tu nombre.'
+      : e2==='espera' ? 'Estamos recibiendo muchos registros. Intenta en unos minutos o pídela en caja.'
+      : 'No se pudo. Revisa tu internet e intenta otra vez.';
+    if(recuperar&&e2==='nombre'){ recuperar=false; pintarModo(); err.textContent='No encontramos ese WhatsApp. Regístrate aquí 👇'; }
+    if(e2==='existe'&&!recuperar){ recuperar=true; pintarModo(); err.textContent='Ya tienes tarjeta 💕 Elige tu cumpleaños para verla.'; }
+  }catch(x){ err.textContent='No se pudo. Revisa tu internet e intenta otra vez.'; }
+  btn.disabled=false; btn.textContent=recuperar?'VER MI TARJETA':txt;
+}
+</script>
+</body>
+</html>
