@@ -131,13 +131,14 @@ async function enviar(e){
       return;
     }
     const e2=j&&j.error;
-    err.textContent= e2==='existe' ? (j.tiene_cumple?'Ese WhatsApp ya tiene tarjeta. Revisa tu cumpleaños o pídela en caja.':'Ese WhatsApp ya tiene tarjeta. Pídela en caja y te la mandamos por WhatsApp.')
+    err.textContent= e2==='cumple_no_coincide' ? 'Ese cumpleaños no coincide con el que tenemos. Revisa el día y el mes.'
+      : e2==='falta_cumple' ? 'Ya tienes tarjeta 💕 Elige tu día y mes de cumpleaños para verla.'
       : e2==='telefono' ? 'Revisa tu WhatsApp (10 dígitos).'
       : e2==='nombre' ? 'Escribe tu nombre.'
-      : e2==='espera' ? 'Estamos recibiendo muchos registros. Intenta en unos minutos o pídela en caja.'
+      : e2==='espera' ? 'Estamos recibiendo muchos registros. Intenta en unos minutos.'
       : 'No se pudo. Revisa tu internet e intenta otra vez.';
     if(recuperar&&e2==='nombre'){ recuperar=false; pintarModo(); err.textContent='No encontramos ese WhatsApp. Regístrate aquí 👇'; }
-    if(e2==='existe'&&!recuperar){ recuperar=true; pintarModo(); err.textContent='Ya tienes tarjeta 💕 Elige tu cumpleaños para verla.'; }
+    if((e2==='cumple_no_coincide'||e2==='falta_cumple')&&!recuperar){ const m=err.textContent; recuperar=true; pintarModo(); err.textContent=e2==='falta_cumple'?m:'Ya tienes tarjeta 💕 Ese cumpleaños no coincide, revisa el día y el mes.'; }
   }catch(x){ err.textContent='No se pudo. Revisa tu internet e intenta otra vez.'; }
   btn.disabled=false; btn.textContent=recuperar?'VER MI TARJETA':txt;
 }
