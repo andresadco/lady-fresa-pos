@@ -2285,7 +2285,7 @@ async function loadReportes(){
   const de=document.getElementById('rep-desde').value, ha=document.getElementById('rep-hasta').value; if(!de||!ha) return;
   const body=document.getElementById('rep-body'); body.innerHTML='<div class="empty">Cargando…</div>';
   const desde=encodeURIComponent(de+'T00:00:00-06:00'), hasta=encodeURIComponent(ha+'T23:59:59.999-06:00');
-  let q=`select=id,created_at,order_number,sucursal,service_type,pay_method,subtotal,discount_amt,canje_monto,total,cajero_name,client_name,status&created_at=gte.${desde}&created_at=lte.${hasta}&order=created_at.asc`;
+  let q=`select=id,created_at,order_number,sucursal,service_type,pay_method,pago_efectivo,pago_tarjeta,pago_transferencia,pago_ref,subtotal,discount_amt,canje_monto,total,cajero_name,client_name,status&created_at=gte.${desde}&created_at=lte.${hasta}&order=created_at.asc`;
   if(repSuc!=='all') q+='&sucursal=eq.'+encodeURIComponent(repSuc);
   try{
     const todas=await sbGetAll('orders',q);
@@ -2324,7 +2324,11 @@ function renderReportes(de,ha){
   const porDia=grp(O,diaKey,o=>Number(o.total||0)), nDia=cnt(O,diaKey);
   const porSuc=grp(O,o=>o.sucursal||'—',o=>Number(o.total||0)), nSuc=cnt(O,o=>o.sucursal||'—');
   const PAY={efectivo:'💵 Efectivo',tarjeta:'💳 Tarjeta Santander',transferencia:'📲 Transferencia'};
-  const porPago=grp(O,o=>o.pay_method||'otro',o=>Number(o.total||0)), nPago=cnt(O,o=>o.pay_method||'otro');
+  // Por forma de pago con el desglose real (un pago mixto suma en cada forma)
+  const porPago={}, nPago={};
+  O.forEach(o=>{ const t=Number(o.total||0), m=o.pay_method;
+    const p=(o.pago_efectivo!=null||o.pago_tarjeta!=null||o.pago_transferencia!=null)?{efectivo:+o.pago_efectivo||0,tarjeta:+o.pago_tarjeta||0,transferencia:+o.pago_transferencia||0}:{[m||'otro']:t};
+    Object.entries(p).forEach(([k,v])=>{ if(v>0){ porPago[k]=(porPago[k]||0)+v; nPago[k]=(nPago[k]||0)+1; } }); });
   const porCaj=grp(O,o=>o.cajero_name||'—',o=>Number(o.total||0)), nCaj=cnt(O,o=>o.cajero_name||'—');
   const horaKey=o=>Number(new Date(o.created_at).toLocaleString('en-US',{timeZone:'America/Mexico_City',hour:'numeric',hour12:false}))%24;
   const porHora=grp(O,horaKey,o=>Number(o.total||0));
@@ -2363,8 +2367,8 @@ function repCSVProductos(){
 }
 function repCSV(){
   if(!repOrders.length){ toast('No hay ventas para exportar'); return; }
-  const rows=[['orden','fecha','hora','sucursal','cajero','pago','subtotal','descuento','total','cliente']];
-  repOrders.forEach(o=>{ const d=new Date(o.created_at); rows.push([o.order_number||o.id, d.toLocaleDateString('en-CA',{timeZone:'America/Mexico_City'}), d.toLocaleTimeString('es-MX',{timeZone:'America/Mexico_City',hour:'2-digit',minute:'2-digit'}), o.sucursal||'', o.cajero_name||'', o.pay_method||'', o.subtotal||0, o.discount_amt||0, o.total||0, o.client_name||'']); });
+  const rows=[['orden','fecha','hora','sucursal','cajero','pago','subtotal','descuento','total','cliente','efectivo','tarjeta','transferencia','referencia']];
+  repOrders.forEach(o=>{ const d=new Date(o.created_at); rows.push([o.order_number||o.id, d.toLocaleDateString('en-CA',{timeZone:'America/Mexico_City'}), d.toLocaleTimeString('es-MX',{timeZone:'America/Mexico_City',hour:'2-digit',minute:'2-digit'}), o.sucursal||'', o.cajero_name||'', o.pay_method||'', o.subtotal||0, o.discount_amt||0, o.total||0, o.client_name||'', o.pago_efectivo??'', o.pago_tarjeta??'', o.pago_transferencia??'', o.pago_ref||'']); });
   const csv='﻿'+rows.map(r=>r.map(v=>{v=String(v==null?'':v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}).join(',')).join('\n');
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
   a.download=`ventas_${document.getElementById('rep-desde').value}_${document.getElementById('rep-hasta').value}${repSuc==='all'?'':'_'+repSuc}.csv`; a.click();

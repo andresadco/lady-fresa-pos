@@ -620,7 +620,10 @@ html, body {
 .la-empty-icon { font-size: 32px; margin-bottom: 8px; }
 
 
-.pay-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.pay-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-bottom: 14px; }
+.ref-input { width:100%; height:46px; border:1.5px solid var(--border-2); border-radius:12px; padding:0 14px; font-size:15px; font-family:'DM Sans',sans-serif; outline:none; color:var(--text); }
+.mix-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.mix-row .efec-input { font-size:20px; height:50px; }
 .pay-btn { padding: 11px 4px; border: 1.5px solid var(--border-2); border-radius: 12px; background: transparent; font-size: 11px; font-weight: 500; color: var(--text-2); cursor: pointer; font-family: 'DM Sans', sans-serif; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .pay-btn .pay-icon { font-size: 20px; }
 .pay-btn.active { background: var(--red-light); border-color: var(--red-mid); color: var(--red-dark); }
@@ -1042,6 +1045,7 @@ html,body,button,.pin-btn{touch-action:manipulation;}
       <button class="pay-btn active" onclick="setPay('efectivo',this)"><span class="pay-icon">💵</span>Efectivo</button>
       <button class="pay-btn" onclick="setPay('tarjeta',this)"><span class="pay-icon">💳</span>Tarjeta Santander</button>
       <button class="pay-btn" onclick="setPay('transferencia',this)"><span class="pay-icon">📲</span>Transferencia</button>
+      <button class="pay-btn" onclick="setPay('mixto',this)"><span class="pay-icon">🔀</span>Mixto</button>
     </div>
     <button class="cobrar-btn" id="cobrar-btn" onclick="openCobro()">COBRAR</button>
   </div>
@@ -1121,6 +1125,13 @@ html,body,button,.pin-btn{touch-action:manipulation;}
     </div>
     <div class="cobro-total" id="cobro-total">$0</div>
     <div class="cobro-sub" id="cobro-pay-label"></div>
+    <div id="mixto-section" style="display:none;margin-bottom:6px;">
+      <div class="mix-row">
+        <div><div class="efec-label">💳 Con tarjeta</div><input type="number" inputmode="decimal" class="efec-input" id="mix-tarjeta" placeholder="0" oninput="calcCambio()"></div>
+        <div><div class="efec-label">📲 Con transferencia</div><input type="number" inputmode="decimal" class="efec-input" id="mix-transfer" placeholder="0" oninput="calcCambio()"></div>
+      </div>
+      <div class="cambio-box" style="margin-bottom:12px;"><span class="cambio-label">💵 Resto en efectivo</span><span class="cambio-val" id="mix-efectivo">$0</span></div>
+    </div>
     <div id="efec-section">
       <div class="efec-label">Recibiste:</div>
       <input type="number" class="efec-input" id="efec-input" placeholder="0" oninput="calcCambio()">
@@ -1129,6 +1140,10 @@ html,body,button,.pin-btn{touch-action:manipulation;}
         <span class="cambio-label">Cambio</span>
         <span class="cambio-val" id="cambio-val">$0</span>
       </div>
+    </div>
+    <div id="ref-section" style="display:none;margin-top:12px;">
+      <div class="efec-label">Referencia (opcional): últimos 4 dígitos de la tarjeta o folio de la transferencia</div>
+      <input type="text" class="ref-input" id="pago-ref" maxlength="40" autocomplete="off" placeholder="Ej. 4821 o folio SPEI">
     </div>
   </div>
   <div class="sheet-footer">
@@ -1236,6 +1251,17 @@ async function lfLogin(pin,origen){
   return j||{ok:false};
 }
 
+// Desglose de pago de una venta (las ventas viejas o en cola sin desglose se toman completas con su método)
+function _pagosDe(v){
+  if(v&&v.pagos) return v.pagos;
+  const t=Number(v?.total)||0, m=v?.payMethod||v?.pay_method;
+  return {ef:m==='efectivo'?t:0, ta:m==='tarjeta'?t:0, tr:m==='transferencia'?t:0};
+}
+function _pagosOrden(o){
+  if(o&&(o.pago_efectivo!=null||o.pago_tarjeta!=null||o.pago_transferencia!=null))
+    return {ef:Number(o.pago_efectivo)||0, ta:Number(o.pago_tarjeta)||0, tr:Number(o.pago_transferencia)||0};
+  return _pagosDe(o);
+}
 function nowMX() { return new Date(new Date().toLocaleString('en-US',{timeZone:'America/Mexico_City'})); }
 function fmtMX(d) { return new Date(d).toLocaleString('es-MX',{timeZone:'America/Mexico_City',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}); }
 function timeMX(d) { return new Date(d).toLocaleTimeString('es-MX',{timeZone:'America/Mexico_City',hour:'2-digit',minute:'2-digit',hour12:false}); }
@@ -1470,7 +1496,7 @@ async function reconstruirTurnoDesdeDB() {
   if (!turnoId) return;
   try {
     const [dbOrders, dbRetiros] = await Promise.all([
-      sbGet('orders', 'turno_id=eq.'+turnoId+'&status=neq.cancelada&select=id,order_number,total,iva,pay_method,created_at,cajero_name&order=created_at.asc'),
+      sbGet('orders', 'turno_id=eq.'+turnoId+'&status=neq.cancelada&select=id,order_number,total,iva,pay_method,pago_efectivo,pago_tarjeta,pago_transferencia,created_at,cajero_name&order=created_at.asc'),
       fetch(SB_URL+'/rest/v1/gastos_operativos?or=(turno_id.eq.'+turnoId+',nota.eq.'+encodeURIComponent('"Turno: '+turnoId+'"')+')&categoria=eq.'+encodeURIComponent('Retiro de caja')+'&select=monto,concepto,quien,fecha,created_at&order=created_at.asc',{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}}).then(r=>r.ok?r.json():null).catch(()=>null),
     ]);
     if(Array.isArray(dbRetiros)){
@@ -1486,7 +1512,7 @@ async function reconstruirTurnoDesdeDB() {
     const pendientes=offlineQueue.filter(q=>q._turno===turnoId&&!q._server_id);
     sales = dbOrders.map(o=>({
       id:o.order_number||o.id, _server_id:o.id, total:parseFloat(o.total)||0, iva:parseFloat(o.iva)||0,
-      payMethod:o.pay_method,
+      payMethod:o.pay_method, pagos:_pagosOrden(o),
       items:allItems.filter(i=>i.order_id===o.id).map(i=>({
         name:i.product_name, qty:i.qty, unitPrice:parseFloat(i.unit_price)||0, emoji:EMOJI_MAP[i.product_name]||'🍓'
       }))
@@ -2252,37 +2278,62 @@ function closeOrderSheet(){
 // ═══════════════════════════════
 // COBRO — CON PREVENCIÓN DE DOBLE COBRO + ERROR HANDLING
 // ═══════════════════════════════
+const r2=n=>Math.round((Number(n)||0)*100)/100;
+// Cómo se reparte el total entre efectivo, tarjeta y transferencia
+function partesPago(total){
+  if(payMethod==='tarjeta') return {ef:0,ta:total,tr:0};
+  if(payMethod==='transferencia') return {ef:0,ta:0,tr:total};
+  if(payMethod==='mixto'){
+    const ta=r2(document.getElementById('mix-tarjeta')?.value), tr=r2(document.getElementById('mix-transfer')?.value);
+    return {ef:r2(total-ta-tr),ta,tr};
+  }
+  return {ef:total,ta:0,tr:0};
+}
+function cobroValido(){
+  const{total}=calcTotals(); const p=partesPago(total);
+  if(p.ef<0||p.ta<0||p.tr<0) return false;
+  if(payMethod==='mixto'&&!(p.ta>0||p.tr>0)) return false;
+  if(p.ef>0){ const con=parseFloat(document.getElementById('efec-input').value)||0; if(con<p.ef) return false; }
+  return true;
+}
 function openCobro(){
   const{total}=calcTotals();
   document.getElementById('cobro-total').textContent='$'+total.toLocaleString('es-MX',{minimumFractionDigits:2});
   document.getElementById('cobro-sub').textContent=order.reduce((s,i)=>s+i.qty,0)+' productos';
-  document.getElementById('cobro-pay-label').textContent=payMethod==='efectivo'?'💵 Efectivo':payMethod==='tarjeta'?'💳 Tarjeta Santander':'📲 Transferencia';
-  const efecSection=document.getElementById('efec-section');
-  efecSection.style.display=payMethod==='efectivo'?'block':'none';
-  // Reset error banner
+  document.getElementById('cobro-pay-label').textContent=payMethod==='efectivo'?'💵 Efectivo':payMethod==='tarjeta'?'💳 Tarjeta Santander':payMethod==='mixto'?'🔀 Pago mixto':'📲 Transferencia';
   document.getElementById('cobro-error-banner').classList.remove('show');
-  if(payMethod==='efectivo'){
-    document.getElementById('efec-input').value='';
-    document.getElementById('cambio-val').textContent='$0';
-    const r10=Math.ceil(total/10)*10, r50=Math.ceil(total/50)*50;
-    const opts=[total,r10,r50,100,200,500,1000].filter((v,i,a)=>v>=total&&a.indexOf(v)===i).slice(0,5);
-    document.getElementById('quick-btns').innerHTML=opts.map((v,i)=>`<button class="quick-btn" onclick="setEfec(${v})">${i===0?'Exacto ':''}$${v.toLocaleString('es-MX')}</button>`).join('');
-    document.getElementById('confirmar-btn').disabled=true;
-  } else {
-    document.getElementById('confirmar-btn').disabled=false;
-  }
+  ['mix-tarjeta','mix-transfer','efec-input','pago-ref'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('mixto-section').style.display=payMethod==='mixto'?'block':'none';
+  document.getElementById('ref-section').style.display=payMethod==='efectivo'?'none':'block';
+  calcCambio();
   closeSheet('order'); openSheet('cobro');
 }
 
 function setEfec(v){document.getElementById('efec-input').value=v;calcCambio();}
 function calcCambio(){
   const{total}=calcTotals();
-  const con=parseFloat(document.getElementById('efec-input').value)||0;
-  const cambio=con-total;
-  const el=document.getElementById('cambio-val');
-  el.textContent=cambio>=0?'$'+cambio.toLocaleString('es-MX',{minimumFractionDigits:2}):'—';
-  el.style.color=cambio>=0?'var(--green)':'var(--red)';
-  document.getElementById('confirmar-btn').disabled=cambio<0;
+  const p=partesPago(total);
+  const fmt2=n=>'$'+Number(n).toLocaleString('es-MX',{minimumFractionDigits:2});
+  if(payMethod==='mixto'){
+    const me=document.getElementById('mix-efectivo');
+    me.textContent=p.ef<0?'Se pasa '+fmt2(-p.ef):fmt2(p.ef);
+    me.style.color=p.ef<0?'var(--red)':'var(--text)';
+  }
+  const efecSection=document.getElementById('efec-section');
+  efecSection.style.display=p.ef>0?'block':'none';
+  if(p.ef>0){
+    const lbl=efecSection.querySelector('.efec-label'); if(lbl) lbl.textContent=payMethod==='mixto'?'Efectivo recibido (te toca cobrar '+fmt2(p.ef)+'):':'Recibiste:';
+    const r10=Math.ceil(p.ef/10)*10, r50=Math.ceil(p.ef/50)*50;
+    const opts=[p.ef,r10,r50,100,200,500,1000].filter((v,i,a)=>v>=p.ef&&a.indexOf(v)===i).slice(0,5);
+    const qb=document.getElementById('quick-btns'), html=opts.map((v,i)=>`<button class="quick-btn" onclick="setEfec(${v})">${i===0?'Exacto ':''}$${v.toLocaleString('es-MX')}</button>`).join('');
+    if(qb.innerHTML!==html) qb.innerHTML=html;
+    const con=parseFloat(document.getElementById('efec-input').value)||0;
+    const cambio=r2(con-p.ef);
+    const el=document.getElementById('cambio-val');
+    el.textContent=cambio>=0?fmt2(cambio):'—';
+    el.style.color=cambio>=0?'var(--green)':'var(--red)';
+  }
+  document.getElementById('confirmar-btn').disabled=!cobroValido();
 }
 function closeCobro(){closeSheet('cobro');}
 
@@ -2315,8 +2366,11 @@ async function confirmarPago(){
   }
 
   const{total,sub,desc,iva,canjeAmt,canjeItem}=calcTotals();
-  const con=parseFloat(document.getElementById('efec-input').value)||total;
-  const cambio=payMethod==='efectivo'?con-total:0;
+  if(!cobroValido()){ _cobroPending=false; btn.classList.remove('loading'); btn.textContent='CONFIRMAR PAGO'; btn.disabled=true; showToast('Revisa los montos del pago'); return; }
+  const pagos=partesPago(total);
+  const con=pagos.ef>0?(parseFloat(document.getElementById('efec-input').value)||pagos.ef):0;
+  const cambio=pagos.ef>0?r2(con-pagos.ef):0;
+  const pagoRef=(document.getElementById('pago-ref')?.value||'').trim().slice(0,40);
   const client=document.getElementById('client-input').value.trim()||(loyaltyCliente?.nombre||'');
   if(!_ventaKey) _ventaKey=_lfUuid();   // misma llave en cada reintento de esta orden → nunca se duplica
   const saleData={
@@ -2324,7 +2378,7 @@ async function confirmarPago(){
     promoId:promoActiva?.id||null, promoNombre:promoActiva?.nombre||null, canjeItem:canjeItem||null,
     id:orderN, date:new Date(), items:JSON.parse(JSON.stringify(order)), sub,desc,iva,total,
     payMethod,svcType,client,cambio,discount:discountMonto>0?0:discount,discountMonto:discountMonto>0?discountMonto:0,
-    cashReceived:con, paid_at:new Date().toISOString(),
+    cashReceived:con, paid_at:new Date().toISOString(), pagos, pagoRef,
     loyaltyClienteId:loyaltyCliente?.id||null, loyaltyClienteQR:loyaltyCliente?.qr_code||null,
     loyaltyReq:loyaltyConfig?.sellos_requeridos||10, loyaltySellos:loyaltyCliente?((loyaltyCliente.sellos_actuales||0)-(loyaltyAplicarCanje&&loyaltyCliente.puede_canjear?(loyaltyConfig?.sellos_requeridos||10):0)+1):null,
     loyaltyCanje:!!loyaltyAplicarCanje, canjeAmt:canjeAmt||0,
@@ -2384,7 +2438,7 @@ async function confirmarPago(){
     errBanner.classList.add('show');
     btn.textContent='CONFIRMAR PAGO';
     btn.classList.remove('loading');
-    btn.disabled=payMethod==='efectivo'?(parseFloat(document.getElementById('efec-input').value)||0)<total:false;
+    btn.disabled=!cobroValido();
   } finally {
     _cobroPending=false;
   }
@@ -2429,8 +2483,9 @@ async function saveToSupabase(saleData){
     turno_id:saleData._turno??turnoId??null,
     subtotal:saleData.sub, discount_pct:saleData.discount||0, discount_amt:saleData.desc||0, iva:saleData.iva, total:saleData.total,
     pay_method:saleData.payMethod, service_type:saleData.svcType, client_name:saleData.client||null,
-    cash_received:saleData.payMethod==='efectivo'?saleData.cashReceived:null,
-    change_given:saleData.payMethod==='efectivo'?saleData.cambio:null,
+    cash_received:_pagosDe(saleData).ef>0?saleData.cashReceived:null,
+    change_given:_pagosDe(saleData).ef>0?saleData.cambio:null,
+    pago_efectivo:_pagosDe(saleData).ef, pago_tarjeta:_pagosDe(saleData).ta, pago_transferencia:_pagosDe(saleData).tr, pago_ref:saleData.pagoRef||null,
     paid_at:saleData.paid_at,
     loyalty_cliente_id:saleData.loyaltyClienteId||null, loyalty_canje:!!saleData.loyaltyCanje, canje_monto:saleData.canjeAmt||0,
     promo_id:saleData.promoId||null, promo_nombre:saleData.promoNombre||null,
@@ -2563,7 +2618,7 @@ async function openHist(){
     const totalHoy=vivas.reduce((s,o)=>s+Number(o.total||0),0);
     const totalReti=retiList.reduce((s,r)=>s+Number(r.monto||0),0);
     const fmtD=n=>'$'+Number(n).toLocaleString('es-MX',{minimumFractionDigits:2});
-    const payLbl={efectivo:'💵',tarjeta:'💳',transferencia:'📲'};
+    const payLbl={efectivo:'💵',tarjeta:'💳',transferencia:'📲',mixto:'🔀'};
     let html='';
     if(offlineQueue.length) html+=`<div style="background:#FDF3DC;border-radius:12px;padding:12px 16px;margin-bottom:8px;font-size:13px;color:#92400E;display:flex;justify-content:space-between;align-items:center;gap:8px;">📵 ${offlineQueue.length} venta${offlineQueue.length>1?'s':''} sin subir (sin internet)<button onclick="flushOfflineQueue(true).then(openHist)" style="border:none;background:#B45309;color:#fff;border-radius:10px;padding:8px 12px;font-weight:700;">Subir ahora</button></div>`;
     html+=`<div style="background:var(--red-light);border-radius:12px;padding:12px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
@@ -2619,6 +2674,7 @@ async function histDetalle(id){
       return `<div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;"><span>${i.qty}× ${sanitize(i.product_name)}${i.size?' · '+sanitize(i.size):''}${i.base?' · '+sanitize(i.base):''}${tops.length?'<br><small style="color:var(--text-3)">+ '+sanitize(tops.join(', '))+'</small>':''}</span><b>${fmtD(i.subtotal)}</b></div>`; }).join('')||'<div style="font-size:12px;color:var(--text-3);">Sin detalle de productos</div>'}
     ${Number(o.canje_monto)>0?`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--green);"><span>🎁 Regalo Lady Lovers</span><span>-${fmtD(o.canje_monto)}</span></div>`:''}
     ${Number(o.discount_amt)>0?`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--green);"><span>Descuento${o.promo_nombre?' · '+sanitize(o.promo_nombre):''}</span><span>-${fmtD(o.discount_amt)}</span></div>`:''}
+    ${(()=>{ const p=_pagosOrden(o), parts=[['💵',p.ef],['💳',p.ta],['📲',p.tr]].filter(x=>x[1]>0); return (parts.length>1||o.pago_ref)?`<div style="font-size:12px;color:var(--text-3);margin-top:6px;">${parts.length>1?'Pago: '+parts.map(([k,v])=>k+' '+fmtD(v)).join(' + '):''}${o.pago_ref?' · Ref: '+sanitize(o.pago_ref):''}</div>`:''; })()}
     ${canc?`<div style="font-size:12px;color:#b3261e;margin-top:6px;">Cancelada por ${sanitize(o.cancelada_por||'—')} · ${timeMX(o.cancelada_at)}${o.cancel_motivo?' · '+sanitize(o.cancel_motivo):''}</div>`:''}
     <div style="display:flex;gap:8px;margin-top:10px;">
       <button onclick="histReimprimir(${id})" style="flex:1;height:42px;border-radius:12px;border:1.5px solid var(--border-2);background:var(--surface);font-weight:700;font-family:DM Sans,sans-serif;">🖨️ Reimprimir</button>
@@ -2630,7 +2686,7 @@ function ventaDesdeDB(o){
     items:(o._items||[]).map(i=>({name:i.product_name, qty:i.qty, unitPrice:Number(i.unit_price)||0, sel:i.toppings||{}, note:i.note||''})),
     sub:Number(o.subtotal)||0, desc:Number(o.discount_amt)||0, iva:Number(o.iva)||0, total:Number(o.total)||0,
     payMethod:o.pay_method, svcType:o.service_type, client:o.client_name||'', cambio:Number(o.change_given)||0, cashReceived:Number(o.cash_received)||0,
-    canjeAmt:Number(o.canje_monto)||0, promoNombre:o.promo_nombre||null };
+    canjeAmt:Number(o.canje_monto)||0, promoNombre:o.promo_nombre||null, pagos:_pagosOrden(o), pagoRef:o.pago_ref||'' };
 }
 async function histReimprimir(id){
   const o=_histOrders.find(x=>x.id===id); if(!o) return;
@@ -2690,13 +2746,13 @@ async function cancelarVenta(id){
   const o=_histOrders.find(x=>x.id===id); if(!o) return;
   const fmtD=n=>'$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2});
   const a=await pedirAutorizacion({titulo:'Cancelar venta #'+String(o.order_number).padStart(3,'0'),
-    mensaje:`Se quita ${fmtD(o.total)} de las ventas del turno${o.loyalty_cliente_id?', se regresan los sellos':''} y se devuelven los insumos al inventario.${o.pay_method==='efectivo'?' Regresa el efectivo a la clienta.':''}`});
+    mensaje:`Se quita ${fmtD(o.total)} de las ventas del turno${o.loyalty_cliente_id?', se regresan los sellos':''} y se devuelven los insumos al inventario.${_pagosOrden(o).ef>0?' Regresa '+fmtD(_pagosOrden(o).ef)+' en efectivo a la clienta.':''}${_pagosOrden(o).ta>0?' Cancela también el cobro de '+fmtD(_pagosOrden(o).ta)+' en la terminal.':''}${_pagosOrden(o).tr>0?' Devuelve la transferencia de '+fmtD(_pagosOrden(o).tr)+'.':''}`});
   if(!a) return;
   try{
     const r=await fetch(SB_URL+'/rest/v1/rpc/pos_cancelar_orden',{method:'POST',headers:SB_H,body:JSON.stringify({p_order_id:id,p_por:a.por,p_motivo:a.motivo})});
     const j=r.ok?await r.json():null;
     if(!j||!j.ok) throw new Error((j&&j.error)||'error');
-    showToast(j.turno_cerrado?'Venta cancelada. Ojo: el corte de ese turno ya estaba hecho.':(o.pay_method==='efectivo'?'✅ Cancelada. Regresa '+fmtD(o.total)+' en efectivo.':'✅ Venta cancelada'));
+    showToast(j.turno_cerrado?'Venta cancelada. Ojo: el corte de ese turno ya estaba hecho.':(_pagosOrden(o).ef>0?'✅ Cancelada. Regresa '+fmtD(_pagosOrden(o).ef)+' en efectivo.':'✅ Venta cancelada'));
     await reconstruirTurnoDesdeDB();
     openHist();
   }catch(e){ showToast('⚠️ No se pudo cancelar: '+(e.message||'')); }
@@ -2790,7 +2846,7 @@ function buildCierreData(){
   const ticketProm=totalOrdenes>0?totalVentas/totalOrdenes:0;
   const totalIva=sales.reduce((s,v)=>s+v.iva,0);
   const byPay={efectivo:0,tarjeta:0,transferencia:0};
-  sales.forEach(s=>{ byPay[s.payMethod]=(byPay[s.payMethod]||0)+s.total; });
+  sales.forEach(s=>{ const p=_pagosDe(s); byPay.efectivo+=p.ef; byPay.tarjeta+=p.ta; byPay.transferencia+=p.tr; });
   const byProd={};
   sales.forEach(sale=>{
     sale.items.forEach(item=>{
@@ -3785,7 +3841,7 @@ async function openHoy(){
   document.getElementById('hoy-sub').textContent=suc+' · '+new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',timeZone:'America/Mexico_City'});
   try{
     const desde=new Date(hoy+'T00:00:00-06:00').toISOString();
-    const orders=await sbGet('orders',`sucursal=eq.${encodeURIComponent(suc)}&created_at=gte.${desde}&select=id,total,pay_method,cajero_name,created_at,service_type&order=created_at.asc&limit=1000`);
+    const orders=await sbGet('orders',`sucursal=eq.${encodeURIComponent(suc)}&created_at=gte.${desde}&select=id,total,pay_method,pago_efectivo,pago_tarjeta,pago_transferencia,cajero_name,created_at,service_type&order=created_at.asc&limit=1000`);
     const ords=Array.isArray(orders)?orders:[];
     let items=[];
     if(ords.length){
@@ -3804,7 +3860,7 @@ function renderHoy(ords,items){
   const horas={}; for(let h=12;h<=22;h++) horas[h]=0;
   ords.forEach(o=>{ const h=+new Date(o.created_at).toLocaleString('en-US',{hour:'numeric',hour12:false,timeZone:'America/Mexico_City'}); horas[h]=(horas[h]||0)+(+o.total||0); });
   const hmax=Math.max(1,...Object.values(horas));
-  const pay={}; ords.forEach(o=>{ const k=o.pay_method||'otro'; pay[k]=(pay[k]||0)+(+o.total||0); });
+  const pay={}; ords.forEach(o=>{ const p=_pagosOrden(o); [['efectivo',p.ef],['tarjeta',p.ta],['transferencia',p.tr]].forEach(([k,v])=>{ if(v) pay[k]=(pay[k]||0)+v; }); });
   const payLbl={efectivo:'💵 Efectivo',tarjeta:'💳 Tarjeta Santander',transferencia:'📲 Transferencia'};
   const prods={}; items.forEach(i=>{ const k=i.product_name||'—'; prods[k]=prods[k]||{q:0,r:0}; prods[k].q+=(+i.qty||0); prods[k].r+=(+i.subtotal||0); });
   const top=Object.entries(prods).sort((a,b)=>b[1].q-a[1].q).slice(0,8); const tmax=Math.max(1,...top.map(t=>t[1].q));
@@ -4107,10 +4163,13 @@ function buildTicketXML(saleData,type='ticket'){
     xml+=line('TOTAL',fmtD(saleData.total),true,COLS/2,2);
     if(mostrarIva) xml+=T('IVA incluido '+fmtD(saleData.iva),{a:'right'});
     xml+=feed(1);
-    const payLabel=saleData.payMethod==='efectivo'?'Efectivo':saleData.payMethod==='tarjeta'?'Tarjeta':'Transferencia';
-    xml+=line('Pago',payLabel);
-    if(saleData.payMethod==='efectivo'&&saleData.cambio>0){
-      xml+=line('Recibido',fmtD(saleData.cashReceived||saleData.total));
+    const pp=_pagosDe(saleData);
+    const partes=[['Efectivo',pp.ef],['Tarjeta',pp.ta],['Transferencia',pp.tr]].filter(x=>x[1]>0);
+    if(partes.length>1){ xml+=T('Pago mixto',{b:true}); partes.forEach(([k,v])=>{ xml+=line('  '+k,fmtD(v)); }); }
+    else xml+=line('Pago',partes.length?partes[0][0]:(saleData.payMethod||''));
+    if(saleData.pagoRef) xml+=line('Referencia',String(saleData.pagoRef).slice(0,24));
+    if(pp.ef>0&&saleData.cambio>0){
+      xml+=line('Efectivo recibido',fmtD(saleData.cashReceived||pp.ef));
       xml+=line('Cambio',fmtD(saleData.cambio),true);
     }
     if(rfc) xml+=center('RFC: '+rfc);
@@ -4156,7 +4215,7 @@ async function printEpson(saleData,type='ticket'){
   const headers={'Content-Type':'text/xml; charset=utf-8','SOAPAction':'""'};
   // MEJORA: cajón en el MISMO XML que el ticket (atómico, no hay race condition)
   let body=buildTicketXML(saleData,type);
-  if(type==='ticket'&&saleData.payMethod==='efectivo'&&printerCfg.drawerOnCash!==false&&!saleData._reprint){
+  if(type==='ticket'&&_pagosDe(saleData).ef>0&&printerCfg.drawerOnCash!==false&&!saleData._reprint){
     // Inyectar pulso de cajón ANTES del cut
     body=body.replace('<cut type="feed"/>','<cut type="feed"/><pulse drawer="drawer_1" time="pulse_100"/>');
   }
@@ -4300,9 +4359,10 @@ function buildTicketText(saleData){
   text+=`─────────────────\n`;
   if(saleData.desc>0) text+=`Descuento: -${fmtD(saleData.desc)}\n`;
   text+=`Total: ${fmtD(saleData.total)}\n`;
-  const payLabel=saleData.payMethod==='efectivo'?'Efectivo':saleData.payMethod==='tarjeta'?'Tarjeta Santander':'Transferencia';
-  text+=`Pago: ${payLabel}\n`;
-  if(saleData.payMethod==='efectivo'&&saleData.cambio>0){
+  const pp=_pagosDe(saleData);
+  const partes=[['Efectivo',pp.ef],['Tarjeta',pp.ta],['Transferencia',pp.tr]].filter(x=>x[1]>0);
+  text+=`Pago: ${partes.length>1?partes.map(([k,v])=>k+' '+fmtD(v)).join(' + '):(partes[0]?.[0]||'')}\n`;
+  if(pp.ef>0&&saleData.cambio>0){
     text+=`Recibió: ${fmtD(saleData.cashReceived||saleData.total)}\n`;
     text+=`Cambio: ${fmtD(saleData.cambio)}\n`;
   }
