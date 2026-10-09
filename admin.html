@@ -2821,7 +2821,7 @@ async function cpEnviar(){
       body:JSON.stringify({admin_pin:currentUser&&currentUser._pin,titulo:tit,mensaje:msg,cliente_ids:ids,todas_ids:todas,segmento:_cpSeg,promo_id,promo_codigo:promo&&promo.codigo,base_url:location.href.replace(/admin\.html.*$/,'')})});
     const j=await r.json();
     if(!r.ok||!j.ok) throw new Error(j.error||r.status);
-    toast((ids.length?`📣 Enviado a ${j.clientas} clienta${j.clientas===1?'':'s'}`+(j.fallas?` · ${j.fallas} sin entregar`:''):'✓ Promo publicada')+(j.wallet?` · ${j.wallet} en Google Wallet`:'')+(promo?` · visible en ${todas.length} tarjetas`:''));
+    toast((ids.length?`📣 Enviado a ${j.clientas} clienta${j.clientas===1?'':'s'}`+(j.fallas?` · ${j.fallas} sin entregar`:''):'✓ Promo publicada')+(j.wallet?` · ${j.wallet} en Google Wallet`:'')+(j.apple?` · ${j.apple} en Apple Wallet`:'')+(promo?` · visible en ${todas.length} tarjetas`:''));
     _llPush=null; llRenderCampanas();
   }catch(e){ toast('⚠ No se pudo enviar: '+e.message); }
 }

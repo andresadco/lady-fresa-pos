@@ -347,6 +347,14 @@ html, body { background: var(--bg); color: var(--text); font-family: 'DM Sans', 
     <div class="xsmall" id="gw-msg" style="margin-top:6px;">Tus sellos siempre a la mano y avisos de tus promos.</div>
   </div>
 
+  <!-- APPLE WALLET (iPhone) — aparece cuando se activa en el admin (o con ?apple=1 para probar) -->
+  <div id="aw-box" style="display:none;margin:12px 16px 0;text-align:center;">
+    <a id="aw-btn" href="#" aria-label="Agregar a Apple Wallet" style="display:inline-block;line-height:0;">
+      <img src="img/wallet/agregar-apple-wallet.svg" alt="Agregar a Apple Wallet" style="height:48px;width:auto;">
+    </a>
+    <div class="xsmall" style="margin-top:6px;">Tus sellos siempre a la mano y avisos de tus promos.</div>
+  </div>
+
   <!-- HISTORY -->
   <div class="section-title">Tus últimas visitas</div>
   <div class="history" id="history"></div>
@@ -529,7 +537,7 @@ async function agregarGoogleWallet(){
     const r=await fetch(SB_URL+'/functions/v1/lf-wallet-google',{method:'POST',headers:{...SB_H,'Content-Type':'application/json'},body:JSON.stringify({qr:QR})});
     const j=await r.json().catch(()=>({}));
     if(j&&j.ok&&j.url){ msg.textContent='Abriendo Google Wallet…'; location.href=j.url; return; }
-    msg.textContent=/secreto|GOOGLE_WALLET_SA/.test(j&&j.error||'')?'Muy pronto podrás agregarla a Google Wallet 💕':'No se pudo preparar tu pase. Intenta otra vez.';
+    msg.textContent=/secreto|GOOGLE_WALLET_SA/.test(j&&j.error||'')?'Muy pronto podrás agregarla a Google Wallet 🍓':'No se pudo preparar tu pase. Intenta otra vez.';
   }catch(e){ msg.textContent='No se pudo preparar tu pase. Revisa tu internet.'; }
   btn.disabled=false; btn.style.opacity=1;
 }
@@ -573,6 +581,16 @@ const VAPID_PUBLIC='BEb1urSUxK_EUnJI8QJl2Y4fMSTE937N1Xv_NMtudzY8n-h_QHS_0rKCeuig
 const QR=(new URLSearchParams(location.search).get('qr')||'').toUpperCase().trim();
 const esIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
 const esApp=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+// Apple Wallet: en iPhone, si ya está activado (lf_loyalty_config.apple_wallet_activo)
+(async function(){
+  if(!esIOS||!QR) return;
+  const box=document.getElementById('aw-box'), a=document.getElementById('aw-btn'); if(!box||!a) return;
+  let activo=new URLSearchParams(location.search).get('apple')==='1';
+  if(!activo){ try{ const r=await fetch(SB_URL+'/rest/v1/lf_loyalty_config?id=eq.1&select=apple_wallet_activo',{headers:SB_H}); const j=await r.json(); activo=!!(j&&j[0]&&j[0].apple_wallet_activo); }catch(e){} }
+  if(!activo) return;
+  a.href=SB_URL+'/functions/v1/lf-wallet-apple?qr='+encodeURIComponent(QR);
+  box.style.display='block';
+})();
 function b64ToU8(b){ const p='='.repeat((4-b.length%4)%4); const r=atob((b+p).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from([...r].map(c=>c.charCodeAt(0))); }
 function pintarAvisos(estado){
   const box=document.getElementById('avisos-box'), btn=document.getElementById('avisos-btn'), s=document.getElementById('avisos-s');
