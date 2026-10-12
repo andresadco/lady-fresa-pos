@@ -106,7 +106,7 @@ function pintarModo(){
   $('modo-nuevo-2').style.display=recuperar?'none':'block';
   $('btn').textContent=recuperar?'VER MI TARJETA':'QUIERO MI TARJETA';
   $('toggle').textContent=recuperar?'¿Todavía no tienes tarjeta? Regístrate':'¿Ya tienes tarjeta? Recupérala aquí';
-  $('hero-p').textContent=recuperar?'Pon tu WhatsApp y tu cumpleaños para ver tus sellos.':(REF?'Una amiga te invitó 💕 Regístrate y en tu primera compra las dos ganan un sello extra.':'Te regalamos tu primer sello. Junta los demás y llévate tu fresa gratis.');
+  $('hero-p').textContent=recuperar?'Pon tu WhatsApp y tu cumpleaños para ver tus sellos.':(REF?'Una amiga te invitó 🍓 Regístrate y en tu primera compra las dos ganan un sello extra.':'Te regalamos tu primer sello. Junta los demás y llévate tu fresa gratis.');
   $('cumple-hint').textContent=recuperar?'(el que diste al registrarte)':'(para tu sorpresa; también sirve para recuperar tu tarjeta)';
   $('err').textContent='';
 }
@@ -134,13 +134,13 @@ async function enviar(e){
     }
     const e2=j&&j.error;
     err.textContent= e2==='cumple_no_coincide' ? 'Ese cumpleaños no coincide con el que tenemos. Revisa el día y el mes.'
-      : e2==='falta_cumple' ? 'Ya tienes tarjeta 💕 Elige tu día y mes de cumpleaños para verla.'
+      : e2==='falta_cumple' ? 'Ya tienes tarjeta 🍓 Elige tu día y mes de cumpleaños para verla.'
       : e2==='telefono' ? 'Revisa tu WhatsApp (10 dígitos).'
       : e2==='nombre' ? 'Escribe tu nombre.'
       : e2==='espera' ? 'Estamos recibiendo muchos registros. Intenta en unos minutos.'
       : 'No se pudo. Revisa tu internet e intenta otra vez.';
     if(recuperar&&e2==='nombre'){ recuperar=false; pintarModo(); err.textContent='No encontramos ese WhatsApp. Regístrate aquí 👇'; }
-    if((e2==='cumple_no_coincide'||e2==='falta_cumple')&&!recuperar){ const m=err.textContent; recuperar=true; pintarModo(); err.textContent=e2==='falta_cumple'?m:'Ya tienes tarjeta 💕 Ese cumpleaños no coincide, revisa el día y el mes.'; }
+    if((e2==='cumple_no_coincide'||e2==='falta_cumple')&&!recuperar){ const m=err.textContent; recuperar=true; pintarModo(); err.textContent=e2==='falta_cumple'?m:'Ya tienes tarjeta 🍓 Ese cumpleaños no coincide, revisa el día y el mes.'; }
   }catch(x){ err.textContent='No se pudo. Revisa tu internet e intenta otra vez.'; }
   btn.disabled=false; btn.textContent=recuperar?'VER MI TARJETA':txt;
 }

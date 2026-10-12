@@ -424,7 +424,7 @@ function render(c,movs,cfg,d){
   if(new URLSearchParams(location.search).get('bienvenida')==='1'&&!document.getElementById('bienvenida')){
     const b=document.createElement('div'); b.id='bienvenida';
     b.style.cssText='margin:14px 18px 0;padding:14px 16px;border-radius:16px;background:#053A0A;color:#fff;font-size:14px;line-height:1.45;text-align:center;';
-    b.innerHTML='<b style="font-size:16px;">¡Ya eres Lady Lover! 💕</b><br>'+((c.sellos_actuales||0)>0?'Ya tienes tu primer sello de regalo. ':'')+'Enseña esta pantalla en caja en cada compra para sumar sellos. Guárdala en tu pantalla de inicio para tenerla a la mano.';
+    b.innerHTML='<b style="font-size:16px;">¡Ya eres Lady Lover! 🍓</b><br>'+((c.sellos_actuales||0)>0?'Ya tienes tu primer sello de regalo. ':'')+'Enseña esta pantalla en caja en cada compra para sumar sellos. Guárdala en tu pantalla de inicio para tenerla a la mano.';
     const card=document.querySelector('#content .card'); if(card) card.parentNode.insertBefore(b,card.nextSibling);
     try{ history.replaceState(null,'',location.pathname+'?qr='+encodeURIComponent(c.qr_code)); }catch(e){}
   }
@@ -492,7 +492,7 @@ function pintarExtras(c,cfg,d){
   const regalo=sanitize(cfg.regalo_cumple||'una sorpresa');
   // Nivel en el hero
   const nv=document.getElementById('nivel');
-  if(niv.nombre){ nv.style.display='inline-flex'; nv.textContent=(niv.n===3?'👑 ':niv.n===2?'⭐ ':'💕 ')+niv.nombre; }
+  if(niv.nombre){ nv.style.display='inline-flex'; nv.textContent=(niv.n===3?'👑 ':niv.n===2?'⭐ ':'🍓 ')+niv.nombre; }
   // Cumpleaños
   if(cum.tiene&&cum.es_hoy){
     h+=`<div class="xcard cumple-hoy"><h3>¡FELIZ CUMPLEAÑOS! 🎂</h3><p>Hoy te toca ${regalo}. Enseña esta pantalla en caja y pide tu regalo.</p></div>`;
@@ -514,7 +514,7 @@ function pintarExtras(c,cfg,d){
   // Nivel: progreso al siguiente
   if(niv.siguiente&&niv.meta){
     const pct=Math.min(100,Math.round((niv.total||0)/niv.meta*100));
-    h+=`<div class="xcard"><h3>${niv.n===2?'⭐':'💕'} ${sanitize(niv.nombre)}</h3>${niv.beneficio?`<p>Tu beneficio: ${sanitize(niv.beneficio)}.</p>`:''}
+    h+=`<div class="xcard"><h3>${niv.n===2?'⭐':'🍓'} ${sanitize(niv.nombre)}</h3>${niv.beneficio?`<p>Tu beneficio: ${sanitize(niv.beneficio)}.</p>`:''}
       <div class="xbar"><i style="width:${pct}%"></i></div>
       <div class="xsmall">Te faltan <b>${niv.faltan}</b> sellos para ser <b>${sanitize(niv.siguiente)}</b>${d.siguiente_beneficio?'':''}</div></div>`;
   } else if(niv.n===3){
