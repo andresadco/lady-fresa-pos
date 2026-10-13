@@ -28,20 +28,23 @@ body{font-family:'DM Sans',sans-serif;background:#eee;color:#1a0508}
 .pasos{display:flex;gap:calc(8px*var(--k));margin:calc(16px*var(--k)) calc(18px*var(--k)) calc(8px*var(--k))}
 .pasos div{flex:1;background:var(--red-light);border-radius:calc(12px*var(--k));padding:calc(10px*var(--k)) calc(6px*var(--k));text-align:center;font-size:calc(12.5px*var(--k));color:var(--text-2);line-height:1.3}
 .pasos b{display:block;font-family:'Lilita One',sans-serif;font-weight:400;color:var(--red);font-size:calc(22px*var(--k))}
+.top,.qr,.esc,.pasos,.pie{flex-shrink:0}
 .pie{text-align:center;font-size:calc(12px*var(--k));color:#9a7075;padding:calc(10px*var(--k)) calc(16px*var(--k)) calc(18px*var(--k));margin-top:auto}
 @media print{
-  body{background:#fff}
+  html,body{background:#fff;margin:0;padding:0}
   .bar{display:none}
-  .hoja{zoom:1 !important;margin:0;box-shadow:none;border-radius:0}
+  /* Cabe aunque el navegador (Safari, algunas impresoras) agregue sus propios márgenes */
+  .hoja{zoom:1 !important;width:100% !important;height:calc(var(--h) - 26mm) !important;margin:0 auto;box-shadow:none;border-radius:0;break-inside:avoid;page-break-inside:avoid;page-break-after:avoid}
+  .qr{width:min(50%,calc(var(--h)*0.30))}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-}
-</style>
+}</style>
 </head>
 <body>
 <div class="bar">
   <label>Sucursal <select id="suc" onchange="pintar()"></select></label>
   <label>Tamaño <select id="tam" onchange="tamano()">
-    <option value="A4">Carta / A4 (21 × 29.7 cm)</option>
+    <option value="A4">A4 (21 × 29.7 cm)</option>
+    <option value="CARTA">Carta (21.6 × 27.9 cm)</option>
     <option value="A6">Tarjeta de mostrador A6 (10.5 × 14.8 cm)</option>
     <option value="A2">Póster A2 (42 × 59.4 cm)</option>
   </select></label>
@@ -77,7 +80,7 @@ function pintar(){
   const q=qrcode(0,'M'); q.addData(url); q.make();
   document.getElementById('qr').innerHTML=q.createSvgTag({cellSize:8,margin:0,scalable:true});
 }
-const T={A6:[105,148],A4:[210,297],A2:[420,594]};
+const T={A6:[105,148],A4:[210,297],CARTA:[216,279],A2:[420,594]};
 function tamano(){
   const t=document.getElementById('tam').value;
   const [w,h]=T[t], hj=document.getElementById('hoja');
