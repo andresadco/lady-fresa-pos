@@ -15,24 +15,24 @@ body{font-family:'DM Sans',sans-serif;background:#eee;color:#1a0508}
 .bar{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;padding:14px 16px;background:#fff;border-bottom:1px solid #ddd;font-size:14px}
 .bar select,.bar button{height:40px;border-radius:10px;border:1.5px solid #e0c0c8;padding:0 12px;font-size:14px;font-family:inherit;background:#fff}
 .bar button.p{background:var(--red);color:#fff;border:none;font-weight:700;padding:0 18px}
-.hoja{width:min(100%,148mm);margin:18px auto;background:#fff;border-radius:6px;box-shadow:0 4px 24px rgba(0,0,0,.12);overflow:hidden;position:relative}
-.top{background:var(--red);color:#fff;text-align:center;padding:26px 20px 30px;position:relative;overflow:hidden}
+/* El diseño se escala con --k: A6 = 0.71 · A4 = 1.42 · A2 = 2.84 (base media carta = 1) */
+.hoja{--k:1.42;--w:210mm;--h:297mm;width:var(--w);height:var(--h);margin:18px auto;background:#fff;border-radius:6px;box-shadow:0 4px 24px rgba(0,0,0,.12);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.top{background:var(--red);color:#fff;text-align:center;padding:calc(26px*var(--k)) 20px calc(30px*var(--k));position:relative;overflow:hidden}
 .top img.logo{width:52%;display:block;margin:0 auto}
-.top h1{font-family:'Lilita One',sans-serif;font-weight:400;font-size:40px;letter-spacing:1.5px;margin-top:10px;line-height:1}
-.top p{font-size:17px;margin-top:8px;opacity:.95;padding:0 18%}
-.top img.masc{position:absolute;right:-18px;bottom:-22px;width:20%}
-.qr{width:62%;margin:26px auto 8px;padding:10px;border:3px solid var(--red);border-radius:18px}
+.top h1{font-family:'Lilita One',sans-serif;font-weight:400;font-size:calc(40px*var(--k));letter-spacing:1.5px;margin-top:calc(10px*var(--k));line-height:1}
+.top p{font-size:calc(17px*var(--k));margin-top:calc(8px*var(--k));opacity:.95;padding:0 18%}
+.top img.masc{position:absolute;right:-4%;bottom:-6%;width:20%}
+.qr{width:58%;margin:calc(22px*var(--k)) auto calc(8px*var(--k));padding:calc(10px*var(--k));border:calc(3px*var(--k)) solid var(--red);border-radius:calc(18px*var(--k))}
 .qr svg{display:block;width:100%;height:auto}
-.esc{text-align:center;font-family:'Lilita One',sans-serif;font-size:24px;color:var(--red);letter-spacing:1px}
-.pasos{display:flex;gap:8px;margin:18px 18px 8px}
-.pasos div{flex:1;background:var(--red-light);border-radius:12px;padding:10px 6px;text-align:center;font-size:12.5px;color:var(--text-2);line-height:1.3}
-.pasos b{display:block;font-family:'Lilita One',sans-serif;font-weight:400;color:var(--red);font-size:22px}
-.pie{text-align:center;font-size:12px;color:#9a7075;padding:10px 16px 18px}
+.esc{text-align:center;font-family:'Lilita One',sans-serif;font-size:calc(24px*var(--k));color:var(--red);letter-spacing:1px}
+.pasos{display:flex;gap:calc(8px*var(--k));margin:calc(16px*var(--k)) calc(18px*var(--k)) calc(8px*var(--k))}
+.pasos div{flex:1;background:var(--red-light);border-radius:calc(12px*var(--k));padding:calc(10px*var(--k)) calc(6px*var(--k));text-align:center;font-size:calc(12.5px*var(--k));color:var(--text-2);line-height:1.3}
+.pasos b{display:block;font-family:'Lilita One',sans-serif;font-weight:400;color:var(--red);font-size:calc(22px*var(--k))}
+.pie{text-align:center;font-size:calc(12px*var(--k));color:#9a7075;padding:calc(10px*var(--k)) calc(16px*var(--k)) calc(18px*var(--k));margin-top:auto}
 @media print{
-  @page{size:A5;margin:0}
   body{background:#fff}
   .bar{display:none}
-  .hoja{width:148mm;height:210mm;margin:0;box-shadow:none;border-radius:0}
+  .hoja{zoom:1 !important;margin:0;box-shadow:none;border-radius:0}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 </style>
@@ -40,10 +40,16 @@ body{font-family:'DM Sans',sans-serif;background:#eee;color:#1a0508}
 <body>
 <div class="bar">
   <label>Sucursal <select id="suc" onchange="pintar()"></select></label>
+  <label>Tamaño <select id="tam" onchange="tamano()">
+    <option value="A4">Carta / A4 (21 × 29.7 cm)</option>
+    <option value="A6">Tarjeta de mostrador A6 (10.5 × 14.8 cm)</option>
+    <option value="A2">Póster A2 (42 × 59.4 cm)</option>
+  </select></label>
   <button class="p" onclick="window.print()">🖨️ Imprimir</button>
-  <span style="color:#9a7075">Sale en tamaño media carta (A5). Ponlo junto a la caja.</span>
+  <span style="color:#9a7075">Mismos tamaños que sus diseños de Canva. Al imprimir elige ese tamaño de hoja y márgenes "Ninguno".</span>
 </div>
-<div class="hoja">
+<style id="pg">@media print{@page{size:210mm 297mm;margin:0}}</style>
+<div class="hoja" id="hoja">
   <div class="top">
     <img class="logo" src="img/marca/logo-blanco.png" alt="Lady Fresa">
     <h1>HAZTE LADY LOVER</h1>
@@ -71,6 +77,20 @@ function pintar(){
   const q=qrcode(0,'M'); q.addData(url); q.make();
   document.getElementById('qr').innerHTML=q.createSvgTag({cellSize:8,margin:0,scalable:true});
 }
+const T={A6:[105,148],A4:[210,297],A2:[420,594]};
+function tamano(){
+  const t=document.getElementById('tam').value;
+  const [w,h]=T[t], hj=document.getElementById('hoja');
+  hj.style.setProperty('--k',w/148); hj.style.setProperty('--w',w+'mm'); hj.style.setProperty('--h',(h-0.5)+'mm');
+  document.getElementById('pg').textContent='@media print{@page{size:'+w+'mm '+h+'mm;margin:0}html,body{margin:0}}';
+  try{ localStorage.setItem('lf_cartel_tam',t); }catch(e){}
+  ajustar();
+}
+// En pantalla se ve reducido para que quepa; al imprimir sale a tamaño real
+function ajustar(){ const h=document.getElementById('hoja'); h.style.zoom=1; const w=h.offsetWidth; h.style.zoom=Math.min(1,(window.innerWidth-32)/w); }
+window.addEventListener('resize',ajustar);
+try{ const t=new URLSearchParams(location.search).get('tam')||localStorage.getItem('lf_cartel_tam'); if(t&&T[t]) document.getElementById('tam').value=t; }catch(e){}
+tamano();
 const sel=document.getElementById('suc');
 sel.innerHTML=pre?`<option>${pre.replace(/[<>&"]/g,'')}</option>`:'<option value="">General</option>';
 pintar();
