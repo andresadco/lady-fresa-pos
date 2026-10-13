@@ -281,6 +281,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 .t-body h4 { font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--text-3); margin:0 0 6px; font-weight:600; }
 .kv { display:flex; justify-content:space-between; font-size:13px; padding:3px 0; border-bottom:1px dashed var(--border); }
 .kv:last-child { border-bottom:none; }
+.rol-gerente .solo-admin { display:none !important; }
 .set-row { display:flex; justify-content:space-between; align-items:center; gap:14px; padding:12px 0; border-bottom:1px solid var(--border); }
 .set-row:last-child { border-bottom:none; }
 .set-row b { display:block; font-size:14px; } .set-row small { display:block; font-size:12px; color:var(--text-3); margin-top:2px; }
@@ -425,6 +426,7 @@ html,body,button,.pin-btn{touch-action:manipulation;}
     <div class="nav-section">
       <div class="nav-section-label">Finanzas</div>
       <button class="nav-item" onclick="goPage('gastos',this)"><span class="nav-icon">💸</span>Gastos</button>
+      <button class="nav-item solo-admin" onclick="goPage('inversiones',this)"><span class="nav-icon">🤝</span>Inversiones</button>
     </div>
 
 
@@ -681,6 +683,16 @@ html,body,button,.pin-btn{touch-action:manipulation;}
         <div class="card-title">Retiros de caja del POS <small style="color:var(--text-3);font-weight:400;">· también salen en cada corte</small></div>
         <div id="gastos-retiros"></div>
       </div>
+    </div>
+
+    <!-- INVERSIONES (solo lectura; se capturan en el app de gastos) -->
+    <div class="page" id="page-inversiones">
+      <div class="pg-head">
+        <div><div class="page-title">Inversiones</div>
+        <div class="page-sub">Recuperación del 50% y dividendos por tienda · se capturan en el app de gastos (🤝 Inversión)</div></div>
+        <button class="btn btn-secondary" onclick="loadInversiones()">↻ Actualizar</button>
+      </div>
+      <div id="inv-body"><div class="empty">Cargando…</div></div>
     </div>
 
     <!-- TURNOS -->
@@ -1314,16 +1326,20 @@ async function lfLogin(pin,origen){
   return j||{ok:false};
 }
 
-// App de Gastos — Supabase externo (solo lectura para sync)
+// App de Gastos — base externa. Se lee por el puente (lfg-puente) con la sesión del admin;
+// la base de gastos ya no deja leer sin sesión.
 const APP_URL = 'https://tnspshptvqvhhwwckzcc.supabase.co';
-const APP_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRuc3BzaHB0dnF2aGh3d2NremNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyOTE4MzYsImV4cCI6MjA4Nzg2NzgzNn0.VYO6LMiRfv9pTCO-jRrz4ph2S_uKgX-kqYRCyVKCwdU';
 async function appGet(table, query) {
   try {
-    var res = await fetch(APP_URL + '/rest/v1/' + table + '?' + (query||''), {
-      headers: { 'apikey': APP_KEY, 'Authorization': 'Bearer ' + APP_KEY }
+    if (!LF_AUTH) return [];
+    if (LF_AUTH.expires_at*1000-Date.now() < 90000) await lfAuthRefresh();
+    var res = await _lfFetch(APP_URL + '/functions/v1/lfg-puente', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-pos-token': LF_AUTH.access_token },
+      body: JSON.stringify({ accion: 'leer', tabla: table, query: query || '' })
     });
     if (!res.ok) return [];
-    return await res.json();
+    var j = await res.json();
+    return Array.isArray(j) ? j : [];
   } catch(e) { return []; }
 }
 
@@ -1590,6 +1606,7 @@ async function loadPage(page) {
   else if (page==='movimientos') { await loadInventario(); loadMovimientos(); }
   else if (page==='entradas') { await loadInventario(); loadEntradasPendientes(); }
   else if (page==='gastos') loadGastosOperativos();
+  else if (page==='inversiones') loadInversiones();
   else if (page==='promociones') loadPromociones();
   else if (page==='categorias') loadCategorias();
 }
@@ -4834,6 +4851,53 @@ function renderGastosTabla() {
   }).join('');
 }
 
+
+// ═══════════════════════════════════════════════════
+// INVERSIONES (lectura desde el app de gastos, solo rol admin)
+// ═══════════════════════════════════════════════════
+const INV_CONCEPTO={capex:'Obra / equipo',guante:'Guante',capital_trabajo:'Capital de trabajo',otro:'Otro'};
+function mesLargo(m){ if(!m) return '—'; const [y,mm]=String(m).split('-').map(Number); const l=new Date(y,mm-1,1).toLocaleDateString('es-MX',{month:'long',year:'numeric'}); return l.charAt(0).toUpperCase()+l.slice(1); }
+async function loadInversiones(){
+  const body=document.getElementById('inv-body');
+  body.innerHTML='<div class="empty">Cargando…</div>';
+  const [inv,abo,vm,sucs]=await Promise.all([
+    appGet('inversiones','select=*&order=fecha.desc'),
+    appGet('abonos_inversionistas','select=*&order=fecha.desc'),
+    appGet('ventas_mensuales','select=*&order=mes.desc'),
+    appGet('sucursales','select=id,nombre,emoji,empresa&order=orden.asc'),
+  ]);
+  if(!sucs.length){ body.innerHTML='<div class="card empty">No se pudo leer el app de gastos. Revisa tu conexión o vuelve a entrar.</div>'; return; }
+  const G2=sucs.filter(x=>(x.empresa||'G1')==='G2'), nom=id=>{const x=sucs.find(z=>z.id===id); return x?x.nombre:'—';};
+  const n=v=>+v||0;
+  const filas=G2.map(sc=>{
+    const invertido=inv.filter(i=>i.sucursal_id===sc.id&&i.recuperable).reduce((t,i)=>t+n(i.monto),0);
+    const recuperado=abo.filter(a=>a.sucursal_id===sc.id&&a.tipo==='recuperacion').reduce((t,a)=>t+n(a.monto),0);
+    const dividendos=abo.filter(a=>a.sucursal_id===sc.id&&a.tipo==='dividendo').reduce((t,a)=>t+n(a.monto),0);
+    const meta=invertido*0.5; return {sc,invertido,meta,recuperado,dividendos,pct:meta>0?Math.min(100,recuperado/meta*100):0};
+  });
+  const T=filas.reduce((t,f)=>({invertido:t.invertido+f.invertido,meta:t.meta+f.meta,recuperado:t.recuperado+f.recuperado,dividendos:t.dividendos+f.dividendos}),{invertido:0,meta:0,recuperado:0,dividendos:0});
+  const pctT=T.meta>0?Math.min(100,T.recuperado/T.meta*100):0;
+  const totalInv=inv.reduce((t,i)=>t+n(i.monto),0);
+  const kpi=(l,v,s)=>`<div class="kpi"><div class="k-l">${l}</div><div class="k-v">${v}</div><div class="k-s">${s}</div></div>`;
+  const barra=p=>`<div style="height:10px;border-radius:5px;background:var(--pink-light);overflow:hidden;margin-top:8px;"><i style="display:block;height:100%;width:${p.toFixed(1)}%;background:#A6182E;border-radius:5px;"></i></div>`;
+  let h=`<div class="kpi-row">
+    ${kpi('Invertido',fmt(totalInv),inv.length+' registros'+(totalInv!==T.invertido?' · '+fmt(T.invertido)+' recuperable':''))}
+    ${kpi('Recuperado del 50%',fmt(T.recuperado),'de '+fmt(T.meta)+' · '+pctT.toFixed(1)+'%')}
+    ${kpi('Falta por recuperar',fmt(Math.max(0,T.meta-T.recuperado)),'antes de dividendos')}
+    ${kpi('Dividendos pagados',fmt(T.dividendos),abo.filter(a=>a.tipo==='dividendo').length+' pagos')}
+  </div>`;
+  h+=`<div class="card"><div class="card-title">Por tienda</div>${filas.length?filas.map(f=>`
+    <div style="padding:8px 0;border-bottom:1px dashed var(--border);">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;"><b>${escH((f.sc.emoji||'')+' '+f.sc.nombre)}</b><b style="color:var(--pink);">${f.pct.toFixed(0)}%</b></div>
+      ${barra(f.pct)}
+      <div class="m-hint" style="margin-top:6px;">Invertido ${fmt(f.invertido)} · Recuperado ${fmt(f.recuperado)} de ${fmt(f.meta)}${f.dividendos?' · Dividendos '+fmt(f.dividendos):''}</div>
+    </div>`).join(''):'<div class="empty">Sin tiendas de Groventia 2</div>'}</div>`;
+  h+=`<div class="card"><div class="card-title">Inversiones registradas</div>${inv.length?inv.map(i=>`<div class="kv"><span>${escH(i.fecha||'')} · ${escH(nom(i.sucursal_id))} · ${escH(INV_CONCEPTO[i.concepto]||i.concepto||'')}${i.inversionista?' · '+escH(i.inversionista):''}${i.recuperable?'':' · <i>no recuperable</i>'}${i.nota?'<br><small style="color:var(--text-3)">'+escH(i.nota)+'</small>':''}</span><b>${fmt(i.monto)}</b></div>`).join(''):'<div class="empty">Sin inversiones</div>'}</div>`;
+  h+=`<div class="card"><div class="card-title">Abonos a inversionistas</div>${abo.length?abo.map(a=>`<div class="kv"><span>${escH(a.fecha||'')} · ${escH(nom(a.sucursal_id))} · ${a.tipo==='dividendo'?'Dividendo':'Recuperación'}${a.mes?' de '+escH(mesLargo(a.mes)):''}${a.inversionista?' · '+escH(a.inversionista):''}${a.referencia?'<br><small style="color:var(--text-3)">Ref. '+escH(a.referencia)+'</small>':''}</span><b>${fmt(a.monto)}</b></div>`).join(''):'<div class="empty">Aún no hay abonos</div>'}</div>`;
+  const vmG2=vm.filter(v=>G2.some(x=>x.id===v.sucursal_id));
+  h+=`<div class="card"><div class="card-title">Venta mensual (Parrot)</div>${vmG2.length?vmG2.map(v=>`<div class="kv"><span>${escH(mesLargo(v.mes))} · ${escH(nom(v.sucursal_id))}</span><b>${fmt(v.venta_total)} <small style="color:var(--text-3);font-weight:400;">bruta ${fmt(v.venta_bruta)}</small></b></div>`).join(''):'<div class="empty">Aún no se ha subido ningún mes</div>'}</div>`;
+  body.innerHTML=h;
+}
 // ── REGISTRAR DESDE ENTRADAS PENDIENTES COMO GASTO ──
 function epSetMode(entradaId, mode) {
   var invFields = document.querySelector('#page-entradas [id^="ep-ins-' + entradaId + '"]').closest('div[style*="grid"]');

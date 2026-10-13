@@ -1733,7 +1733,6 @@ setTimeout(function(){
 // Config general del POS (fondo de caja, envío al app de gastos)
 const posCfg={};
 const GASTOS_URL='https://tnspshptvqvhhwwckzcc.supabase.co';
-const GASTOS_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRuc3BzaHB0dnF2aGh3d2NremNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyOTE4MzYsImV4cCI6MjA4Nzg2NzgzNn0.VYO6LMiRfv9pTCO-jRrz4ph2S_uKgX-kqYRCyVKCwdU';
 async function loadPosConfig(){
   try{
     const r=await fetch(SB_URL+'/rest/v1/config?key=in.(fondo_caja,enviar_venta_gastos,descontar_inventario)',{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}});
@@ -1748,10 +1747,13 @@ function gastosActivoPara(suc){
 async function enviarVentaGastos(d){
   // Registra (o actualiza) la venta del día en el app de gastos: efectivo cobrado y retiros
   const fecha=new Date(d.inicio).toLocaleDateString('en-CA',{timeZone:'America/Mexico_City'});
-  const res=await fetch(GASTOS_URL+'/rest/v1/rpc/pos_registrar_venta',{method:'POST',
-    headers:{'Content-Type':'application/json',apikey:GASTOS_KEY,Authorization:'Bearer '+GASTOS_KEY},
-    body:JSON.stringify({p_fecha:fecha,p_sucursal:d.sucursal,p_efectivo:d.efectivo,p_salidas:d.total_retiros||0,
-      p_nota:'Corte POS · '+(d.cajero_name||'')+' [POS]',p_quien:'POS · '+(d.cajero_name||'')})});
+  // Pasa por el puente del app de gastos con la sesión del POS (la base de gastos ya no acepta llamadas anónimas)
+  if(LF_AUTH&&LF_AUTH.expires_at*1000-Date.now()<90000) await lfAuthRefresh();
+  if(!LF_AUTH) throw new Error('sin sesión');
+  const res=await fetch(GASTOS_URL+'/functions/v1/lfg-puente',{method:'POST',
+    headers:{'Content-Type':'application/json','x-pos-token':LF_AUTH.access_token},
+    body:JSON.stringify({accion:'venta',p:{p_fecha:fecha,p_sucursal:d.sucursal,p_efectivo:d.efectivo,p_salidas:d.total_retiros||0,
+      p_nota:'Corte POS · '+(d.cajero_name||'')+' [POS]',p_quien:'POS · '+(d.cajero_name||'')}})});
   if(!res.ok) throw new Error(await res.text());
   return res.json();
 }
