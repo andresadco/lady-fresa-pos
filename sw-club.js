@@ -1,4 +1,5 @@
-// Service worker de la tarjeta Lady Lovers: recibe avisos (push) y abre la tarjeta al tocarlos
+// Service worker del sitio: avisos (push) de la tarjeta Lady Lovers y permite instalar el POS como app.
+// No guarda nada en caché: todo se pide siempre a internet para que nunca quede una versión vieja.
 self.addEventListener('install', e => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 self.addEventListener('push', e => {
@@ -16,4 +17,10 @@ self.addEventListener('notificationclick', e => {
     for (const w of ws) { if (w.url.includes('club.html') && 'focus' in w) { w.navigate(url); return w.focus(); } }
     return self.clients.openWindow(url);
   }));
+});
+
+// Necesario para que Android ofrezca "Instalar app". Pasa directo a la red, sin caché.
+self.addEventListener('fetch', e => {
+  if (e.request.mode !== 'navigate') return;
+  e.respondWith(fetch(e.request));
 });
