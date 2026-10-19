@@ -1016,6 +1016,12 @@ html,body,button,.pin-btn{touch-action:manipulation;}
       <button class="svc-btn" onclick="setSvc('para-llevar',this)">🛍 Para llevar</button>
       <button class="svc-btn" onclick="setSvc('delivery',this)">🛵 Delivery</button>
     </div>
+    <div class="svc-row" id="canal-row" style="display:none;margin-top:-2px;">
+      <button class="svc-btn canal-btn" data-c="uber" onclick="setCanal('uber')">Uber Eats</button>
+      <button class="svc-btn canal-btn" data-c="didi" onclick="setCanal('didi')">DiDi Food</button>
+      <button class="svc-btn canal-btn" data-c="rappi" onclick="setCanal('rappi')">Rappi</button>
+      <button class="svc-btn canal-btn" data-c="propio" onclick="setCanal('propio')">Propio</button>
+    </div>
     <input type="text" class="client-input" id="client-input" placeholder="✍️ Nombre para la comanda (opcional)">
         <button type="button" class="client-toggle" id="client-toggle" onclick="openClienteSheet()">
       <span id="client-toggle-text">+ Agregar cliente</span>
@@ -1295,11 +1301,11 @@ async function lfLogin(pin,origen){
 function _pagosDe(v){
   if(v&&v.pagos) return v.pagos;
   const t=Number(v?.total)||0, m=v?.payMethod||v?.pay_method;
-  return {ef:m==='efectivo'?t:0, ta:m==='tarjeta'?t:0, tr:m==='transferencia'?t:0};
+  return {ef:m==='efectivo'?t:0, ta:m==='tarjeta'?t:0, tr:m==='transferencia'?t:0, pl:m==='plataforma'?t:0};
 }
 function _pagosOrden(o){
   if(o&&(o.pago_efectivo!=null||o.pago_tarjeta!=null||o.pago_transferencia!=null))
-    return {ef:Number(o.pago_efectivo)||0, ta:Number(o.pago_tarjeta)||0, tr:Number(o.pago_transferencia)||0};
+    return {ef:Number(o.pago_efectivo)||0, ta:Number(o.pago_tarjeta)||0, tr:Number(o.pago_transferencia)||0, pl:Number(o.pago_plataforma)||0};
   return _pagosDe(o);
 }
 function nowMX() { return new Date(new Date().toLocaleString('en-US',{timeZone:'America/Mexico_City'})); }
@@ -1397,6 +1403,10 @@ let promoActiva = null;
 let promosCargadas = [];
 let payMethod = 'efectivo';
 let svcType = 'mostrador';
+// Delivery: de qué app viene el pedido. Uber/DiDi/Rappi ya vienen pagados en la app.
+let canal=null, _llPreguntado=false;
+const CANALES={uber:'Uber Eats',didi:'DiDi Food',rappi:'Rappi',propio:'Delivery propio'};
+const esApp=()=>svcType==='delivery'&&['uber','didi','rappi'].includes(canal);
 let catFilter = 'all';
 let CS = {};
 var ticketCfg = {};
@@ -1405,7 +1415,7 @@ var comandaCfg = {};
 let _cobroPending = false;
 
 const PERMS = {
-  cajero:    { discount:false, cierre:false, dashboard:false },
+  cajero:    { discount:false, cierre:true,  dashboard:false },
   encargado: { discount:true,  cierre:true,  dashboard:false },
   gerente:   { discount:true,  cierre:true,  dashboard:true },
   admin:     { discount:true,  cierre:true,  dashboard:true },
@@ -1417,6 +1427,25 @@ const PERMS = {
 function fechaMX(d){ return (d?new Date(d):new Date()).toLocaleDateString('en-CA',{timeZone:'America/Mexico_City'}); }
 // Un turno abierto por sucursal: todos los que cobran en la sucursal comparten turno y el corte cubre todo.
 let turnoAbiertoPor='';
+// Si quedó abierto un turno de otro día, hay que hacer ese corte antes de cobrar
+let _cortePendiente=null, _recordarCorteDespues=0;
+async function avisoCortePendiente(){
+  if(!_cortePendiente||document.querySelector('#_lfc-ok')) return;
+  const ok=await lfConfirm({icon:'🔐',title:'Falta un corte',message:'El turno sigue abierto desde el '+_cortePendiente+'. Haz ese corte (cuenta la caja) antes de empezar a cobrar hoy.',okText:'Hacer el corte',cancelText:'Ahorita no'});
+  if(ok) openCierreSheet();
+}
+// A la hora de cierre, recordar el corte (cada 20 min si dicen "todavía no")
+setInterval(async()=>{
+  try{
+    if(!currentUser||!turnoId||_cortePendiente||Date.now()<_recordarCorteDespues) return;
+    if(document.querySelector('#_lfc-ok')||(typeof order!=='undefined'&&order.length)) return;
+    const [hh,mm]=String(posCfg.hora_cierre||'21:30').split(':').map(Number), n=nowMX();
+    if(n.getHours()*60+n.getMinutes()<hh*60+(mm||0)) return;
+    _recordarCorteDespues=Date.now()+20*60000;
+    const ok=await lfConfirm({icon:'🌙',title:'Hora del corte',message:'Antes de irte, haz el corte de caja: cuenta billetes y monedas y confírmalo.',okText:'Hacer el corte',cancelText:'En 20 min'});
+    if(ok) openCierreSheet();
+  }catch(e){}
+},60000);
 async function abrirTurnoDB(user) {
   const suc=user.sucursal||'Principal';
   const key='lf_turno_suc_'+suc;
@@ -1432,7 +1461,8 @@ async function abrirTurnoDB(user) {
     if(Array.isArray(rows)&&rows.length){
       turnoId=rows[0].id; turnoStartTime=new Date(rows[0].created_at||Date.now()); turnoAbiertoPor=rows[0].cajero_name||user.name;
       localStorage.setItem(key,turnoId);
-      if(fechaMX(turnoStartTime)!==fechaMX()) setTimeout(()=>showToast('⚠️ El turno sigue abierto desde el '+fmtMX(turnoStartTime)+'. Haz el corte cuando cierres hoy.'),1500);
+      _cortePendiente=fechaMX(turnoStartTime)!==fechaMX()?fmtMX(turnoStartTime):null;
+      if(_cortePendiente) setTimeout(avisoCortePendiente,1200);
     }
   } catch(e) {
     const c=localStorage.getItem(key); if(c) turnoId=parseInt(c);   // sin internet: seguir cobrando en el último turno conocido
@@ -1537,7 +1567,7 @@ async function reconstruirTurnoDesdeDB() {
   if (!turnoId) return;
   try {
     const [dbOrders, dbRetiros] = await Promise.all([
-      sbGet('orders', 'turno_id=eq.'+turnoId+'&status=neq.cancelada&select=id,order_number,total,iva,pay_method,pago_efectivo,pago_tarjeta,pago_transferencia,created_at,cajero_name&order=created_at.asc'),
+      sbGet('orders', 'turno_id=eq.'+turnoId+'&status=neq.cancelada&select=id,order_number,total,iva,pay_method,pago_efectivo,pago_tarjeta,pago_transferencia,pago_plataforma,canal,created_at,cajero_name&order=created_at.asc'),
       fetch(SB_URL+'/rest/v1/gastos_operativos?or=(turno_id.eq.'+turnoId+',nota.eq.'+encodeURIComponent('"Turno: '+turnoId+'"')+')&categoria=eq.'+encodeURIComponent('Retiro de caja')+'&select=monto,concepto,quien,fecha,created_at&order=created_at.asc',{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}}).then(r=>r.ok?r.json():null).catch(()=>null),
     ]);
     if(Array.isArray(dbRetiros)){
@@ -1669,7 +1699,7 @@ async function logout() {
   document.getElementById('screen-login').classList.add('active');
   document.body.classList.remove('pos-active');
   document.getElementById('login-error').textContent='';
-  order=[]; discount=0; discountMonto=0; promoActiva=null; payMethod='efectivo'; svcType='mostrador';
+  order=[]; discount=0; discountMonto=0; promoActiva=null; payMethod='efectivo'; svcType='mostrador'; canal=null; _llPreguntado=false;
   document.getElementById('promo-applied-bar').classList.add('hidden');
   mostrarDescManual();
   renderOrderBar();
@@ -1737,7 +1767,7 @@ const posCfg={};
 const GASTOS_URL='https://tnspshptvqvhhwwckzcc.supabase.co';
 async function loadPosConfig(){
   try{
-    const r=await fetch(SB_URL+'/rest/v1/config?key=in.(fondo_caja,enviar_venta_gastos,descontar_inventario)',{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}});
+    const r=await fetch(SB_URL+'/rest/v1/config?key=in.(fondo_caja,enviar_venta_gastos,descontar_inventario,hora_cierre)',{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}});
     if(r.ok){ (await r.json()).forEach(c=>{ posCfg[c.key]=c.value; }); }
   }catch(e){}
 }
@@ -2257,6 +2287,19 @@ function setSvc(s,btn){
   document.querySelectorAll('.svc-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('tb-svc-label').textContent=(s==='mostrador'?'Mostrador':s==='para-llevar'?'Para llevar':'Delivery')+' · '+(currentUser?.name||'—');
+  if(s!=='delivery') canal=null;
+  actualizarCanalUI();
+}
+function setCanal(c){ canal=c; actualizarCanalUI(); }
+function actualizarCanalUI(){
+  const row=document.getElementById('canal-row'); if(row) row.style.display=svcType==='delivery'?'flex':'none';
+  document.querySelectorAll('.canal-btn').forEach(b=>b.classList.toggle('active',b.dataset.c===canal));
+  const app=esApp();
+  document.querySelectorAll('.pay-row').forEach(r=>r.style.display=app?'none':'');
+  let n=document.getElementById('pay-app-nota');
+  if(!n){ const pr=document.querySelector('.sheet-footer .pay-row'); if(pr){ n=document.createElement('div'); n.id='pay-app-nota'; n.style.cssText='padding:12px;margin-bottom:10px;border-radius:12px;background:var(--red-light);color:var(--red-dark);font-size:13px;font-weight:600;text-align:center;'; pr.parentNode.insertBefore(n,pr); } }
+  if(n){ n.style.display=app?'block':'none'; n.textContent=app?'🛵 Ya viene pagado en '+CANALES[canal]+'. No entra dinero a la caja.':''; }
+  if(app) payMethod='plataforma'; else if(payMethod==='plataforma'){ payMethod='efectivo'; const b=document.querySelector('.pay-btn'); if(b){ document.querySelectorAll('.pay-btn').forEach(x=>x.classList.remove('active')); b.classList.add('active'); } }
 }
 
 function setPay(m,btn){
@@ -2296,7 +2339,7 @@ async function cancelOrder(){
     danger:true,
   });
   if(!ok) return;
-  order=[]; discount=0; discountMonto=0; promoActiva=null; payMethod='efectivo'; svcType='mostrador'; _ventaKey=null; promoQuitadaManual=false;
+  order=[]; discount=0; discountMonto=0; promoActiva=null; payMethod='efectivo'; svcType='mostrador'; canal=null; _llPreguntado=false; _ventaKey=null; promoQuitadaManual=false;
   document.getElementById('client-input').value='';
   loyaltyCliente=null; loyaltyAplicarCanje=false; if(typeof clearClienteLealtad==='function') clearClienteLealtad();
   document.getElementById('promo-applied-bar').classList.add('hidden');
@@ -2324,26 +2367,53 @@ function closeOrderSheet(){
 const r2=n=>Math.round((Number(n)||0)*100)/100;
 // Cómo se reparte el total entre efectivo, tarjeta y transferencia
 function partesPago(total){
-  if(payMethod==='tarjeta') return {ef:0,ta:total,tr:0};
-  if(payMethod==='transferencia') return {ef:0,ta:0,tr:total};
+  if(esApp()) return {ef:0,ta:0,tr:0,pl:total};
+  if(payMethod==='tarjeta') return {ef:0,ta:total,tr:0,pl:0};
+  if(payMethod==='transferencia') return {ef:0,ta:0,tr:total,pl:0};
   if(payMethod==='mixto'){
     const ta=r2(document.getElementById('mix-tarjeta')?.value), tr=r2(document.getElementById('mix-transfer')?.value);
-    return {ef:r2(total-ta-tr),ta,tr};
+    return {ef:r2(total-ta-tr),ta,tr,pl:0};
   }
-  return {ef:total,ta:0,tr:0};
+  return {ef:total,ta:0,tr:0,pl:0};
 }
 function cobroValido(){
   const{total}=calcTotals(); const p=partesPago(total);
   if(p.ef<0||p.ta<0||p.tr<0) return false;
+  if(svcType==='delivery'&&!canal) return false;
   if(payMethod==='mixto'&&!(p.ta>0||p.tr>0)) return false;
   if(p.ef>0){ const con=parseFloat(document.getElementById('efec-input').value)||0; if(con<p.ef) return false; }
   return true;
 }
+function preguntarLadyLover(){
+  document.querySelectorAll('.lf-ll-paso').forEach(x=>x.remove());
+  const d=document.createElement('div'); d.className='lf-ll-paso';
+  d.style.cssText='position:fixed;inset:0;background:rgba(26,5,8,0.55);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;cursor:pointer;';
+  const b='width:100%;height:54px;border-radius:14px;font-family:DM Sans,sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;';
+  d.innerHTML=`<div style="background:#fff;border-radius:22px;padding:22px 20px 16px;max-width:380px;width:100%;cursor:auto;text-align:center;">
+    <img src="img/marca/sello.png" alt="" style="width:56px;height:56px;border-radius:50%;">
+    <div style="font-family:'Lilita One',serif;font-size:22px;color:#1a0508;margin:8px 0 4px;">¿Es Lady Lover?</div>
+    <div style="font-size:13.5px;color:#5a2830;margin-bottom:10px;">Pregúntale antes de cobrar para ponerle su sello.</div>
+    <button data-a="qr" style="${b}background:#A6182E;color:#fff;border:none;">📷 Escanear su tarjeta</button>
+    <button data-a="tel" style="${b}background:#FDEEF1;color:#672626;border:1.5px solid #FAD8DE;">📱 Buscarla o registrarla</button>
+    <button data-a="no" style="${b}background:#fff;color:#5a2830;border:1.5px solid #e9d6da;">No es Lady Lover · cobrar</button>
+  </div>`;
+  d.onclick=e=>{ if(e.target===d) d.remove(); };
+  d.querySelectorAll('button').forEach(x=>x.onclick=()=>{ const a=x.dataset.a; d.remove();
+    if(a==='no'){ _llPreguntado=true; openCobro(); }
+    else { openClienteSheet(); if(a==='qr') setTimeout(()=>escanearQR(),350); } });
+  document.body.appendChild(d);
+}
 function openCobro(){
+  if(_cortePendiente){ avisoCortePendiente(); return; }
+  if(svcType==='delivery'&&!canal){ showToast('Elige de qué app es el pedido: Uber, DiDi, Rappi o Propio'); return; }
+  if(loyaltyConfig?.activo!==false&&!loyaltyCliente&&!esApp()&&!_llPreguntado&&order.length){ preguntarLadyLover(); return; }
   const{total}=calcTotals();
   document.getElementById('cobro-total').textContent='$'+total.toLocaleString('es-MX',{minimumFractionDigits:2});
   document.getElementById('cobro-sub').textContent=order.reduce((s,i)=>s+i.qty,0)+' productos';
-  document.getElementById('cobro-pay-label').textContent=payMethod==='efectivo'?'💵 Efectivo':payMethod==='tarjeta'?'💳 Tarjeta Santander':payMethod==='mixto'?'🔀 Pago mixto':'📲 Transferencia';
+  document.getElementById('cobro-pay-label').textContent=esApp()?'🛵 Pagado en '+CANALES[canal]:payMethod==='efectivo'?'💵 Efectivo':payMethod==='tarjeta'?'💳 Tarjeta Santander':payMethod==='mixto'?'🔀 Pago mixto':'📲 Transferencia';
+  const refLbl=document.querySelector('#ref-section .efec-label'), refInp=document.getElementById('pago-ref');
+  if(refLbl) refLbl.textContent=esApp()?'Número de pedido en '+CANALES[canal]+' (opcional)':'Referencia (opcional): últimos 4 dígitos de la tarjeta o folio de la transferencia';
+  if(refInp) refInp.placeholder=esApp()?'Ej. #A1B2':'Ej. 4821 o folio SPEI';
   document.getElementById('cobro-error-banner').classList.remove('show');
   ['mix-tarjeta','mix-transfer','efec-input','pago-ref'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   document.getElementById('mixto-section').style.display=payMethod==='mixto'?'block':'none';
@@ -2421,7 +2491,7 @@ async function confirmarPago(){
     promoId:promoActiva?.id||null, promoNombre:promoActiva?.nombre||null, canjeItem:canjeItem||null,
     id:orderN, date:new Date(), items:JSON.parse(JSON.stringify(order)), sub,desc,iva,total,
     payMethod,svcType,client,cambio,discount:discountMonto>0?0:discount,discountMonto:discountMonto>0?discountMonto:0,
-    cashReceived:con, paid_at:new Date().toISOString(), pagos, pagoRef,
+    cashReceived:con, paid_at:new Date().toISOString(), pagos, pagoRef, canal:svcType==='delivery'?canal:null,
     loyaltyClienteId:loyaltyCliente?.id||null, loyaltyClienteQR:loyaltyCliente?.qr_code||null,
     loyaltyReq:loyaltyConfig?.sellos_requeridos||10, loyaltySellos:loyaltyCliente?((loyaltyCliente.sellos_actuales||0)-(loyaltyAplicarCanje&&loyaltyCliente.puede_canjear?(loyaltyConfig?.sellos_requeridos||10):0)+1):null,
     loyaltyCanje:!!loyaltyAplicarCanje, canjeAmt:canjeAmt||0,
@@ -2458,7 +2528,7 @@ async function confirmarPago(){
 
     // Resetear orden
     _ventaKey=null; promoQuitadaManual=false;
-    orderN=(Number(saleData.id)||orderN)+1; order=[]; discount=0; discountMonto=0; payMethod='efectivo'; svcType='mostrador'; promoActiva=null;
+    orderN=(Number(saleData.id)||orderN)+1; order=[]; discount=0; discountMonto=0; payMethod='efectivo'; svcType='mostrador'; canal=null; _llPreguntado=false; promoActiva=null;
     pintarFolio(); cargarFolio();
     btn.textContent='CONFIRMAR PAGO'; btn.classList.remove('loading');
     document.querySelectorAll('.disc-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
@@ -2529,6 +2599,7 @@ async function saveToSupabase(saleData){
     cash_received:_pagosDe(saleData).ef>0?saleData.cashReceived:null,
     change_given:_pagosDe(saleData).ef>0?saleData.cambio:null,
     pago_efectivo:_pagosDe(saleData).ef, pago_tarjeta:_pagosDe(saleData).ta, pago_transferencia:_pagosDe(saleData).tr, pago_ref:saleData.pagoRef||null,
+    pago_plataforma:_pagosDe(saleData).pl||0, canal:saleData.canal||null,
     paid_at:saleData.paid_at,
     loyalty_cliente_id:saleData.loyaltyClienteId||null, loyalty_canje:!!saleData.loyaltyCanje, canje_monto:saleData.canjeAmt||0,
     promo_id:saleData.promoId||null, promo_nombre:saleData.promoNombre||null,
@@ -2888,8 +2959,8 @@ function buildCierreData(){
   const totalOrdenes=sales.length;
   const ticketProm=totalOrdenes>0?totalVentas/totalOrdenes:0;
   const totalIva=sales.reduce((s,v)=>s+v.iva,0);
-  const byPay={efectivo:0,tarjeta:0,transferencia:0};
-  sales.forEach(s=>{ const p=_pagosDe(s); byPay.efectivo+=p.ef; byPay.tarjeta+=p.ta; byPay.transferencia+=p.tr; });
+  const byPay={efectivo:0,tarjeta:0,transferencia:0,apps:0};
+  sales.forEach(s=>{ const p=_pagosDe(s); byPay.efectivo+=p.ef; byPay.tarjeta+=p.ta; byPay.transferencia+=p.tr; byPay.apps+=p.pl||0; });
   const byProd={};
   sales.forEach(sale=>{
     sale.items.forEach(item=>{
@@ -2905,7 +2976,7 @@ function buildCierreData(){
     cajero_id:currentUser.id, cajero_name:turnoAbiertoPor||currentUser.name, cerrado_por:currentUser.name,
     total_ventas:totalVentas, total_ordenes:totalOrdenes,
     ticket_promedio:ticketProm,
-    efectivo:byPay.efectivo||0, tarjeta:byPay.tarjeta||0, transferencia:byPay.transferencia||0,
+    efectivo:byPay.efectivo||0, tarjeta:byPay.tarjeta||0, transferencia:byPay.transferencia||0, apps:byPay.apps||0,
     total_iva:totalIva,
     productos:topProds.map(([name,d])=>({name,qty:d.qty,rev:d.rev,emoji:d.emoji})),
     retiros:[...retiros],
@@ -2973,6 +3044,7 @@ function renderCierreModal(){
     {label:'💵 Efectivo',amt:d.efectivo,color:'var(--green)'},
     {label:'💳 Tarjeta Santander',amt:d.tarjeta,color:'var(--blue)'},
     {label:'📲 Transferencia',amt:d.transferencia,color:'var(--purple)'},
+    {label:'🛵 Apps (ya pagado en la app)',amt:d.apps||0,color:'var(--red-dark)'},
   ].filter(r=>r.amt>0);
 
   // Fondo de caja: el último que usó esta tablet, o el de configuración (default $2,000 como en Parrot)
@@ -3125,7 +3197,7 @@ async function confirmarCierre(){
       }catch(e){ gastosMsg='⚠️ No se pudo mandar al app de gastos — avisa a Andrés'; }
     }
     if(currentUser) localStorage.removeItem('lf_turno_suc_'+(currentUser.sucursal||'Principal'));
-    turnoId=null;
+    turnoId=null; _cortePendiente=null; _recordarCorteDespues=0;
 
     const dif=cierreData.diferencia_caja;
     const difTxt=dif===0?'Cuadre exacto ✅':dif>0?`Sobran $${Math.abs(dif).toLocaleString('es-MX')} 🔵`:`Faltan $${Math.abs(dif).toLocaleString('es-MX')} 🔴`;
@@ -3174,7 +3246,7 @@ function finalizarCierre(){
   document.getElementById('order-num-2').textContent='001';
   localStorage.removeItem('lf_session'); lfAuthSet(null);
 
-  order=[]; discount=0; discountMonto=0; promoActiva=null; payMethod='efectivo'; svcType='mostrador';
+  order=[]; discount=0; discountMonto=0; promoActiva=null; payMethod='efectivo'; svcType='mostrador'; canal=null; _llPreguntado=false;
   renderOrderBar(); renderProducts();
   currentUser=null; pinBuffer=''; updateDots();
   document.getElementById('screen-pos').classList.remove('active');
@@ -4336,7 +4408,7 @@ function buildTicketXML(saleData,type='ticket'){
   const tcGet=(k,def)=>tc[k]||def||'';
   const ccGet=(k,def)=>cc[k]||def||'';
   const fontOpts=f=>f==='double'?{w:2,h:2}:f==='bold'?{b:true}:f==='double-bold'?{w:2,h:2,b:true}:{};
-  const servicio=saleData.svcType==='para-llevar'?'PARA LLEVAR':saleData.svcType==='delivery'?'DELIVERY':'MOSTRADOR';
+  const servicio=saleData.svcType==='para-llevar'?'PARA LLEVAR':saleData.svcType==='delivery'?('DELIVERY'+(saleData.canal?' '+String(CANALES[saleData.canal]||'').toUpperCase():'')):'MOSTRADOR';
   const folio='#'+String(saleData.id).padStart(3,'0');
   if(isComanda){
     const marginTop=parseInt(ccGet('comanda_margin_top','0'))||0;
@@ -4418,7 +4490,7 @@ function buildTicketXML(saleData,type='ticket'){
     if(mostrarIva) xml+=T('IVA incluido '+fmtD(saleData.iva),{a:'right'});
     xml+=feed(1);
     const pp=_pagosDe(saleData);
-    const partes=[['Efectivo',pp.ef],['Tarjeta',pp.ta],['Transferencia',pp.tr]].filter(x=>x[1]>0);
+    const partes=[['Efectivo',pp.ef],['Tarjeta',pp.ta],['Transferencia',pp.tr],[CANALES[saleData.canal]||'App',pp.pl||0]].filter(x=>x[1]>0);
     if(partes.length>1){ xml+=T('Pago mixto',{b:true}); partes.forEach(([k,v])=>{ xml+=line('  '+k,fmtD(v)); }); }
     else xml+=line('Pago',partes.length?partes[0][0]:(saleData.payMethod||''));
     if(saleData.pagoRef) xml+=line('Referencia',String(saleData.pagoRef).slice(0,24));
@@ -4617,7 +4689,7 @@ function buildTicketText(saleData){
   if(saleData.desc>0) text+=`Descuento: -${fmtD(saleData.desc)}\n`;
   text+=`Total: ${fmtD(saleData.total)}\n`;
   const pp=_pagosDe(saleData);
-  const partes=[['Efectivo',pp.ef],['Tarjeta',pp.ta],['Transferencia',pp.tr]].filter(x=>x[1]>0);
+  const partes=[['Efectivo',pp.ef],['Tarjeta',pp.ta],['Transferencia',pp.tr],[CANALES[saleData.canal]||'App',pp.pl||0]].filter(x=>x[1]>0);
   text+=`Pago: ${partes.length>1?partes.map(([k,v])=>k+' '+fmtD(v)).join(' + '):(partes[0]?.[0]||'')}\n`;
   if(pp.ef>0&&saleData.cambio>0){
     text+=`Recibió: ${fmtD(saleData.cashReceived||saleData.total)}\n`;

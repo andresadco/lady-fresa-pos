@@ -810,6 +810,15 @@ html,body,button,.pin-btn{touch-action:manipulation;}
             <div class="money-in"><span>$</span><input class="form-input" id="cj-fondo" type="number" inputmode="decimal" min="0" step="50"></div></div>
           <div class="set-row"><div><b>Descuento máximo</b><small>Tope de descuento que puede dar un encargado.</small></div>
             <div class="money-in"><input class="form-input" id="cj-desc" type="number" inputmode="numeric" min="0" max="100"><span>%</span></div></div>
+          <div class="set-row"><div><b>Hora del corte</b><small>A partir de esta hora (CDMX) el POS le recuerda a la cajera hacer el corte.</small></div>
+            <div class="money-in"><input class="form-input" id="cj-hora" type="time"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Comisión de las apps de delivery</div>
+          <div class="set-note">El POS la guarda en cada pedido de la app para ver cuánto te queda de verdad. Ponla como % del total del pedido.</div>
+          <div class="set-row"><div><b>Uber Eats</b></div><div class="money-in"><input class="form-input" id="cj-com-uber" type="number" inputmode="decimal" min="0" max="60" step="0.5"><span>%</span></div></div>
+          <div class="set-row"><div><b>DiDi Food</b></div><div class="money-in"><input class="form-input" id="cj-com-didi" type="number" inputmode="decimal" min="0" max="60" step="0.5"><span>%</span></div></div>
+          <div class="set-row"><div><b>Rappi</b></div><div class="money-in"><input class="form-input" id="cj-com-rappi" type="number" inputmode="decimal" min="0" max="60" step="0.5"><span>%</span></div></div>
         </div>
         <div class="card">
           <div class="card-title">Mandar la venta al app de gastos</div>
@@ -2289,7 +2298,7 @@ async function loadReportes(){
   const de=document.getElementById('rep-desde').value, ha=document.getElementById('rep-hasta').value; if(!de||!ha) return;
   const body=document.getElementById('rep-body'); body.innerHTML='<div class="empty">Cargando…</div>';
   const desde=encodeURIComponent(de+'T00:00:00-06:00'), hasta=encodeURIComponent(ha+'T23:59:59.999-06:00');
-  let q=`select=id,created_at,order_number,sucursal,service_type,pay_method,pago_efectivo,pago_tarjeta,pago_transferencia,pago_ref,subtotal,discount_amt,canje_monto,total,cajero_name,client_name,status&created_at=gte.${desde}&created_at=lte.${hasta}&order=created_at.asc`;
+  let q=`select=id,created_at,order_number,sucursal,service_type,pay_method,pago_efectivo,pago_tarjeta,pago_transferencia,pago_plataforma,canal,comision,pago_ref,subtotal,discount_amt,canje_monto,total,cajero_name,client_name,status&created_at=gte.${desde}&created_at=lte.${hasta}&order=created_at.asc`;
   if(repSuc!=='all') q+='&sucursal=eq.'+encodeURIComponent(repSuc);
   try{
     const todas=await sbGetAll('orders',q);
@@ -2327,11 +2336,11 @@ function renderReportes(de,ha){
   const diaKey=o=>new Date(o.created_at).toLocaleDateString('en-CA',{timeZone:'America/Mexico_City'});
   const porDia=grp(O,diaKey,o=>Number(o.total||0)), nDia=cnt(O,diaKey);
   const porSuc=grp(O,o=>o.sucursal||'—',o=>Number(o.total||0)), nSuc=cnt(O,o=>o.sucursal||'—');
-  const PAY={efectivo:'💵 Efectivo',tarjeta:'💳 Tarjeta Santander',transferencia:'📲 Transferencia'};
+  const PAY={efectivo:'💵 Efectivo',tarjeta:'💳 Tarjeta Santander',transferencia:'📲 Transferencia',uber:'🛵 Uber Eats',didi:'🛵 DiDi Food',rappi:'🛵 Rappi',apps:'🛵 Apps'};
   // Por forma de pago con el desglose real (un pago mixto suma en cada forma)
   const porPago={}, nPago={};
   O.forEach(o=>{ const t=Number(o.total||0), m=o.pay_method;
-    const p=(o.pago_efectivo!=null||o.pago_tarjeta!=null||o.pago_transferencia!=null)?{efectivo:+o.pago_efectivo||0,tarjeta:+o.pago_tarjeta||0,transferencia:+o.pago_transferencia||0}:{[m||'otro']:t};
+    const p=(o.pago_efectivo!=null||o.pago_tarjeta!=null||o.pago_transferencia!=null)?{efectivo:+o.pago_efectivo||0,tarjeta:+o.pago_tarjeta||0,transferencia:+o.pago_transferencia||0,[o.canal&&o.canal!=='propio'?o.canal:'apps']:+o.pago_plataforma||0}:{[m||'otro']:t};
     Object.entries(p).forEach(([k,v])=>{ if(v>0){ porPago[k]=(porPago[k]||0)+v; nPago[k]=(nPago[k]||0)+1; } }); });
   const porCaj=grp(O,o=>o.cajero_name||'—',o=>Number(o.total||0)), nCaj=cnt(O,o=>o.cajero_name||'—');
   const horaKey=o=>Number(new Date(o.created_at).toLocaleString('en-US',{timeZone:'America/Mexico_City',hour:'numeric',hour12:false}))%24;
@@ -2371,8 +2380,8 @@ function repCSVProductos(){
 }
 function repCSV(){
   if(!repOrders.length){ toast('No hay ventas para exportar'); return; }
-  const rows=[['orden','fecha','hora','sucursal','cajero','pago','subtotal','descuento','total','cliente','efectivo','tarjeta','transferencia','referencia']];
-  repOrders.forEach(o=>{ const d=new Date(o.created_at); rows.push([o.order_number||o.id, d.toLocaleDateString('en-CA',{timeZone:'America/Mexico_City'}), d.toLocaleTimeString('es-MX',{timeZone:'America/Mexico_City',hour:'2-digit',minute:'2-digit'}), o.sucursal||'', o.cajero_name||'', o.pay_method||'', o.subtotal||0, o.discount_amt||0, o.total||0, o.client_name||'', o.pago_efectivo??'', o.pago_tarjeta??'', o.pago_transferencia??'', o.pago_ref||'']); });
+  const rows=[['orden','fecha','hora','sucursal','cajero','pago','subtotal','descuento','total','cliente','efectivo','tarjeta','transferencia','referencia','canal','pagado_en_app','comision_app']];
+  repOrders.forEach(o=>{ const d=new Date(o.created_at); rows.push([o.order_number||o.id, d.toLocaleDateString('en-CA',{timeZone:'America/Mexico_City'}), d.toLocaleTimeString('es-MX',{timeZone:'America/Mexico_City',hour:'2-digit',minute:'2-digit'}), o.sucursal||'', o.cajero_name||'', o.pay_method||'', o.subtotal||0, o.discount_amt||0, o.total||0, o.client_name||'', o.pago_efectivo??'', o.pago_tarjeta??'', o.pago_transferencia??'', o.pago_ref||'', o.canal||'', o.pago_plataforma||0, o.comision||0]); });
   const csv='﻿'+rows.map(r=>r.map(v=>{v=String(v==null?'':v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}).join(',')).join('\n');
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
   a.download=`ventas_${document.getElementById('rep-desde').value}_${document.getElementById('rep-hasta').value}${repSuc==='all'?'':'_'+repSuc}.csv`; a.click();
@@ -2837,6 +2846,8 @@ async function loadCajaConfig(){
   cajaCfg={}; (Array.isArray(cfg)?cfg:[]).forEach(c=>cajaCfg[c.key]=c.value);
   document.getElementById('cj-fondo').value=cajaCfg.fondo_caja||2000;
   document.getElementById('cj-desc').value=cajaCfg.descuento_max||30;
+  document.getElementById('cj-hora').value=cajaCfg.hora_cierre||'21:30';
+  ['uber','didi','rappi'].forEach(k=>{ document.getElementById('cj-com-'+k).value=cajaCfg['comision_'+k]||''; });
   const names=(Array.isArray(suc)?suc:[]).filter(s=>s.active!==false).map(s=>s.name);
   const on=(key,n)=>{ const v=(cajaCfg[key]||'').toLowerCase(); if(v==='todas'||v==='true') return true; return v.split(',').map(x=>x.trim()).includes(n.toLowerCase()); };
   const sw=(key)=>names.map(n=>`<label class="suc-sw"><span>🏪 ${escH(n)}</span><button type="button" class="toggle ${on(key,n)?'on':''}" data-key="${key}" data-suc="${escH(n)}" onclick="this.classList.toggle('on')"></button></label>`).join('');
@@ -2848,7 +2859,8 @@ async function saveCajaConfig(){
   if(isNaN(fondo)||fondo<0){ toast('⚠ Fondo inválido'); return; }
   if(isNaN(d)||d<0||d>100){ toast('⚠ Descuento entre 0 y 100'); return; }
   const lista=key=>[...document.querySelectorAll(`.suc-switches .toggle[data-key="${key}"].on`)].map(b=>b.dataset.suc.toLowerCase()).join(',');
-  const vals={ fondo_caja:String(fondo), descuento_max:String(d), enviar_venta_gastos:lista('enviar_venta_gastos'), descontar_inventario:lista('descontar_inventario') };
+  const vals={ fondo_caja:String(fondo), descuento_max:String(d), enviar_venta_gastos:lista('enviar_venta_gastos'), descontar_inventario:lista('descontar_inventario'), hora_cierre:document.getElementById('cj-hora').value||'21:30' };
+  for(const k of ['uber','didi','rappi']){ const v=document.getElementById('cj-com-'+k).value.trim(); if(v!==''&&(isNaN(+v)||+v<0||+v>60)){ toast('⚠ Comisión de '+k+' entre 0 y 60%'); return; } vals['comision_'+k]=v; }
   const r=await fetch(`${SB_URL}/rest/v1/config?on_conflict=key`,{method:'POST',headers:Object.assign({},SB_H,{Prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify(Object.entries(vals).map(([key,value])=>({key,value})))});
   toast(r.ok?'✓ Guardado — el POS lo toma al recargar':'⚠ No se pudo guardar');
 }
@@ -2856,7 +2868,7 @@ async function saveCajaConfig(){
 // ── CONFIG ──
 async function loadConfig() {
   const cfg = await sbGet('config','order=id.asc&select=*');
-  const propias = /^(ticket_|comanda_|suc_)|^(fondo_caja|descuento_max|enviar_venta_gastos|descontar_inventario)$/;
+  const propias = /^(ticket_|comanda_|suc_|comision_)|^(fondo_caja|descuento_max|enviar_venta_gastos|descontar_inventario|hora_cierre)$/;
   const lista = (Array.isArray(cfg)?cfg:[]).filter(c=>!propias.test(c.key));
   document.getElementById('config-rows').innerHTML = !lista.length ? '<div class="empty">Todo se configura en las otras pestañas</div>' : lista.map(c=>`
     <div class="config-row">
