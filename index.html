@@ -4736,6 +4736,8 @@ function usbErrorTexto(e){
   if(/No device selected|NotFoundError/i.test(m)||e?.name==='NotFoundError') return 'No se eligió ninguna impresora.';
   if(/usb_no_conectada/.test(m)) return 'No hay impresora USB conectada. Toca “Conectar impresora USB”.';
   if(/timeout/.test(m)) return 'La impresora no respondió. Revisa papel, tapa y que esté encendida.';
+  if(/Access denied|SecurityError|Unable to claim/i.test(m)||e?.name==='SecurityError') return 'Otra app o el sistema tiene tomada la impresora (¿Parrot o su driver?). Ciérrala, desconecta y conecta el cable, y vuelve a intentar.';
+  if(/no tiene salida USB/.test(m)) return 'Ese aparato no es una impresora. Toca “Conectar impresora USB” otra vez y elige otro de la lista.';
   return 'Error USB: '+m;
 }
 async function _usbAbrir(dev){
@@ -4756,9 +4758,11 @@ async function _usbAbrir(dev){
 }
 // Requiere que la persona toque un botón (Chrome pide permiso la primera vez)
 async function usbConectarNuevo(){
-  const dev=await navigator.usb.requestDevice({filters:[{vendorId:0x04B8},{classCode:7}]});
+  // Sin filtro: hay impresoras que no son Epson o que vienen integradas a la pantalla y no se anuncian como "impresora"
+  const dev=await navigator.usb.requestDevice({filters:[]});
   await _usbAbrir(dev);
   printerCfg.usbName=dev.productName||'Impresora USB';
+  printerCfg.usbVid=dev.vendorId; printerCfg.usbPid=dev.productId;
   try{localStorage.setItem('lf_printer',JSON.stringify(printerCfg));}catch{}
   return dev;
 }
@@ -4767,7 +4771,7 @@ async function usbReconectar(){
   if(_usb.dev&&_usb.dev.opened) return _usb.dev;
   if(!usbSoportado()) return null;
   const devs=await navigator.usb.getDevices();
-  const dev=devs.find(d=>d.vendorId===0x04B8)||devs[0];
+  const dev=devs.find(d=>d.vendorId===printerCfg.usbVid&&d.productId===printerCfg.usbPid)||devs.find(d=>d.vendorId===0x04B8)||devs[0];
   if(!dev) return null;
   try{ return await _usbAbrir(dev); }catch(e){ console.warn('USB',e); return null; }
 }
@@ -4851,7 +4855,7 @@ function openPrinterCfg(){
     <div id="pcfg-sec-usb" style="display:none;margin-bottom:10px;">
       <div id="pcfg-usb-estado" style="padding:12px;border:1.5px solid #e0e0e0;border-radius:12px;font-size:13px;margin-bottom:8px;">Revisando…</div>
       <button type="button" onclick="pcfgUsbConectar()" style="width:100%;height:48px;background:#FDF6F7;border:1.5px solid #e0c0c8;border-radius:12px;color:#A6182E;font-family:DM Sans,sans-serif;font-size:14px;font-weight:700;cursor:pointer;">🔌 Conectar impresora USB</button>
-      <div style="font-size:11px;color:#9a7075;margin-top:6px;line-height:1.5;">Conecta el cable de la impresora a la pantalla, toca el botón y elige la Epson. Chrome lo pide solo la primera vez. Si Parrot está usando la impresora, ciérralo antes.</div>
+      <div style="font-size:11px;color:#9a7075;margin-top:6px;line-height:1.5;">Conecta el cable de la impresora a la pantalla, toca el botón y elige la impresora de la lista (puede decir Epson, Printer, POS o la marca de la pantalla). Chrome lo pide solo la primera vez. Si Parrot está usando la impresora, ciérralo antes.</div>
     </div>
     <div id="pcfg-sec-rawbt" style="display:none;margin-bottom:10px;font-size:12px;color:#5a3a40;line-height:1.6;padding:12px;border:1.5px solid #e0e0e0;border-radius:12px;">
       Plan B si el cable USB no funciona directo:<br>1. Instala <b>RawBT</b> desde Play Store.<br>2. En RawBT elige la impresora USB (Epson).<br>3. Regresa aquí, guarda y toca “Probar”.
@@ -5003,7 +5007,7 @@ function savePrinterCfg(){
     :(printerCfg.base&&printerCfg.ip===newIp?printerCfg.base:undefined);
   printerCfg={
     mode:window._pcfgMode||'red',
-    usbName:printerCfg.usbName,
+    usbName:printerCfg.usbName, usbVid:printerCfg.usbVid, usbPid:printerCfg.usbPid,
     ip:newIp,
     base:keepBase,
     port:'8008',
