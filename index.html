@@ -4628,6 +4628,7 @@ let _printerOnline=false;
 let _printerHeartbeatId=null;
 async function checkPrinterStatus(){
   if(printerMode()==='rawbt'){updatePrinterStatus(true);return true;}
+  if(printerMode()==='imin'){ try{ await iminConectar(); updatePrinterStatus(true); return true; }catch(e){ updatePrinterStatus(false); return false; } }
   if(printerMode()==='usb'){const ok=!!(await usbReconectar());updatePrinterStatus(ok);return ok;}
   if(!printerCfg.ip){updatePrinterStatus(null);return;}
   const headers={'Content-Type':'text/xml; charset=utf-8','SOAPAction':'""'};
@@ -4735,7 +4736,111 @@ async function reimprimirTicket(saleData){
 // así el ticket sale igual por red o por USB (logo, QR, cajón).
 // ═══════════════════════════════
 function printerMode(){ return printerCfg.mode||'red'; }
-function printerListo(){ const m=printerMode(); return m==='usb'||m==='rawbt'||!!printerCfg.ip; }
+function printerListo(){ const m=printerMode(); return m==='usb'||m==='rawbt'||m==='imin'||!!printerCfg.ip; }
+
+// ── Impresora INTEGRADA de pantallas iMin (Swan 2, D4, etc.) ──
+// El servicio de impresión de iMin escucha en la misma pantalla: ws://127.0.0.1:8081/websocket
+// (protocolo del SDK oficial iMin JS Printer). El ticket se dibuja como imagen (mismo XML que la Epson)
+// para que se vea igual: columnas alineadas, logo y QR; luego se corta y, si es efectivo, abre el cajón.
+const _imin={ws:null,abriendo:null,cola:Promise.resolve(),espera:null};
+function _iminMsg(type,text,value){ return JSON.stringify({data:{text:text===undefined?'':text,value:value===undefined?-1:value,labelData:{}},type:type}); }
+function iminConectar(){
+  if(_imin.ws&&_imin.ws.readyState===1) return Promise.resolve(_imin.ws);
+  if(_imin.abriendo) return _imin.abriendo;
+  _imin.abriendo=new Promise((res,rej)=>{
+    let ws; try{ ws=new WebSocket('ws://127.0.0.1:8081/websocket'); }catch(e){ _imin.abriendo=null; rej(new Error('imin_no')); return; }
+    const t=setTimeout(()=>{ try{ws.close();}catch(e){} _imin.abriendo=null; rej(new Error('imin_no')); },5000);
+    ws.onopen=()=>{ clearTimeout(t); _imin.ws=ws; _imin.abriendo=null; ws.send(_iminMsg(1,'SPI')); res(ws);
+      clearInterval(_imin.hb); _imin.hb=setInterval(()=>{ if(ws.readyState===1) ws.send(_iminMsg(0,'ping')); },3000); };
+    ws.onmessage=e=>{ let d=null; try{ d=JSON.parse(e.data); }catch(x){} if(d&&d.type===2&&_imin.espera){ const f=_imin.espera; _imin.espera=null; f(d.data); } };
+    ws.onerror=()=>{ clearTimeout(t); _imin.abriendo=null; rej(new Error('imin_no')); };
+    ws.onclose=()=>{ if(_imin.ws===ws) _imin.ws=null; clearInterval(_imin.hb); };
+  });
+  return _imin.abriendo;
+}
+async function iminEstado(){
+  const ws=await iminConectar();
+  return new Promise(res=>{ _imin.espera=d=>res(d); ws.send(_iminMsg(2,'SPI')); setTimeout(()=>{ if(_imin.espera){ _imin.espera=null; res(null); } },3000); });
+}
+function iminErrorTexto(e){
+  const m=String(e&&e.message||e||'');
+  if(/imin_no|Failed to fetch|NetworkError|Load failed/i.test(m)) return 'No encontré la impresora de la pantalla. Usa esta opción solo en la pantalla iMin y, si Chrome pregunta, dale Permitir.';
+  if(/papel/.test(m)) return m;
+  return 'Impresora integrada: '+m;
+}
+// Dibuja el XML del ticket (formato ePOS de Epson) en un canvas de 576 px (papel de 80 mm)
+function eposXmlToCanvas(xml){
+  const doc=new DOMParser().parseFromString(xml,'text/xml');
+  const root=doc.getElementsByTagNameNS('*','epos-print')[0]; if(!root) throw new Error('xml_invalido');
+  const W=576, COLS=42, CW=W/COLS;
+  // Ajusta el tamaño de letra para que 42 caracteres quepan exactos en el papel
+  const mc=document.createElement('canvas').getContext('2d'); mc.font='100px "Courier New",Courier,monospace';
+  const FS=Math.floor(CW/(mc.measureText('M').width/100)*0.99*10)/10, LH=Math.round(FS*1.2);
+  const ops=[]; let y=8, align='left';
+  for(const el of root.children){
+    const tag=el.localName;
+    if(tag==='text'){
+      if(el.hasAttribute('align')) align=el.getAttribute('align');
+      const em=el.getAttribute('em')==='true', w=Math.max(1,parseInt(el.getAttribute('width')||'1')||1), h=Math.max(1,parseInt(el.getAttribute('height')||'1')||1);
+      const lines=el.textContent.split('\n'); if(lines[lines.length-1]==='') lines.pop();
+      lines.forEach(t=>{ ops.push({k:'t',t,y,align,em,w,h}); y+=LH*h; });
+    } else if(tag==='feed'){ y+=LH*Math.max(0,parseInt(el.getAttribute('line')||'1')||1); }
+    else if(tag==='image'){
+      const iw=parseInt(el.getAttribute('width')),ih=parseInt(el.getAttribute('height'));
+      ops.push({k:'i',iw,ih,raw:atob(el.textContent.trim()),y,align}); y+=ih+4;
+    } else if(tag==='symbol'&&window.qrcode){
+      const q=qrcode(0,{level_l:'L',level_m:'M',level_q:'Q',level_h:'H'}[el.getAttribute('level')]||'M'); q.addData(el.textContent.trim()); q.make();
+      const n=q.getModuleCount(), cell=Math.max(3,Math.floor(Math.min(240,W*0.42)/n));
+      ops.push({k:'q',q,n,cell,y,align}); y+=n*cell+8;
+    }
+  }
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=Math.ceil(y+16);
+  const cx=cv.getContext('2d'); cx.fillStyle='#fff'; cx.fillRect(0,0,cv.width,cv.height); cx.fillStyle='#000'; cx.textBaseline='top';
+  const xAl=(a,ancho)=>a==='center'?(W-ancho)/2:a==='right'?W-ancho:0;
+  ops.forEach(o=>{
+    if(o.k==='t'){
+      cx.save(); cx.font=(o.em?'bold ':'')+(FS*o.h).toFixed(2)+'px "Courier New",Courier,monospace';
+      const sx=o.w/o.h; let ancho=cx.measureText(o.t).width*sx; const sc=ancho>W?W/ancho:1; ancho=Math.min(ancho,W);
+      cx.translate(xAl(o.align,ancho),o.y); cx.scale(sx*sc,1); cx.fillText(o.t,0,0);
+      if(o.em){ cx.fillText(o.t,0.6,0); } cx.restore();
+    } else if(o.k==='i'){
+      const bw=Math.ceil(o.iw/8), x0=Math.round(xAl(o.align,o.iw));
+      for(let r=0;r<o.ih;r++) for(let c=0;c<o.iw;c++){ const b=o.raw.charCodeAt(r*bw+(c>>3)); if(b&(0x80>>(c&7))) cx.fillRect(x0+c,o.y+r,1,1); }
+    } else if(o.k==='q'){
+      const x0=Math.round(xAl(o.align,o.n*o.cell));
+      for(let r=0;r<o.n;r++) for(let c=0;c<o.n;c++) if(o.q.isDark(r,c)) cx.fillRect(x0+c*o.cell,o.y+r*o.cell,o.cell,o.cell);
+    }
+  });
+  return cv;
+}
+async function iminImprimirXML(xml){
+  if(!window.qrcode&&/<symbol/.test(xml)){ try{ await cargarQRLib(); }catch(e){} }
+  const corta=/<cut/.test(xml), cajon=/<pulse/.test(xml);
+  const cv=eposXmlToCanvas(xml);
+  const run=async()=>{
+    const ws=await iminConectar();
+    const st=await iminEstado().catch(()=>null);
+    if(st&&String(st.value)==='3') throw new Error('La tapa de la impresora está abierta.');
+    if(st&&String(st.value)==='7') throw new Error('No hay papel en la impresora.');
+    // En trozos para que el servicio de iMin no rechace imágenes muy largas
+    const PART=2400;
+    for(let y0=0;y0<cv.height;y0+=PART){
+      const h=Math.min(PART,cv.height-y0), pc=document.createElement('canvas'); pc.width=cv.width; pc.height=h;
+      pc.getContext('2d').drawImage(cv,0,y0,cv.width,h,0,0,cv.width,h);
+      const blob=await new Promise(r=>pc.toBlob(r,'image/png'));
+      const fd=new FormData(); fd.append('file',blob,'ticket.png');
+      const r=await fetch('http://127.0.0.1:8081/upload',{method:'POST',body:fd});
+      if(!r.ok) throw new Error('subida '+r.status);
+      await r.text();
+      ws.send(_iminMsg(27,'',1));   // imprimir la imagen subida, centrada
+      await new Promise(z=>setTimeout(z,350));
+    }
+    ws.send(_iminMsg(4,'',60));     // avanzar papel
+    if(corta) ws.send(_iminMsg(5,''));
+    if(cajon) ws.send(_iminMsg(100,''));
+  };
+  const p=_imin.cola.then(run,run); _imin.cola=p.catch(()=>{}); return p;
+}
 
 const _cp1252Extra={'€':0x80,'‚':0x82,'„':0x84,'…':0x85,'‘':0x91,'’':0x92,'“':0x93,'”':0x94,'•':0x95,'–':0x96,'—':0x97,'™':0x99};
 function _enc1252(s){
@@ -4886,6 +4991,10 @@ async function printLocal(saleData,type){
   if(type==='ticket'&&_pagosDe(saleData).ef>0&&printerCfg.drawerOnCash!==false&&!saleData._reprint){
     xml=xml.replace('<cut type="feed"/>','<cut type="feed"/><pulse drawer="drawer_1" time="pulse_100"/>');
   }
+  if(printerMode()==='imin'){
+    try{ await iminImprimirXML(xml); updatePrinterStatus(true); return {ok:true}; }
+    catch(e){ console.warn('iMin',e); updatePrinterStatus(false); showToast('⚠️ '+iminErrorTexto(e)); if(printerCfg.retryQueue!==false) enqueuePrintJob({type,sale:saleData,tries:0}); return {ok:false,error:e.message}; }
+  }
   let bytes;
   try{ bytes=eposXmlToEscPos(xml); }catch(e){ console.error(e); return {ok:false,error:'formato'}; }
   if(printerMode()==='rawbt'){ rawbtEnviar(bytes); return {ok:true}; }
@@ -4919,6 +5028,10 @@ function openPrinterCfg(){
       <button type="button" class="pcfg-modo" data-m="usb" onclick="pcfgModo('usb')" style="flex:1;height:44px;border-radius:12px;font-family:DM Sans,sans-serif;font-size:13px;font-weight:600;cursor:pointer;">🔌 Cable USB</button>
       <button type="button" class="pcfg-modo" data-m="red" onclick="pcfgModo('red')" style="flex:1;height:44px;border-radius:12px;font-family:DM Sans,sans-serif;font-size:13px;font-weight:600;cursor:pointer;">📶 Red (IP)</button>
       <button type="button" class="pcfg-modo" data-m="rawbt" onclick="pcfgModo('rawbt')" style="flex:1;height:44px;border-radius:12px;font-family:DM Sans,sans-serif;font-size:13px;font-weight:600;cursor:pointer;">📱 App RawBT</button>
+    </div>
+    <button type="button" class="pcfg-modo" data-m="imin" onclick="pcfgModo('imin')" style="width:100%;height:44px;border-radius:12px;font-family:DM Sans,sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin:-4px 0 12px;">🧾 Impresora integrada (pantalla iMin)</button>
+    <div id="pcfg-sec-imin" style="display:none;margin-bottom:10px;font-size:12px;color:#5a3a40;line-height:1.6;padding:12px;border:1.5px solid #e0e0e0;border-radius:12px;">
+      Para pantallas iMin que traen la impresora adentro (como la Swan 2). Solo funciona abriendo el POS en esa misma pantalla.<br>Toca <b>Probar conexión</b>; si Chrome pregunta si puede usar dispositivos de la red local, dale <b>Permitir</b>.
     </div>
     <div id="pcfg-sec-red">
       <div style="font-size:12px;color:#9a7075;margin-bottom:6px;">IP de la impresora</div>
@@ -4965,7 +5078,7 @@ function pcfgModo(m){
     b.style.color=on?'#fff':'#9a7075';
     b.style.border='1.5px solid '+(on?'#A6182E':'#e0c0c8');
   });
-  ['red','usb','rawbt'].forEach(k=>{ const el=document.getElementById('pcfg-sec-'+k); if(el) el.style.display=k===m?'block':'none'; });
+  ['red','usb','rawbt','imin'].forEach(k=>{ const el=document.getElementById('pcfg-sec-'+k); if(el) el.style.display=k===m?'block':'none'; });
   const st=document.getElementById('pcfg-status'); if(st) st.style.display='none';
   if(m==='usb') pcfgUsbEstado();
 }
@@ -4993,17 +5106,18 @@ async function testPrinter(){
     status.style.display='block'; status.style.background='#FFF7ED'; status.style.color='#92400E'; status.textContent='⏳ Mandando ticket de prueba…';
     const xml='<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print">'
       +'<text align="center" em="true" width="2" height="2">LADY FRESA&#10;</text>'
-      +'<text align="center" em="false" width="1" height="1">Prueba de impresora ('+(window._pcfgMode==='usb'?'USB':'RawBT')+')&#10;</text>'
+      +'<text align="center" em="false" width="1" height="1">Prueba de impresora ('+(window._pcfgMode==='usb'?'USB':window._pcfgMode==='imin'?'integrada':'RawBT')+')&#10;</text>'
+      +'<text align="left" em="false" width="1" height="1">Fresas con crema x2                 $198.00&#10;</text>'
       +'<text align="center" em="false" width="1" height="1">Acentos: á é í ó ú ñ ¡¿&#10;</text>'
       +'<feed line="2"/><cut type="feed"/></epos-print></s:Body></s:Envelope>';
     try{
-      const bytes=eposXmlToEscPos(xml);
-      if(window._pcfgMode==='rawbt') rawbtEnviar(bytes); else await usbEnviar(bytes);
+      if(window._pcfgMode==='imin') await iminImprimirXML(xml);
+      else { const bytes=eposXmlToEscPos(xml); if(window._pcfgMode==='rawbt') rawbtEnviar(bytes); else await usbEnviar(bytes); }
       status.style.background='#F0FDF4'; status.style.color='#166534';
       status.textContent=window._pcfgMode==='rawbt'?'✅ Enviado a RawBT. Si no salió, revisa que RawBT tenga elegida la impresora.':'✅ Ticket de prueba enviado. Si salió, dale GUARDAR.';
     }catch(e){
       status.style.background='#FEF2F2'; status.style.color='#991B1B';
-      status.textContent='❌ '+usbErrorTexto(e);
+      status.textContent='❌ '+(window._pcfgMode==='imin'?iminErrorTexto(e):usbErrorTexto(e));
     }
     return;
   }
