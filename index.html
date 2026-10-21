@@ -326,10 +326,8 @@ html, body {
 .top-chip { display: flex; align-items: center; gap: 8px; padding: 10px; border: 2px solid var(--border-2); border-radius: 12px; cursor: pointer; transition: all 0.15s; }
 .top-chip:active { transform: scale(0.97); }
 .top-chip { position: relative; }
-.top-mas { position: absolute; top: 3px; right: 3px; width: 40px; height: 34px; padding: 0; border: none; border-radius: 10px; background: #A6182E; color: #fff; font-family: inherit; font-size: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(166,24,46,.35); cursor: pointer; z-index: 3; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-.top-mas:active { transform: scale(0.92); }
-.top-chip.sel, .top-chip.sel-prem, .top-chip.sel-shot { padding-right: 44px; }
-.top-chip:not(.sel):not(.sel-prem):not(.sel-shot) .top-mas { display: none; }
+@keyframes topPop { 0%{transform:scale(1)} 40%{transform:scale(1.08)} 100%{transform:scale(1)} }
+.top-chip.doble { animation: topPop .25s ease; box-shadow: 0 0 0 2px #A6182E inset; }
 .top-chip.sel { border-color: var(--red); background: var(--red-light); }
 .top-chip.sel-prem { border-color: var(--purple); background: var(--purple-light); }
 .top-chip.sel-shot { border-color: var(--green); background: var(--green-light); }
@@ -2005,13 +2003,12 @@ function renderCustomBody() {
         const arr=CS.sel[modKey]||[];
         const cnt=arr.filter(x=>x===o.name).length;
         const isSel=cnt>0;
-        const cls=isSel?(isPrem?'sel-prem':isShot?'sel-shot':'sel'):'';
+        const cls=(isSel?(isPrem?'sel-prem':isShot?'sel-shot':'sel'):'')+(cnt>1?' doble':'');
         const priceLabel=topPrecioLabel(o,cnt);
         html+=`<div class="top-chip${cls?' '+cls:''}" data-mod="${sanitize(modKey)}" data-name="${sanitize(o.name)}" onclick="toggleTop(this.dataset.mod,this.dataset.name)">
           <span class="top-emoji">${tEmoji(o.name)}</span>
           <span class="top-name">${sanitize(o.name)}</span>
           <span class="top-price">${priceLabel}</span>
-          <button type="button" class="top-mas" aria-label="Agregar otra porción" onclick="event.stopPropagation();event.preventDefault();masTop(this.parentNode.dataset.mod,this.parentNode.dataset.name)">+1</button>
         </div>`;
       });
       html+=`</div>`;
@@ -2111,7 +2108,9 @@ function toggleTop(modKey, name, soloPintar) {
   const arr = CS.sel[modKey] || [];
   const cnt = soloPintar ? 0 : arr.filter(x => x === name).length;
   // Un toque lo pone y otro lo quita (antes un segundo toque lo duplicaba y cobraba de más). Para doble porción está "Doble Topping".
+  // 1er toque: lo pone · 2º toque: doble porción (×2) si hay lugar · 3er toque: lo quita
   if(soloPintar) {}
+  else if(cnt === 1 && arr.length < mod.max) { arr.push(name); }
   else if(cnt > 0) { for(let k=arr.length-1;k>=0;k--) if(arr[k]===name) arr.splice(k,1); }
   else { if(arr.length >= mod.max) { showToast('Máximo '+mod.max+' selecciones'); return; } arr.push(name); }
   CS.sel[modKey] = arr;
@@ -2129,7 +2128,7 @@ function toggleTop(modKey, name, soloPintar) {
     const isSel = chipCnt > 0;
     const opt = mod.options.find(o => o.name === chipName);
     // Clases
-    el.className = 'top-chip' + (isSel ? (' ' + (isPrem?'sel-prem':isShot?'sel-shot':'sel')) : '');
+    el.className = 'top-chip' + (isSel ? (' ' + (isPrem?'sel-prem':isShot?'sel-shot':'sel')) : '') + (chipCnt>1?' doble':'');
     // Precio
     const priceEl = el.querySelector('.top-price');
     if(priceEl && opt) {
