@@ -1483,7 +1483,7 @@ function pintarFolio(){
 // ═══════════════════════════════
 // SUCURSAL — se ve siempre arriba; encargado/admin pueden cambiarla
 // ═══════════════════════════════
-function puedeCambiarSucursal(){ const p=PERMS[currentUser?.role]||PERMS.cajero; return !!p.dashboard; }
+function puedeCambiarSucursal(){ const p=PERMS[currentUser?.role]||PERMS.cajero; return !!p.dashboard||!!currentUser?.permissions?.cambiar_sucursal; }
 function pintarSucursal(){
   const n=document.getElementById('tb-suc-name'); if(n) n.textContent=currentUser?.sucursal||'—';
   const b=document.getElementById('tb-suc'); if(b) b.classList.toggle('fija',!puedeCambiarSucursal());
@@ -1537,6 +1537,7 @@ async function cambiarSucursal(nueva){
   document.querySelector('.lf-modal')?.remove();
   if(!currentUser||nueva===currentUser.sucursal) return;
   currentUser.sucursal=nueva;
+  try{ localStorage.setItem('lf_suc_pantalla',nueva); }catch(e){}
   try{ const s=JSON.parse(localStorage.getItem('lf_session')||'{}'); if(s.user){ s.user.sucursal=nueva; localStorage.setItem('lf_session',JSON.stringify(s)); } }catch(e){}
   turnoId=null; sales=[]; retiros=[]; turnoStartTime=new Date();
   pintarSucursal();
@@ -1620,7 +1621,9 @@ async function pinEnter() {
       return;
     }
     currentUser = users[0];
-    localStorage.setItem('lf_session', JSON.stringify({savedAt:Date.now(), user:{id:currentUser.id,name:currentUser.name,role:currentUser.role,sucursal:currentUser.sucursal}}));
+    // Quien puede cambiar de sucursal entra en la última que eligió en ESTA pantalla
+    try{ const sd=localStorage.getItem('lf_suc_pantalla'); if(sd&&puedeCambiarSucursal()) currentUser.sucursal=sd; }catch(e){}
+    localStorage.setItem('lf_session', JSON.stringify({savedAt:Date.now(), user:{id:currentUser.id,name:currentUser.name,role:currentUser.role,sucursal:currentUser.sucursal,permissions:currentUser.permissions||{}}}));
     await abrirTurnoDB(currentUser);
     await reconstruirTurnoDesdeDB();
     showPOS();
