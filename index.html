@@ -326,7 +326,9 @@ html, body {
 .top-chip { display: flex; align-items: center; gap: 8px; padding: 10px; border: 2px solid var(--border-2); border-radius: 12px; cursor: pointer; transition: all 0.15s; }
 .top-chip:active { transform: scale(0.97); }
 .top-chip { position: relative; }
-.top-mas { position: absolute; top: -8px; right: -6px; min-width: 30px; height: 26px; padding: 0 7px; border-radius: 13px; background: #A6182E; color: #fff; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(166,24,46,.35); cursor: pointer; z-index: 2; }
+.top-mas { position: absolute; top: 3px; right: 3px; width: 40px; height: 34px; padding: 0; border: none; border-radius: 10px; background: #A6182E; color: #fff; font-family: inherit; font-size: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(166,24,46,.35); cursor: pointer; z-index: 3; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.top-mas:active { transform: scale(0.92); }
+.top-chip.sel, .top-chip.sel-prem, .top-chip.sel-shot { padding-right: 44px; }
 .top-chip:not(.sel):not(.sel-prem):not(.sel-shot) .top-mas { display: none; }
 .top-chip.sel { border-color: var(--red); background: var(--red-light); }
 .top-chip.sel-prem { border-color: var(--purple); background: var(--purple-light); }
@@ -2009,7 +2011,7 @@ function renderCustomBody() {
           <span class="top-emoji">${tEmoji(o.name)}</span>
           <span class="top-name">${sanitize(o.name)}</span>
           <span class="top-price">${priceLabel}</span>
-          <span class="top-mas" title="Agregar otra porción" onclick="event.stopPropagation();masTop(this.parentNode.dataset.mod,this.parentNode.dataset.name)">+1</span>
+          <button type="button" class="top-mas" aria-label="Agregar otra porción" onclick="event.stopPropagation();event.preventDefault();masTop(this.parentNode.dataset.mod,this.parentNode.dataset.name)">+1</button>
         </div>`;
       });
       html+=`</div>`;
