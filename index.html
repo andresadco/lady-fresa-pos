@@ -325,6 +325,9 @@ html, body {
 .tops-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .top-chip { display: flex; align-items: center; gap: 8px; padding: 10px; border: 2px solid var(--border-2); border-radius: 12px; cursor: pointer; transition: all 0.15s; }
 .top-chip:active { transform: scale(0.97); }
+.top-chip { position: relative; }
+.top-mas { position: absolute; top: -8px; right: -6px; min-width: 30px; height: 26px; padding: 0 7px; border-radius: 13px; background: #A6182E; color: #fff; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(166,24,46,.35); cursor: pointer; z-index: 2; }
+.top-chip:not(.sel):not(.sel-prem):not(.sel-shot) .top-mas { display: none; }
 .top-chip.sel { border-color: var(--red); background: var(--red-light); }
 .top-chip.sel-prem { border-color: var(--purple); background: var(--purple-light); }
 .top-chip.sel-shot { border-color: var(--green); background: var(--green-light); }
@@ -2001,11 +2004,12 @@ function renderCustomBody() {
         const cnt=arr.filter(x=>x===o.name).length;
         const isSel=cnt>0;
         const cls=isSel?(isPrem?'sel-prem':isShot?'sel-shot':'sel'):'';
-        const priceLabel=isSel?(o.extra===0?'gratis ✓':`+$${o.extra*cnt}${cnt>1?` ×${cnt}`:''}`):(o.extra===0?'gratis':'+$'+o.extra);
+        const priceLabel=topPrecioLabel(o,cnt);
         html+=`<div class="top-chip${cls?' '+cls:''}" data-mod="${sanitize(modKey)}" data-name="${sanitize(o.name)}" onclick="toggleTop(this.dataset.mod,this.dataset.name)">
           <span class="top-emoji">${tEmoji(o.name)}</span>
           <span class="top-name">${sanitize(o.name)}</span>
           <span class="top-price">${priceLabel}</span>
+          <span class="top-mas" title="Agregar otra porción" onclick="event.stopPropagation();masTop(this.parentNode.dataset.mod,this.parentNode.dataset.name)">+1</span>
         </div>`;
       });
       html+=`</div>`;
@@ -2088,12 +2092,25 @@ function selSingle(modKey, val) {
   updateCustomPrice();
 }
 
-function toggleTop(modKey, name) {
+function topPrecioLabel(o,cnt){
+  if(cnt>0) return o.extra===0 ? (cnt>1?'gratis ×'+cnt:'gratis ✓') : `+$${o.extra*cnt}${cnt>1?` ×${cnt}`:''}`;
+  return o.extra===0 ? 'gratis' : '+$'+o.extra;
+}
+// Botón +1 sobre un topping ya elegido: agrega otra porción del mismo (ej. nuez ×2 en los gratis)
+function masTop(modKey, name){
   const mod = MODS[modKey]; if(!mod) return;
   const arr = CS.sel[modKey] || [];
-  const cnt = arr.filter(x => x === name).length;
+  if(arr.length >= mod.max) { showToast('Máximo '+mod.max+' selecciones'); return; }
+  arr.push(name); CS.sel[modKey] = arr;
+  toggleTop(modKey, name, true);
+}
+function toggleTop(modKey, name, soloPintar) {
+  const mod = MODS[modKey]; if(!mod) return;
+  const arr = CS.sel[modKey] || [];
+  const cnt = soloPintar ? 0 : arr.filter(x => x === name).length;
   // Un toque lo pone y otro lo quita (antes un segundo toque lo duplicaba y cobraba de más). Para doble porción está "Doble Topping".
-  if(cnt > 0) { for(let k=arr.length-1;k>=0;k--) if(arr[k]===name) arr.splice(k,1); }
+  if(soloPintar) {}
+  else if(cnt > 0) { for(let k=arr.length-1;k>=0;k--) if(arr[k]===name) arr.splice(k,1); }
   else { if(arr.length >= mod.max) { showToast('Máximo '+mod.max+' selecciones'); return; } arr.push(name); }
   CS.sel[modKey] = arr;
 
@@ -2114,9 +2131,7 @@ function toggleTop(modKey, name) {
     // Precio
     const priceEl = el.querySelector('.top-price');
     if(priceEl && opt) {
-      priceEl.textContent = isSel
-        ? (opt.extra===0 ? 'gratis ✓' : `+$${opt.extra*chipCnt}${chipCnt>1?` ×${chipCnt}`:''}`)
-        : (opt.extra===0 ? 'gratis' : '+$'+opt.extra);
+      priceEl.textContent = topPrecioLabel(opt, chipCnt);
     }
   });
 
