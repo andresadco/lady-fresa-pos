@@ -4541,10 +4541,9 @@ function buildTicketXML(saleData,type='ticket'){
     }
     // Factura: QR a la página de autofactura (solo cuando la facturación está activa)
     if(String((ticketCfg||{}).ticket_factura||'')==='1'&&saleData.idempotency_key&&!saleData.canal){
-      const baseF=location.origin+location.pathname.replace(/[^/]*$/,'');
       xml+=divider();
       xml+=T('¿NECESITAS FACTURA?',{a:'center',b:true});
-      xml+=`<text align="center"/><symbol type="qrcode_model_2" level="level_m" width="4">${baseF}factura.html?t=${encodeURIComponent(saleData.idempotency_key)}</symbol>`;
+      xml+=`<text align="center"/><symbol type="qrcode_model_2" level="level_m" width="4">https://www.ladyfresa.com/factura/?t=${encodeURIComponent(saleData.idempotency_key)}</symbol>`;
       xml+=center('Escanea y factúrala tú misma');
       xml+=center('Válido durante el mes de compra');
     }
