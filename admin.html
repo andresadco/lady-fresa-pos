@@ -118,6 +118,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 .form-label { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; }
 .form-input { height: 38px; border: 1px solid var(--border-2); border-radius: var(--radius-sm); padding: 0 12px; font-size: 13px; font-family: 'DM Sans', 'Instrument Serif', sans-serif; color: var(--text); outline: none; background: var(--surface); }
 .form-input:focus { border-color: var(--pink); }
+#page-facturacion .form-input { width: 100%; }
 .form-select { height: 38px; border: 1px solid var(--border-2); border-radius: var(--radius-sm); padding: 0 12px; font-size: 13px; font-family: 'DM Sans', 'Instrument Serif', sans-serif; color: var(--text); outline: none; background: var(--surface); }
 .form-select:focus { border-color: var(--pink); }
 .form-actions { display: flex; gap: 8px; margin-top: 20px; justify-content: flex-end; }
@@ -425,6 +426,7 @@ html,body,button,.pin-btn{touch-action:manipulation;}
 
     <div class="nav-section">
       <div class="nav-section-label">Finanzas</div>
+      <button class="nav-item" onclick="goPage('facturacion',this)"><span class="nav-icon">🧾</span>Facturación</button>
       <button class="nav-item" onclick="goPage('gastos',this)"><span class="nav-icon">💸</span>Gastos</button>
       <button class="nav-item solo-admin" onclick="goPage('inversiones',this)"><span class="nav-icon">🤝</span>Inversiones</button>
     </div>
@@ -651,6 +653,43 @@ html,body,button,.pin-btn{touch-action:manipulation;}
           <thead><tr><th>Fecha</th><th>Insumo</th><th>Tipo</th><th>Cantidad</th><th>Usuario</th><th>Nota</th></tr></thead>
           <tbody id="tbody-movimientos"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-3);">Cargando...</td></tr></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- FACTURACIÓN CFDI -->
+    <div class="page" id="page-facturacion">
+      <div class="pg-head">
+        <div><div class="page-title">Facturación</div>
+        <div class="page-sub">Autofactura de clientas con el QR del ticket · facturas globales del mes (tú das el ok)</div></div>
+        <div class="pg-actions">
+          <select class="form-select" id="fx-mes" onchange="loadFacturacion()" style="max-width:190px;"></select>
+          <button class="btn btn-secondary" onclick="loadFacturacion()">↻</button>
+        </div>
+      </div>
+      <div id="fx-estado"></div>
+      <div class="card">
+        <div class="card-title"><span>Facturas globales · <span id="fx-mes-txt"></span></span><button class="btn btn-primary btn-sm solo-admin" onclick="fxPreparar()">Preparar borradores</button></div>
+        <div class="page-sub" style="margin:-8px 0 14px;">Una por forma de pago, con las ventas que nadie facturó. No se manda nada al SAT hasta que des <b>Timbrar</b>. Plazo del SAT: 72 horas después de cerrar el mes.</div>
+        <div id="fx-preview"></div>
+        <div id="fx-globales"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span>Facturas de clientas</span><span id="fx-cli-n" style="font-size:12px;color:var(--text-3);font-weight:400;"></span></div>
+        <div class="table-wrap"><table class="data-table">
+          <thead><tr><th>Fecha</th><th>RFC</th><th>Nombre</th><th>Total</th><th>Pago</th><th>Folio</th><th>Estado</th><th></th></tr></thead>
+          <tbody id="fx-clientes"><tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-3);">Cargando…</td></tr></tbody>
+        </table></div>
+      </div>
+      <div class="card solo-admin">
+        <div class="card-title">Datos de facturación</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
+          <div><label class="form-label">Facturar ventas desde</label><input class="form-input" type="date" id="fx-desde"><div style="font-size:11px;color:var(--text-3);margin-top:4px;">Lo de antes lo factura Parrot / el contador.</div></div>
+          <div><label class="form-label">C.P. del lugar de expedición</label><input class="form-input" id="fx-cp" maxlength="5" inputmode="numeric" placeholder="03100"></div>
+          <div><label class="form-label">Clave SAT del producto</label><input class="form-input" id="fx-clave" maxlength="8" inputmode="numeric" placeholder="90101501"><div style="font-size:11px;color:var(--text-3);margin-top:4px;">Confírmala con el contador.</div></div>
+          <div><label class="form-label">Serie</label><input class="form-input" id="fx-serie" maxlength="6" placeholder="LF"></div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:14px;font-size:13px;"><input type="checkbox" id="fx-ticket" style="width:18px;height:18px;accent-color:#A6182E;"> Imprimir el QR de factura en los tickets</label>
+        <div style="margin-top:14px;"><button class="btn btn-primary" onclick="fxGuardarCfg()">Guardar</button></div>
       </div>
     </div>
 
@@ -1615,6 +1654,7 @@ async function loadPage(page) {
   else if (page==='movimientos') { await loadInventario(); loadMovimientos(); }
   else if (page==='entradas') { await loadInventario(); loadEntradasPendientes(); }
   else if (page==='gastos') loadGastosOperativos();
+  else if (page==='facturacion') loadFacturacion();
   else if (page==='inversiones') loadInversiones();
   else if (page==='promociones') loadPromociones();
   else if (page==='categorias') loadCategorias();
@@ -2868,7 +2908,7 @@ async function saveCajaConfig(){
 // ── CONFIG ──
 async function loadConfig() {
   const cfg = await sbGet('config','order=id.asc&select=*');
-  const propias = /^(ticket_|comanda_|suc_|comision_)|^(fondo_caja|descuento_max|enviar_venta_gastos|descontar_inventario|hora_cierre)$/;
+  const propias = /^(ticket_|comanda_|suc_|comision_|factura_)|^(fondo_caja|descuento_max|enviar_venta_gastos|descontar_inventario|hora_cierre)$/;
   const lista = (Array.isArray(cfg)?cfg:[]).filter(c=>!propias.test(c.key));
   document.getElementById('config-rows').innerHTML = !lista.length ? '<div class="empty">Todo se configura en las otras pestañas</div>' : lista.map(c=>`
     <div class="config-row">
@@ -5172,6 +5212,142 @@ new MutationObserver(ms=>ms.forEach(m=>{
   if(!isOpen&&wasOpen) admNavPop('modal:'+el.id);
 })).observe(document.body,{subtree:true,attributes:true,attributeFilter:['class'],attributeOldValue:true});
 try{ history.replaceState({adm:'root'},''); history.pushState({adm:'base'},''); }catch(e){}
+
+// ═══════════════════════════════════════════════════
+// FACTURACIÓN (función lf-factura · Facturapi)
+// ═══════════════════════════════════════════════════
+const FX_FN = SB_URL + '/functions/v1/lf-factura';
+const FX_FORMA = { '01':'💵 Efectivo', '04':'💳 Tarjeta', '03':'🏦 Transferencia / apps' };
+const fxMoney = n => '$' + Number(n||0).toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2});
+const fxEsc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let fxState = { activa:false, prueba:false, rol:'', cfg:{} };
+async function fxCall(body, blob) {
+  if (LF_AUTH && LF_AUTH.expires_at*1000 - Date.now() < 90000) await lfAuthRefresh();
+  const r = await fetch(FX_FN, { method:'POST', headers:{ 'Content-Type':'application/json', apikey:SB_KEY, Authorization:'Bearer '+(LF_AUTH?LF_AUTH.access_token:SB_KEY) }, body: JSON.stringify(body) });
+  if (blob) return r.ok && !/json/.test(r.headers.get('Content-Type')||'') ? { ok:true, blob: await r.blob(), nombre: ((r.headers.get('Content-Disposition')||'').match(/filename="([^"]+)"/)||[])[1] } : { ok:false };
+  return r.json().catch(() => ({ ok:false, error:'servidor' }));
+}
+function fxMeses() {
+  const sel = document.getElementById('fx-mes'); if (sel.options.length) return;
+  const now = new Date(Date.now() - 6*3600e3);
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+    const v = d.toISOString().slice(0,7);
+    sel.add(new Option(d.toLocaleDateString('es-MX', { month:'long', year:'numeric', timeZone:'UTC' }), v));
+  }
+  if (now.getUTCDate() <= 5) sel.selectedIndex = 1;   // primeros días: el mes que se acaba de cerrar
+}
+async function loadFacturacion() {
+  fxMeses();
+  const mes = document.getElementById('fx-mes').value;
+  document.getElementById('fx-mes-txt').textContent = document.getElementById('fx-mes').selectedOptions[0].text;
+  const [st, lista, prev] = await Promise.all([ fxCall({accion:'estado'}), fxCall({accion:'lista', periodo:mes}), fxCall({accion:'preview', periodo:mes}) ]);
+  if (!st.ok) { document.getElementById('fx-estado').innerHTML = '<div class="card">No se pudo abrir la facturación (' + fxEsc(st.error||'') + '). Vuelve a entrar al admin.</div>'; return; }
+  fxState = st;
+  const c = st.cfg || {};
+  document.getElementById('fx-desde').value = c.factura_desde || '';
+  document.getElementById('fx-cp').value = c.factura_cp || '';
+  document.getElementById('fx-clave').value = c.factura_clave_prod || '';
+  document.getElementById('fx-serie').value = c.factura_serie || '';
+  document.getElementById('fx-ticket').checked = c.ticket_factura === '1';
+  const falta = [];
+  if (!st.activa) falta.push('Conectar la cuenta de Facturapi (llave)');
+  if (!/^\d{5}$/.test(c.factura_cp||'')) falta.push('C.P. del lugar de expedición');
+  if (!c.factura_desde) falta.push('Fecha desde la que se factura aquí');
+  if (c.ticket_factura !== '1') falta.push('Prender el QR en los tickets');
+  document.getElementById('fx-estado').innerHTML = `<div class="card" style="border-left:3px solid #A6182E;">
+    <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
+      <div><b>${st.activa ? (st.prueba ? '🧪 Conectada en modo prueba' : '✅ Conectada · facturas reales') : '⏳ Falta conectar Facturapi'}</b>
+      <div style="font-size:12px;color:var(--text-3);margin-top:3px;">${st.prueba ? 'Las facturas de prueba no van al SAT ni se cobran.' : (st.activa ? 'Lo que se timbre aquí ya va al SAT.' : 'Mientras no se conecte, los tickets no traen QR y nada se manda al SAT.')}</div></div>
+    </div>
+    ${falta.length ? '<div style="margin-top:10px;font-size:13px;color:var(--text-2);">Pendiente:<br>' + falta.map(f => '☐ ' + fxEsc(f)).join('<br>') + '</div>' : ''}
+  </div>`;
+  // Vista previa en vivo
+  const pv = (prev.ok ? prev.preview : []) || [];
+  document.getElementById('fx-preview').innerHTML = pv.length
+    ? '<div style="font-size:12px;color:var(--text-3);margin-bottom:6px;">Ventas sin facturar ahorita (en vivo):</div><div class="kpi-row">' + pv.map(g => `<div class="kpi"><div class="k-l">${FX_FORMA[g.forma]||g.forma}</div><div class="k-v">${fxMoney(g.total)}</div><div class="k-s">${g.tickets} tickets · ${Object.entries(g.por_sucursal||{}).map(([s,t]) => fxEsc(s)+' '+fxMoney(t)).join(' · ')}</div></div>`).join('') + '</div>'
+    : '<div class="empty" style="padding:10px 0;">No hay ventas pendientes de facturar en este mes.</div>';
+  const fs = (lista.ok ? lista.facturas : []) || [];
+  const glob = fs.filter(f => f.tipo === 'global' && f.estado !== 'cancelada' || (f.tipo === 'global' && f.estado === 'cancelada' && f.uuid));
+  const esAdmin = st.rol === 'admin';
+  document.getElementById('fx-globales').innerHTML = glob.length ? glob.map(f => {
+    const ps = (f.detalle && f.detalle.por_sucursal) || {};
+    const est = { borrador:'<span class="badge" style="background:#FDEEF1;color:#672626;">Borrador · sin timbrar</span>', timbrada:'<span class="badge" style="background:#A6182E;color:#fff;">Timbrada</span>', error:'<span class="badge" style="background:#FDEEF1;color:#A6182E;">No la aceptó el SAT</span>', cancelada:'<span class="badge">Cancelada</span>' }[f.estado] || f.estado;
+    let acc = '';
+    if (f.estado === 'borrador' || f.estado === 'error') acc = (esAdmin ? `<button class="btn btn-primary btn-sm" onclick="fxTimbrar(${f.id},'${f.forma_pago}',${f.total})">Timbrar</button> <button class="btn btn-ghost btn-sm" onclick="fxCancelar(${f.id},true)">Descartar</button>` : '');
+    if (f.estado === 'timbrada') acc = `<button class="btn btn-secondary btn-sm" onclick="fxBajar(${f.id},'pdf')">PDF</button> <button class="btn btn-secondary btn-sm" onclick="fxBajar(${f.id},'xml')">XML</button>` + (esAdmin ? ` <button class="btn btn-ghost btn-sm" onclick="fxCancelar(${f.id},false)">Cancelar</button>` : '');
+    return `<div style="border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:10px;">
+      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
+        <div><b>${FX_FORMA[f.forma_pago]||f.forma_pago}</b> · ${fxMoney(f.total)} · ${f.tickets} tickets ${est}</div>
+        <div>${acc}</div>
+      </div>
+      <div style="font-size:12px;color:var(--text-3);margin-top:6px;">${Object.entries(ps).map(([s,t]) => fxEsc(s)+' '+fxMoney(t)).join(' · ')}${f.uuid ? ' · Folio ' + fxEsc((f.serie||'')+(f.folio||'')) + ' · UUID ' + fxEsc(f.uuid) : ''}${f.timbrada_por ? ' · Timbró ' + fxEsc(f.timbrada_por) : ''}</div>
+      ${f.error ? `<div style="font-size:12px;color:#A6182E;margin-top:6px;">${fxEsc(f.error)}</div>` : ''}
+      ${f.cancel_motivo && f.estado==='timbrada' ? `<div style="font-size:12px;color:var(--text-3);margin-top:4px;">${fxEsc(f.cancel_motivo)}</div>` : ''}
+    </div>`; }).join('')
+    : '<div style="font-size:13px;color:var(--text-3);margin-top:8px;">Todavía no hay borradores de este mes. Dale <b>Preparar borradores</b> cuando cierre el mes.</div>';
+  const cli = fs.filter(f => f.tipo === 'cliente' && f.estado !== 'borrador');
+  document.getElementById('fx-cli-n').textContent = cli.filter(f => f.estado === 'timbrada').length + ' timbradas';
+  document.getElementById('fx-clientes').innerHTML = cli.length ? cli.map(f => `<tr>
+      <td>${new Date(f.created_at).toLocaleDateString('es-MX',{day:'numeric',month:'short',timeZone:'America/Mexico_City'})}</td>
+      <td>${fxEsc(f.rfc)}</td><td>${fxEsc(f.razon_social)}</td><td>${fxMoney(f.total)}</td><td>${FX_FORMA[f.forma_pago]||''}</td>
+      <td>${fxEsc((f.serie||'')+(f.folio||''))}</td>
+      <td>${f.estado==='timbrada'?'Timbrada':f.estado==='error'?'<span title="'+fxEsc(f.error)+'" style="color:#A6182E;">Rechazada</span>':'Cancelada'}</td>
+      <td>${f.estado==='timbrada'?`<button class="btn btn-secondary btn-sm" onclick="fxBajar(${f.id},'pdf')">PDF</button> <button class="btn btn-secondary btn-sm" onclick="fxBajar(${f.id},'xml')">XML</button>${esAdmin?` <button class="btn btn-ghost btn-sm" onclick="fxCancelar(${f.id},false)">Cancelar</button>`:''}`:''}</td>
+    </tr>`).join('') : '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-3);">Nadie ha facturado en este mes.</td></tr>';
+}
+async function fxPreparar() {
+  const mes = document.getElementById('fx-mes').value;
+  if (!confirm('¿Preparar los borradores de las facturas globales de ' + document.getElementById('fx-mes').selectedOptions[0].text + '?\n\nNo se manda nada al SAT todavía.')) return;
+  const r = await fxCall({ accion:'preparar', periodo:mes });
+  if (!r.ok) { toast('⚠ No se pudo: ' + (r.error||'')); return; }
+  toast(r.borradores.length ? '✓ ' + r.borradores.length + ' borradores listos para revisar' : 'No hay ventas sin facturar en ese mes');
+  loadFacturacion();
+}
+async function fxTimbrar(id, forma, total) {
+  if (!fxState.activa) { toast('⚠ Primero hay que conectar Facturapi'); return; }
+  const real = !fxState.prueba;
+  if (!confirm((real ? '⚠ FACTURA REAL · se manda al SAT\n\n' : '🧪 Modo prueba\n\n') + 'Timbrar la factura global de ' + (FX_FORMA[forma]||forma) + ' por ' + fxMoney(total) + '?')) return;
+  toast('Timbrando…');
+  const r = await fxCall({ accion:'timbrar', id });
+  if (r.ok) toast('✓ Timbrada' + (r.quitados ? ' · se quitaron ' + r.quitados + ' tickets que ya se habían facturado' : ''));
+  else toast('⚠ ' + (r.error === 'sat' ? 'El SAT la rechazó: ' + (r.detalle||'') : r.error === 'cp_emisor' ? 'Falta el C.P. de expedición' : (r.error||'Error')));
+  loadFacturacion();
+}
+async function fxCancelar(id, borrador) {
+  if (borrador) { if (!confirm('¿Descartar este borrador?')) return; }
+  else {
+    const m = prompt('Motivo de cancelación ante el SAT:\n02 = Comprobante con errores sin relación (el más común)\n03 = No se llevó a cabo la operación\n\nEscribe 02 o 03:', '02');
+    if (!m) return;
+    if (!confirm('¿Cancelar esta factura ante el SAT? No se puede deshacer.')) return;
+    const r = await fxCall({ accion:'cancelar', id, motivo:m.trim() });
+    toast(r.ok ? (r.pendiente ? 'Solicitud enviada · la clienta debe aceptarla' : '✓ Cancelada') : '⚠ ' + (r.detalle || r.error || 'Error'));
+    return loadFacturacion();
+  }
+  const r = await fxCall({ accion:'cancelar', id });
+  toast(r.ok ? 'Borrador descartado' : '⚠ ' + (r.error||'Error'));
+  loadFacturacion();
+}
+async function fxBajar(id, tipo) {
+  const r = await fxCall({ accion:'descargar', id, tipo }, true);
+  if (!r.ok) { toast('⚠ No se pudo descargar'); return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(r.blob); a.download = r.nombre || ('factura.' + tipo); document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+async function fxGuardarCfg() {
+  const cp = document.getElementById('fx-cp').value.trim(), clave = document.getElementById('fx-clave').value.trim();
+  if (cp && !/^\d{5}$/.test(cp)) { toast('⚠ El C.P. son 5 números'); return; }
+  if (clave && !/^\d{8}$/.test(clave)) { toast('⚠ La clave SAT son 8 números'); return; }
+  const tk = document.getElementById('fx-ticket').checked;
+  if (tk && !fxState.activa) { toast('⚠ Primero hay que conectar Facturapi; si no, el QR llevaría a una página sin facturación'); document.getElementById('fx-ticket').checked = false; return; }
+  const ok = await sbUpsertConfig([
+    { key:'factura_desde', value: document.getElementById('fx-desde').value || '' },
+    { key:'factura_cp', value: cp }, { key:'factura_clave_prod', value: clave },
+    { key:'factura_serie', value: document.getElementById('fx-serie').value.trim().toUpperCase() },
+    { key:'ticket_factura', value: tk ? '1' : '' },
+  ]);
+  toast(ok ? '✓ Guardado' : '⚠ No se pudo guardar');
+  if (ok) loadFacturacion();
+}
 </script>
 </body>
 </html>

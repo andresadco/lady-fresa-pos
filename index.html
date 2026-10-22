@@ -4539,6 +4539,15 @@ function buildTicketXML(saleData,type='ticket'){
       xml+=center('Junta '+req+' sellos y te regalamos');
       xml+=center('una fresa. Pide tu tarjeta en caja.');
     }
+    // Factura: QR a la página de autofactura (solo cuando la facturación está activa)
+    if(String((ticketCfg||{}).ticket_factura||'')==='1'&&saleData.idempotency_key&&!saleData.canal){
+      const baseF=location.origin+location.pathname.replace(/[^/]*$/,'');
+      xml+=divider();
+      xml+=T('¿NECESITAS FACTURA?',{a:'center',b:true});
+      xml+=`<text align="center"/><symbol type="qrcode_model_2" level="level_m" width="4">${baseF}factura.html?t=${encodeURIComponent(saleData.idempotency_key)}</symbol>`;
+      xml+=center('Escanea y factúrala tú misma');
+      xml+=center('Válido durante el mes de compra');
+    }
     if(qrUrl&&!saleData.loyaltyClienteQR){
       xml+=divider();
       xml+=`<text align="center"/><symbol type="qrcode_model_2" level="level_l" width="4">${qrUrl.replace(/&/g,'&amp;').replace(/</g,'').replace(/>/g,'')}</symbol>`;
