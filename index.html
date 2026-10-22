@@ -4695,7 +4695,7 @@ window.addEventListener('online',()=>{setTimeout(flushPrintQueue,1000);});
 async function printSale(saleData){
   if(printerCfg.ticket!==false){
     const r=await printEpson(saleData,'ticket');
-    if(!r.ok&&!printerListo()) showShareSheet(saleData);
+    if(!r.ok&&!printerListo()) avisoSinImpresora();
   }
   if(printerCfg.comanda!==false){await printEpson(saleData,'comanda');}
 }
@@ -4749,10 +4749,14 @@ function showShareSheet(saleData){
   document.body.appendChild(div);
 }
 
+// Pantalla sin impresora configurada: avisar claro en vez de abrir el menú de compartir de Android
+function avisoSinImpresora(){
+  lfConfirm({icon:'🖨️',title:'Esta pantalla no tiene impresora',message:'La venta sí se guardó. Para que salga el ticket, configura la impresora en esta pantalla.',okText:'Configurar ahora',cancelText:'Después'}).then(ok=>{ if(ok) openPrinterCfg(); });
+}
 function _sfShare(){cerrarSuccessFlash();if(window._lastSale) showShareSheet(window._lastSale);}
 function _sfReprint(){cerrarSuccessFlash();if(window._lastSale) reimprimirTicket(window._lastSale);}
 async function reimprimirTicket(saleData){
-  if(!printerListo()){ showShareSheet(saleData); return; }
+  if(!printerListo()){ avisoSinImpresora(); return; }
   const r=await printEpson({...saleData,_reprint:true},'ticket');
   showToast(r&&r.ok?'🖨️ Ticket reimpreso':'⚠️ No se pudo imprimir. Revisa la impresora.');
 }
