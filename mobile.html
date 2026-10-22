@@ -356,7 +356,7 @@ async function cargar(manual){
     if(ord.length) _ultimaId=ord[0].id;
     D={ord,items,cmp:stats(cmpCorte,cmpItems),R,prods:[]};
     pintar();
-    $('act').textContent=new Date().toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit'});
+    $('act').textContent=new Date().toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',timeZone:'America/Mexico_City'})+' CDMX';
   }catch(e){ console.warn(e); $('act').textContent='Sin conexión'; if(manual) aviso('No se pudo actualizar. Revisa tu internet.'); }
 }
 
