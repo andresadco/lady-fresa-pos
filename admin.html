@@ -682,6 +682,14 @@ html,body,button,.pin-btn{touch-action:manipulation;}
       </div>
       <div class="card solo-admin">
         <div class="card-title">Datos de facturación</div>
+        <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border);">
+          <label class="form-label">Llave secreta de Facturapi</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+            <input class="form-input" id="fx-llave" type="password" autocomplete="off" placeholder="sk_test_… o sk_live_…" style="flex:1;min-width:220px;">
+            <button class="btn btn-primary" onclick="fxGuardarLlave()">Conectar</button>
+          </div>
+          <div style="font-size:11px;color:var(--text-3);margin-top:4px;">En Facturapi: tu organización → Desarrolladores → Llaves. Se guarda cifrada y nadie la vuelve a ver. Empieza con la de prueba (sk_test).</div>
+        </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
           <div><label class="form-label">Facturar ventas desde</label><input class="form-input" type="date" id="fx-desde"><div style="font-size:11px;color:var(--text-3);margin-top:4px;">Lo de antes lo factura Parrot / el contador.</div></div>
           <div><label class="form-label">C.P. del lugar de expedición</label><input class="form-input" id="fx-cp" maxlength="5" inputmode="numeric" placeholder="03100"></div>
@@ -5332,6 +5340,16 @@ async function fxBajar(id, tipo) {
   const r = await fxCall({ accion:'descargar', id, tipo }, true);
   if (!r.ok) { toast('⚠ No se pudo descargar'); return; }
   const a = document.createElement('a'); a.href = URL.createObjectURL(r.blob); a.download = r.nombre || ('factura.' + tipo); document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+async function fxGuardarLlave() {
+  const el = document.getElementById('fx-llave'), k = el.value.trim();
+  if (!/^sk_(test|live)_/.test(k)) { toast('⚠ La llave empieza con sk_test_ o sk_live_'); return; }
+  if (k.startsWith('sk_live_') && !confirm('⚠ Esta es la llave REAL: lo que se timbre irá al SAT. ¿Conectar?')) return;
+  toast('Revisando la llave…');
+  const r = await fxCall({ accion:'llave', llave:k });
+  el.value = '';
+  toast(r.ok ? (r.prueba ? '✓ Conectada en modo prueba' : '✓ Conectada · facturas reales') : (r.error === 'invalida' ? '⚠ Facturapi no aceptó esa llave' : '⚠ No se pudo (' + (r.error||'') + ')'));
+  if (r.ok) loadFacturacion();
 }
 async function fxGuardarCfg() {
   const cp = document.getElementById('fx-cp').value.trim(), clave = document.getElementById('fx-clave').value.trim();
