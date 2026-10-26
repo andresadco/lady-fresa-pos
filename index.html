@@ -122,6 +122,10 @@ html, body {
 .tb-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .tb-btn { width: 38px; height: 38px; border-radius: 12px; border: 1.5px solid var(--border-2); background: var(--bg); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .tb-btn:active { background: var(--red-light); }
+.tb-app { height: 38px; padding: 0 12px; border-radius: 19px; border: 2px solid var(--red); background: #fff; color: var(--red); font-family: 'Lilita One', serif; font-size: 14px; letter-spacing: .5px; display: flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+.tb-app.on { background: var(--red); color: #fff; }
+.app-modal-btn { width: 100%; height: 64px; border-radius: 16px; border: 2px solid var(--red-mid); background: #fff; color: var(--red-dark); font-family: 'Lilita One', serif; font-size: 22px; letter-spacing: .5px; cursor: pointer; margin-top: 10px; }
+.app-modal-btn:active { transform: scale(.98); background: var(--red-light); }
 .tb-ll { height: 38px; padding: 0 14px; border-radius: 19px; border: none; background: var(--red); color: #fff; font-family: 'Lilita One', serif; font-size: 15px; letter-spacing: .5px; display: flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; flex-shrink: 0; box-shadow: 0 3px 10px rgba(166,24,46,.25); }
 .tb-ll img { width: 22px; height: 22px; border-radius: 50%; background: #fff; }
 .tb-ll:active { transform: scale(.97); }
@@ -931,6 +935,7 @@ html,body,button,.pin-btn{touch-action:manipulation;}
       <div class="tb-order-svc" id="tb-svc-label">Mostrador · <span id="tb-user">—</span></div>
     </div>
     <div class="tb-actions">
+ <button class="tb-app" id="tb-app" onclick="abrirPedidoApp()" title="Pedido de Uber, DiDi o Rappi">🛵 App</button>
       <button class="tb-ll" onclick="abrirLLQ()" title="Lady Lovers: sellos y registro"><img src="img/marca/sello.png" alt="">Lady Lovers</button>
       <button class="tb-btn tb-lbl" onclick="openHist()" title="Ventas del turno">📋<span>Ventas</span></button>
       <button class="tb-btn tb-hide" onclick="openCierreSheet()" title="Cierre de turno" id="btn-cierre" style="display:none;">🔐</button>
@@ -1407,7 +1412,7 @@ let promosCargadas = [];
 let payMethod = 'efectivo';
 let svcType = 'mostrador';
 // Delivery: de qué app viene el pedido. Uber/DiDi/Rappi ya vienen pagados en la app.
-let canal=null, _llPreguntado=false;
+let canal=null, _llPreguntado=false, _appRef=null;
 const CANALES={uber:'Uber Eats',didi:'DiDi Food',rappi:'Rappi',propio:'Delivery propio'};
 const esApp=()=>svcType==='delivery'&&['uber','didi','rappi'].includes(canal);
 let catFilter = 'all';
@@ -2313,7 +2318,7 @@ function renderOrderItems(){
   totEl.innerHTML=descRow
     +`<div class="ot-row" style="font-size:11px;color:var(--text-3);"><span>IVA incluido</span><span>$${iva}</span></div>`
     +`<div class="ot-row"><span>Total</span><span style="color:var(--red)">$${total.toLocaleString('es-MX',{minimumFractionDigits:2})}</span></div>`;
-  const cb=document.getElementById('cobrar-btn'); cb.disabled=order.length===0; cb.textContent=order.length?'COBRAR $'+total.toLocaleString('es-MX',{minimumFractionDigits:2}):'COBRAR';
+  const cb=document.getElementById('cobrar-btn'); cb.disabled=order.length===0; cb.textContent=(esApp()&&_appRef)?(order.length?'GUARDAR PEDIDO '+(CANALES[canal]||'').split(' ')[0].toUpperCase()+' $'+total.toLocaleString('es-MX',{minimumFractionDigits:2}):'AGREGA PRODUCTOS'):(order.length?'COBRAR $'+total.toLocaleString('es-MX',{minimumFractionDigits:2}):'COBRAR');
 }
 
 function chgQty(idx,d){
@@ -2327,10 +2332,45 @@ function setSvc(s,btn){
   document.querySelectorAll('.svc-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('tb-svc-label').textContent=(s==='mostrador'?'Mostrador':s==='para-llevar'?'Para llevar':'Delivery')+' · '+(currentUser?.name||'—');
-  if(s!=='delivery') canal=null;
-  actualizarCanalUI();
+  if(s!=='delivery'){ canal=null; _appRef=null; }
+  actualizarCanalUI(); pintarModoApp();
 }
-function setCanal(c){ canal=c; actualizarCanalUI(); }
+function setCanal(c){ canal=c; if(!['uber','didi','rappi'].includes(c)) _appRef=null; actualizarCanalUI(); }
+// ── Pedido de app en 3 pasos: número → app → productos → Guardar (sin hoja de cobro) ──
+function abrirPedidoApp(){
+  if(esApp()&&_appRef){ lfConfirm({icon:'🛵',title:'Pedido de '+CANALES[canal]+' #'+_appRef,message:'¿Lo cancelas y regresas a mostrador?',okText:'Sí, cancelar',cancelText:'Seguir'}).then(ok=>{ if(ok) salirModoApp(); }); return; }
+  document.querySelectorAll('.lf-app-modal').forEach(x=>x.remove());
+  const d=document.createElement('div'); d.className='lf-modal lf-app-modal';
+  d.style.cssText='position:fixed;inset:0;background:rgba(26,5,8,0.55);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;';
+  d.onclick=e=>{ if(e.target===d) d.remove(); };
+  d.innerHTML=`<div style="background:#fff;border-radius:24px;padding:22px;max-width:420px;width:100%;">
+    <div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-family:'Lilita One',serif;font-size:24px;color:#A6182E;">🛵 Pedido de app</div><button onclick="this.closest('.lf-app-modal').remove()" style="border:none;background:none;font-size:22px;color:#9a7075;cursor:pointer;width:40px;height:40px;">✕</button></div>
+    <div style="font-size:13px;color:#9a7075;margin:4px 0 12px;">1. Escribe el número de pedido que sale en la tablet · 2. Toca la app</div>
+    <input id="app-ref-in" maxlength="20" autocomplete="off" autocapitalize="characters" placeholder="Número de pedido (ej. A1B2)" style="width:100%;height:56px;border:2px solid #f0d6dc;border-radius:14px;padding:0 14px;font-size:20px;font-weight:700;text-transform:uppercase;outline:none;">
+    <button class="app-modal-btn" onclick="empezarPedidoApp('uber')">Uber Eats</button>
+    <button class="app-modal-btn" onclick="empezarPedidoApp('didi')">DiDi Food</button>
+    <button class="app-modal-btn" onclick="empezarPedidoApp('rappi')">Rappi</button>
+  </div>`;
+  document.body.appendChild(d);
+  setTimeout(()=>document.getElementById('app-ref-in')?.focus(),80);
+}
+function empezarPedidoApp(app){
+  const inp=document.getElementById('app-ref-in'); const ref=(inp?.value||'').trim().toUpperCase().replace(/^#/,'');
+  if(ref.length<3){ if(inp){ inp.style.borderColor='#A6182E'; inp.focus(); } showToast('Primero escribe el número de pedido de la app'); return; }
+  document.querySelectorAll('.lf-app-modal').forEach(x=>x.remove());
+  _appRef=ref; svcType='delivery'; canal=app; _llPreguntado=true;
+  document.querySelectorAll('.svc-btn:not(.canal-btn)').forEach(b=>b.classList.toggle('active',/Delivery/.test(b.textContent)));
+  actualizarCanalUI(); pintarModoApp();
+  showToast('🛵 '+CANALES[app]+' #'+ref+' · agrega los productos (precios de app)');
+}
+function salirModoApp(){ _appRef=null; svcType='mostrador'; canal=null; _llPreguntado=false;
+  document.querySelectorAll('.svc-btn:not(.canal-btn)').forEach((b,i)=>b.classList.toggle('active',i===0));
+  actualizarCanalUI(); pintarModoApp(); }
+function pintarModoApp(){
+  const b=document.getElementById('tb-app'); const on=esApp()&&!!_appRef;
+  if(b){ b.classList.toggle('on',on); b.textContent=on?'🛵 #'+_appRef+' ✕':'🛵 App'; }
+  const l=document.getElementById('tb-svc-label'); if(l&&on) l.textContent='🛵 '+CANALES[canal]+' #'+_appRef+' · '+(currentUser?.name||'—');
+}
 function actualizarCanalUI(){
   const row=document.getElementById('canal-row'); if(row) row.style.display=svcType==='delivery'?'flex':'none';
   document.querySelectorAll('.canal-btn').forEach(b=>b.classList.toggle('active',b.dataset.c===canal));
@@ -2380,7 +2420,7 @@ async function cancelOrder(){
     danger:true,
   });
   if(!ok) return;
-  order=[]; discount=0; discountMonto=0; promoActiva=null; payMethod='efectivo'; svcType='mostrador'; canal=null; _llPreguntado=false; _ventaKey=null; promoQuitadaManual=false;
+  order=[]; discount=0; discountMonto=0; promoActiva=null; payMethod='efectivo'; svcType='mostrador'; canal=null; _llPreguntado=false; _ventaKey=null; promoQuitadaManual=false; _appRef=null; try{ actualizarCanalUI(); pintarModoApp(); }catch(e){}
   document.getElementById('client-input').value='';
   loyaltyCliente=null; loyaltyAplicarCanje=false; if(typeof clearClienteLealtad==='function') clearClienteLealtad();
   document.getElementById('promo-applied-bar').classList.add('hidden');
@@ -2447,6 +2487,11 @@ function preguntarLadyLover(){
 }
 function openCobro(){
   if(_cortePendiente){ avisoCortePendiente(); return; }
+  if(esApp()&&_appRef&&order.length){   // pedido de app: ya viene pagado, se guarda directo
+    const ref=document.getElementById('pago-ref'); if(ref) ref.value=_appRef;
+    const btn=document.getElementById('confirmar-btn'); if(btn) btn.disabled=false;
+    closeSheet('order'); confirmarPago(); return;
+  }
   if(svcType==='delivery'&&!canal){ showToast('Elige de qué app es el pedido: Uber, DiDi, Rappi o Propio'); return; }
   if(loyaltyConfig?.activo!==false&&!loyaltyCliente&&!esApp()&&!_llPreguntado&&order.length){ preguntarLadyLover(); return; }
   const{total}=calcTotals();
@@ -2570,7 +2615,8 @@ async function confirmarPago(){
 
     // Resetear orden
     _ventaKey=null; promoQuitadaManual=false;
-    orderN=(Number(saleData.id)||orderN)+1; order=[]; discount=0; discountMonto=0; payMethod='efectivo'; svcType='mostrador'; canal=null; _llPreguntado=false; promoActiva=null;
+    orderN=(Number(saleData.id)||orderN)+1; order=[]; discount=0; discountMonto=0; payMethod='efectivo'; svcType='mostrador'; canal=null; _llPreguntado=false; promoActiva=null; _appRef=null;
+    document.querySelectorAll('.svc-btn:not(.canal-btn)').forEach((b,i)=>b.classList.toggle('active',i===0)); actualizarCanalUI(); pintarModoApp();
     pintarFolio(); cargarFolio();
     btn.textContent='CONFIRMAR PAGO'; btn.classList.remove('loading');
     document.querySelectorAll('.disc-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
