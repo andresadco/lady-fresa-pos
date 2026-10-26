@@ -1839,16 +1839,37 @@ function construirCatalogo(prods,grupos,opciones,pm){
   grupos=Array.isArray(grupos)?grupos:[];
   grupos.forEach(g=>{
     MODS[g.nombre]={required:g.requerido,min:g.min_seleccion,max:g.max_seleccion,label:g.label||g.nombre,
-      options:(Array.isArray(opciones)?opciones.filter(o=>o.grupo_id===g.id):[]).map(o=>({name:o.nombre,extra:parseFloat(o.precio_extra)||0}))};
+      options:(Array.isArray(opciones)?opciones.filter(o=>o.grupo_id===g.id):[]).map(o=>{ const t=parseFloat(o.precio_extra)||0, a=o.precio_extra_app!=null&&o.precio_extra_app!==''?parseFloat(o.precio_extra_app):t; return {name:o.nombre,extra:t,extraTienda:t,extraApp:isNaN(a)?t:a}; })};
   });
   PRODUCTS.length=0;
   prods.forEach(p=>{
     const mods=(Array.isArray(pm)?pm.filter(x=>x.producto_id===p.id).sort((a,b)=>a.orden-b.orden):[])
       .map(x=>grupos.find(g=>g.id===x.grupo_id)?.nombre).filter(Boolean);
-    PRODUCTS.push({id:p.id,name:p.nombre,cat:p.categoria,price:parseFloat(p.precio),desc:p.descripcion||'',emoji:p.emoji||'🍓',img:p.imagen||'',mods});
+    const pt=parseFloat(p.precio), pa=p.precio_app!=null&&p.precio_app!==''?parseFloat(p.precio_app):pt;
+    PRODUCTS.push({id:p.id,name:p.nombre,cat:p.categoria,price:pt,priceTienda:pt,priceApp:isNaN(pa)?pt:pa,desc:p.descripcion||'',emoji:p.emoji||'🍓',img:p.imagen||'',mods});
     EMOJI_MAP[p.nombre]=p.emoji||'🍓';
   });
+  _listaApp=null; aplicarListaPrecios();
   return true;
+}
+// Precios de apps (Uber/DiDi/Rappi): al elegir la app, el catálogo y la orden cambian a la lista de apps
+let _listaApp=null;
+function aplicarListaPrecios(){
+  const app=typeof esApp==='function'&&esApp();
+  if(_listaApp===app) return; _listaApp=app;
+  PRODUCTS.forEach(p=>{ if(p.priceTienda!=null) p.price=app?p.priceApp:p.priceTienda; });
+  Object.values(MODS).forEach(m=>(m.options||[]).forEach(o=>{ if(o.extraTienda!=null) o.extra=app?o.extraApp:o.extraTienda; }));
+  let cambio=false;
+  order.forEach(it=>{
+    if(it.canjeItem) return;
+    const p=PRODUCTS.find(x=>x.id===it.productId); if(!p) return;
+    let tot=p.price; const tags=[];
+    p.mods.forEach(k=>{ const mod=MODS[k]; if(!mod) return; const v=it.sel?.[k]; const names=mod.max===1?(v?[v]:[]):(v||[]);
+      names.forEach(n=>{ const o=mod.options.find(x=>x.name===n); const ex=o?o.extra:0; tot+=ex; tags.push({modKey:k,name:n,extra:ex}); }); });
+    if(tot!==it.unitPrice){ it.unitPrice=tot; it.tags=tags; cambio=true; }
+  });
+  if(cambio&&order.length) showToast(app?'🛵 Precios de app aplicados':'Precios de mostrador');
+  try{ renderProducts(); renderOrderItems(); renderOrderBar(); }catch(e){}
 }
 async function loadCatalog() {
   const c0=_lfCache('catalogo');
@@ -2318,6 +2339,7 @@ function actualizarCanalUI(){
   let n=document.getElementById('pay-app-nota');
   if(!n){ const pr=document.querySelector('.sheet-footer .pay-row'); if(pr){ n=document.createElement('div'); n.id='pay-app-nota'; n.style.cssText='padding:12px;margin-bottom:10px;border-radius:12px;background:var(--red-light);color:var(--red-dark);font-size:13px;font-weight:600;text-align:center;'; pr.parentNode.insertBefore(n,pr); } }
   if(n){ n.style.display=app?'block':'none'; n.textContent=app?'🛵 Ya viene pagado en '+CANALES[canal]+'. No entra dinero a la caja.':''; }
+  aplicarListaPrecios();
   if(app) payMethod='plataforma'; else if(payMethod==='plataforma'){ payMethod='efectivo'; const b=document.querySelector('.pay-btn'); if(b){ document.querySelectorAll('.pay-btn').forEach(x=>x.classList.remove('active')); b.classList.add('active'); } }
 }
 

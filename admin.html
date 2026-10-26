@@ -1113,6 +1113,7 @@ html,body,button,.pin-btn{touch-action:manipulation;}
     <div class="form-grid">
       <div class="form-group"><label class="form-label">Nombre</label><input class="form-input" id="p-name" placeholder="Fresas con crema"></div>
       <div class="form-group"><label class="form-label">Precio base ($)</label><input class="form-input" id="p-price" type="number" placeholder="99"></div>
+      <div class="form-group"><label class="form-label">Precio en apps ($) 🛵</label><input class="form-input" id="p-price-app" type="number" placeholder="Igual que mostrador"></div>
       <div class="form-group"><label class="form-label">Categoría</label>
         <select class="form-select" id="p-cat"></select>
       </div>
@@ -1179,6 +1180,7 @@ html,body,button,.pin-btn{touch-action:manipulation;}
     <div class="form-grid">
       <div class="form-group full"><label class="form-label">Nombre</label><input class="form-input" id="op-nombre" placeholder="Ej: Galleta Lotus"></div>
       <div class="form-group full"><label class="form-label">Precio extra ($)</label><input class="form-input" id="op-precio" type="number" value="0" min="0" step="0.5"></div>
+      <div class="form-group full"><label class="form-label">Precio extra en apps ($) 🛵</label><input class="form-input" id="op-precio-app" type="number" min="0" step="0.5" placeholder="Igual que mostrador"></div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('modal-opcion')">Cancelar</button>
@@ -1931,7 +1933,7 @@ async function renderMenu() {
   try {
     const prods = await sbGet('productos', 'order=orden.asc&select=*');
     productsData = prods.map(p => ({
-      id: p.id, name: p.nombre, cat: p.categoria, price: p.precio, img: p.imagen||'',
+      id: p.id, name: p.nombre, cat: p.categoria, price: p.precio, priceApp: p.precio_app, img: p.imagen||'',
       emoji: p.emoji, desc: p.descripcion, active: p.activo, orden: p.orden
     }));
   } catch(e) { toast('Error cargando productos'); return; }
@@ -1957,7 +1959,7 @@ function renderMenuList(){
       ${p.img?`<img class="m-img" src="${escH(p.img)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=m-img>${escH(p.emoji||'🍓')}</div>'">`:`<div class="m-img">${escH(p.emoji||'🍓')}</div>`}
       <div class="m-info" onclick="openModalProducto(${p.id})">
         <div class="m-name">${escH(p.name)}</div>
-        <div class="m-sub">${escH(p.cat||'')}${p.desc?' · '+escH(p.desc):''}</div>
+        <div class="m-sub">${p.priceApp!=null?'🛵 Apps $'+(+p.priceApp)+' · ':''}${escH(p.cat||'')}${p.desc?' · '+escH(p.desc):''}</div>
       </div>
       <label class="m-price" title="Precio"><span>$</span><input type="number" inputmode="decimal" min="0" step="1" value="${Number(p.price)||0}"
         onkeydown="if(event.key==='Enter')this.blur()" onchange="guardarPrecio(${p.id},this)"></label>
@@ -2092,6 +2094,7 @@ async function openModalProducto(id) { if(id===undefined) id=null;
   document.getElementById('p-id').value = (p&&p.id) || '';
   document.getElementById('p-name').value = (p&&p.name) || '';
   document.getElementById('p-price').value = (p&&p.price) || '';
+  document.getElementById('p-price-app').value = (p&&p.priceApp!=null) ? p.priceApp : '';
   document.getElementById('p-cat').value = (p&&p.cat) || 'Frutas';
   document.getElementById('p-emoji').value = (p&&p.emoji) || '';
   document.getElementById('p-desc').value = (p&&p.desc) || '';
@@ -2135,6 +2138,7 @@ async function saveProducto() {
   const data = {
     nombre: document.getElementById('p-name').value.trim(),
     precio: parseFloat(document.getElementById('p-price').value) || 0,
+    precio_app: document.getElementById('p-price-app').value === '' ? null : (parseFloat(document.getElementById('p-price-app').value) || 0),
     categoria: document.getElementById('p-cat').value,
     emoji: document.getElementById('p-emoji').value.trim() || '🍓',
     descripcion: document.getElementById('p-desc').value.trim(),
@@ -2990,7 +2994,7 @@ function renderGrupos() {
         ${g.opciones.length ? g.opciones.map(o => `
           <div style="display:flex;align-items:center;gap:4px;padding:4px 4px 4px 12px;border:1px solid var(--border-2);border-radius:10px;background:${o.activo?'white':'var(--bg)'};opacity:${o.activo?1:0.55};">
             <span style="font-size:13px;font-weight:500;">${escH(o.nombre)}</span>
-            <span style="font-size:12px;color:${o.precio_extra>0?'#1f7a45':'var(--text-3)'};font-weight:600;margin:0 4px;">${o.precio_extra>0?'+$'+o.precio_extra:'gratis'}</span>
+            <span style="font-size:12px;color:${o.precio_extra>0?'#1f7a45':'var(--text-3)'};font-weight:600;margin:0 4px;">${o.precio_extra>0?'+$'+o.precio_extra:'gratis'}${o.precio_extra_app!=null&&+o.precio_extra_app!==+o.precio_extra?' · 🛵 $'+(+o.precio_extra_app):''}</span>
             <button class="m-edit" style="width:32px;height:32px;font-size:13px;" onclick="openModalOpcionEditById(${o.id},${g.id},${o.precio_extra})" title="Editar">✏️</button>
             <button class="m-edit" style="width:32px;height:32px;font-size:13px;" onclick="toggleOpcion(${o.id},${o.activo})" title="${o.activo?'Pausar':'Activar'}">${o.activo?'⏸':'▶'}</button>
             <button class="m-edit" style="width:32px;height:32px;font-size:13px;" onclick="eliminarOpcionById(${o.id},${g.id})" title="Eliminar">🗑</button>
@@ -3062,6 +3066,7 @@ function openModalOpcion(grupoId, grupoNombre) {
   document.getElementById('op-grupo-id').value = grupoId;
   document.getElementById('op-nombre').value = '';
   document.getElementById('op-precio').value = '0';
+  document.getElementById('op-precio-app').value = '';
   document.getElementById('modal-opcion').classList.add('open');
 }
 
@@ -3071,6 +3076,8 @@ function openModalOpcionEdit(id, grupoId, nombre, precio) {
   document.getElementById('op-grupo-id').value = grupoId;
   document.getElementById('op-nombre').value = nombre;
   document.getElementById('op-precio').value = precio;
+  var _g = (gruposData||[]).find(function(x){return x.id==grupoId;}); var _o = _g ? (_g.opciones||[]).find(function(x){return x.id==id;}) : null;
+  document.getElementById('op-precio-app').value = (_o && _o.precio_extra_app!=null) ? _o.precio_extra_app : '';
   document.getElementById('modal-opcion').classList.add('open');
 }
 
@@ -3082,6 +3089,7 @@ async function saveOpcion() {
     grupo_id: parseInt(grupoId),
     nombre: document.getElementById('op-nombre').value.trim(),
     precio_extra: parseFloat(document.getElementById('op-precio').value) || 0,
+    precio_extra_app: document.getElementById('op-precio-app').value === '' ? null : (parseFloat(document.getElementById('op-precio-app').value) || 0),
   };
   if (!id) { payload.activo = true; payload.orden = grupo ? grupo.opciones.length + 1 : 0; }
   const anterior = id && grupo ? (grupo.opciones.find(o => o.id == id) || {}).nombre : null;
