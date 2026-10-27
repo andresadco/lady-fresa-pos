@@ -4507,6 +4507,10 @@ function buildTicketXML(saleData,type='ticket'){
     if(marginTop) xml+=feed(marginTop);
     xml+=T('*** COMANDA ***',{a:'center',...fontOpts(ccGet('comanda_font_marca','bold'))});
     xml+=T('ORDEN '+folio,{a:'center',w:2,h:2,b:true,...fontOpts(ccGet('comanda_font_orden','double'))});
+    if(saleData.canal&&['uber','didi','rappi'].includes(saleData.canal)){
+      xml+=T(String(CANALES[saleData.canal]||'').toUpperCase(),{a:'center',w:2,h:2,b:true});
+      if(saleData.pagoRef) xml+=T('#'+String(saleData.pagoRef).slice(0,12),{a:'center',w:2,h:2,b:true});
+    }
     if(saleData.client) xml+=T(saleData.client.substring(0,21),{a:'center',w:2,h:2,b:true});
     xml+=T(servicio+'  ·  '+timeMX(saleData.date),{a:'center',...fontOpts(ccGet('comanda_font_tipo','bold'))});
     if(saleData._reprint) xml+=center('** REIMPRESIÓN **',true);
@@ -4581,7 +4585,7 @@ function buildTicketXML(saleData,type='ticket'){
     const partes=[['Efectivo',pp.ef],['Tarjeta',pp.ta],['Transferencia',pp.tr],[CANALES[saleData.canal]||'App',pp.pl||0]].filter(x=>x[1]>0);
     if(partes.length>1){ xml+=T('Pago mixto',{b:true}); partes.forEach(([k,v])=>{ xml+=line('  '+k,fmtD(v)); }); }
     else xml+=line('Pago',partes.length?partes[0][0]:(saleData.payMethod||''));
-    if(saleData.pagoRef) xml+=line('Referencia',String(saleData.pagoRef).slice(0,24));
+    if(saleData.pagoRef) xml+=line(saleData.canal&&CANALES[saleData.canal]?'Pedido '+CANALES[saleData.canal]:'Referencia',(saleData.canal?'#':'')+String(saleData.pagoRef).slice(0,24));
     if(pp.ef>0&&saleData.cambio>0){
       xml+=line('Efectivo recibido',fmtD(saleData.cashReceived||pp.ef));
       xml+=line('Cambio',fmtD(saleData.cambio),true);
