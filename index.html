@@ -1060,6 +1060,7 @@ html,body,button,.pin-btn{touch-action:manipulation;}
     </div>
     <div id="order-items-list"></div>
     <div id="disc-section" style="margin-top:12px;display:none;">
+     <div id="promo-rapidas" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:8px;"></div>
      <details id="disc-details"><summary><span>🏷️ Descuento o código <span id="disc-sum-val" style="color:var(--red);"></span></span><span class="dd-arrow">▾</span></summary>
       <div class="promo-code-row">
         <input type="text" class="promo-code-input" id="promo-code-input" placeholder="Código de descuento" maxlength="20">
@@ -3350,9 +3351,18 @@ async function cargarPromos(){
   try {
     const res=await fetch(SB_URL+'/rest/v1/promociones?activo=eq.true&select=*',{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}});
     if(res.ok) promosCargadas=await res.json();
+    pintarPromosRapidas();
   } catch{promosCargadas=[];}
 }
 
+// Descuentos de un toque (los códigos activos: Fresero, Cumpleaños, Lady Lover…), sin tener que escribir el código
+function pintarPromosRapidas(){
+  const box=document.getElementById('promo-rapidas'); if(!box) return;
+  const ps=(promosCargadas||[]).filter(p=>p.tipo==='codigo'&&p.activo!==false&&promoVigente(p));
+  box.innerHTML=ps.map(p=>`<button class="disc-btn" style="font-weight:700;" onclick="aplicarPromoRapida(${p.id})">${sanitize(p.nombre)} · ${p.es_monto?'$'+(+p.valor):(+p.valor)+'%'}</button>`).join('');
+  box.style.display=ps.length?'flex':'none';
+}
+function aplicarPromoRapida(id){ const p=(promosCargadas||[]).find(x=>x.id===id); if(!p) return; if(!promoVigente(p)){ showToast('❌ Esa promoción ya no está vigente'); return; } aplicarPromo(p); }
 function aplicarCodigo(){
   const codigo=(document.getElementById('promo-code-input').value||'').trim().toUpperCase();
   if(!codigo) return;
@@ -4495,7 +4505,7 @@ function buildTicketXML(saleData,type='ticket'){
   const tc=_x(ticketCfg||{}), cc=_x(comandaCfg||{});
   const tcGet=(k,def)=>tc[k]||def||'';
   const ccGet=(k,def)=>cc[k]||def||'';
-  const fontOpts=f=>f==='double'?{w:2,h:2}:f==='bold'?{b:true}:f==='double-bold'?{w:2,h:2,b:true}:{};
+  const fontOpts=f=>f==='double'?{w:2,h:2}:f==='bold'?{b:true}:f==='double-bold'?{w:2,h:2,b:true}:f==='alto'?{h:2,b:true}:{};
   const servicio=saleData.svcType==='para-llevar'?'PARA LLEVAR':saleData.svcType==='delivery'?('DELIVERY'+(saleData.canal?' '+String(CANALES[saleData.canal]||'').toUpperCase():'')):'MOSTRADOR';
   const folio='#'+String(saleData.id).padStart(3,'0');
   if(isComanda){
