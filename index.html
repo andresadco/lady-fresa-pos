@@ -3228,6 +3228,66 @@ function renderCierreModal(){
   btn.disabled=false; btn.textContent='✓ CONFIRMAR CIERRE';
 }
 
+
+// ── Ticket del CORTE DE CAJA ──
+function buildCorteXML(cd){
+  const COLS=42;
+  const _t=v=>String(v==null?'':v).replace(/&/g,'y').replace(/</g,'(').replace(/>/g,')').replace(/"/g,"'").replace(/[^\x00-ɏ]/gu,'').replace(/ {2,}/g,' ');
+  const _e=v=>String(v==null?'':v).replace(/&/g,'y').replace(/</g,'(').replace(/>/g,')').replace(/"/g,"'").replace(/[^\x00-ɏ]/gu,'');
+  const T=(text,{a='left',b=false,w=1,h=1}={})=>`<text align="${a}" em="${b}" width="${w}" height="${h}">${_e(text)}&#10;</text>`;
+  const line=(l,r='',b=false)=>{ l=_t(l).substring(0,COLS-String(r).length-1); return T(l+' '.repeat(Math.max(1,COLS-l.length-String(r).length))+r,{b}); };
+  const div=(c='-')=>T(c.repeat(COLS));
+  const $=n=>'$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const f=d=>new Date(d).toLocaleString('es-MX',{timeZone:'America/Mexico_City',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+  const esperado=(cd.fondo_inicial||0)+(cd.efectivo||0)-(cd.total_retiros||0);
+  let x=`<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print">`;
+  x+=T('LADY FRESA',{a:'center',w:2,h:2,b:true});
+  x+=T('CORTE DE CAJA',{a:'center',w:2,h:1,b:true});
+  x+=T(cd.sucursal||'',{a:'center',b:true});
+  x+=div();
+  x+=line('Abrió',f(cd.inicio)); x+=line('Cerró',f(cd.cerrado_at||cd.fin));
+  x+=line('Cajero(a)',_t(cd.cajero_name||'')); x+=line('Corte por',_t(cd.cerrado_por||''));
+  x+=div();
+  x+=line('VENTAS TOTALES',$(cd.total_ventas),true);
+  x+=line('Órdenes',String(cd.total_ordenes||0)); x+=line('Ticket promedio',$(cd.ticket_promedio));
+  x+=div();
+  x+=T('FORMAS DE PAGO',{b:true});
+  x+=line('Efectivo',$(cd.efectivo)); x+=line('Tarjeta',$(cd.tarjeta));
+  if(cd.transferencia) x+=line('Transferencia',$(cd.transferencia));
+  if(cd.apps) x+=line('Apps (Uber/DiDi/Rappi)',$(cd.apps));
+  x+=div();
+  x+=T('EFECTIVO EN CAJA',{b:true});
+  x+=line('Fondo inicial',$(cd.fondo_inicial)); x+=line('+ Ventas en efectivo',$(cd.efectivo)); x+=line('- Retiros',$(cd.total_retiros));
+  x+=line('= Debe haber',$(esperado),true); x+=line('Contado',$(cd.conteo_fisico),true);
+  const d=cd.diferencia_caja||0;
+  x+=T(d===0?'CUADRE EXACTO':(d>0?'SOBRAN ':'FALTAN ')+$(Math.abs(d)),{a:'center',w:2,h:2,b:true});
+  if((cd.retiros||[]).length){ x+=div(); x+=T('RETIROS',{b:true}); cd.retiros.forEach(r=>x+=line('- '+_t(r.motivo||'').slice(0,26),$(r.monto))); }
+  if((cd.productos||[]).length){ x+=div(); x+=T('PRODUCTOS',{b:true}); cd.productos.slice(0,30).forEach(p=>x+=line(p.qty+'x '+_t(p.name),$(p.rev))); }
+  if(cd.notas){ x+=div(); x+=T('Notas: '+_t(cd.notas)); }
+  x+=div(); x+=T(' ',{}); x+=T('Firma: ______________________',{a:'center'}); x+=T(' ',{});
+  x+=`<feed line="2"/><cut type="feed"/></epos-print></s:Body></s:Envelope>`;
+  return x;
+}
+async function enviarXMLImpresora(xml){
+  const m=printerMode();
+  if(m==='red'){
+    const {ip}=printerCfg; if(!ip) return {ok:false,error:'no_ip'};
+    for(const ep of eposEndpoints(ip,10000)){
+      try{ const r=await fetch(ep.url,{method:'POST',headers:{'Content-Type':'text/xml; charset=utf-8','SOAPAction':'""'},body:xml,signal:AbortSignal.timeout(10000)});
+        if(r.ok){ const t=await r.text(); if(/success="false"/i.test(t)) return {ok:false,error:'printer'}; return {ok:true}; } }catch(e){}
+    }
+    return {ok:false,error:'red'};
+  }
+  if(m==='imin'){ try{ await iminImprimirXML(xml); return {ok:true}; }catch(e){ return {ok:false,error:e.message}; } }
+  const bytes=eposXmlToEscPos(xml);
+  if(m==='rawbt'){ rawbtEnviar(bytes); return {ok:true}; }
+  try{ await usbEnviar(bytes); return {ok:true}; }catch(e){ return {ok:false,error:e.message}; }
+}
+async function imprimirCorte(cd){
+  if(!printerListo()){ showToast('🖨️ Esta pantalla no tiene impresora: el corte se guardó pero no se imprimió'); return; }
+  try{ const r=await enviarXMLImpresora(buildCorteXML(cd)); if(!r.ok) showToast('⚠️ No se pudo imprimir el corte. Usa "Reimprimir corte".'); }
+  catch(e){ showToast('⚠️ No se pudo imprimir el corte'); }
+}
 async function confirmarCierre(){
   // Capturar fondo y conteo antes de validar
   const fondo=parseFloat(document.getElementById('cierre-fondo')?.value)||0;
@@ -3288,6 +3348,7 @@ async function confirmarCierre(){
     if(currentUser) localStorage.removeItem('lf_turno_suc_'+(currentUser.sucursal||'Principal'));
     turnoId=null; _cortePendiente=null; _recordarCorteDespues=0;
 
+    window._ultimoCorte={...cierreData}; imprimirCorte(window._ultimoCorte);
     const dif=cierreData.diferencia_caja;
     const difTxt=dif===0?'Cuadre exacto ✅':dif>0?`Sobran $${Math.abs(dif).toLocaleString('es-MX')} 🔵`:`Faltan $${Math.abs(dif).toLocaleString('es-MX')} 🔴`;
 
@@ -3313,7 +3374,7 @@ async function confirmarCierre(){
         </div>
       </div>`;
     document.getElementById('cierre-footer-btns').innerHTML=
-      '<button onclick="finalizarCierre()" style="flex:1;height:50px;background:var(--red);color:#fff;border:none;border-radius:14px;font-family:\'Bebas Neue\',serif;font-size:18px;letter-spacing:2px;cursor:pointer;">CERRAR SESIÓN</button>';
+      '<button onclick="imprimirCorte(window._ultimoCorte)" style="flex:1;height:50px;background:#FDF6F7;color:#A6182E;border:1.5px solid #A6182E;border-radius:14px;font-weight:700;font-size:14px;cursor:pointer;margin-right:8px;">🖨️ Reimprimir corte</button><button onclick="finalizarCierre()" style="flex:1;height:50px;background:var(--red);color:#fff;border:none;border-radius:14px;font-family:\'Bebas Neue\',serif;font-size:18px;letter-spacing:2px;cursor:pointer;">CERRAR SESIÓN</button>';
     // CAMBIO v3: bloquear cualquier escape del sheet — solo se sale por "CERRAR SESIÓN"
     window._cierreFinalizado=true;
     const ov=document.getElementById('ov-cierre');
