@@ -939,6 +939,7 @@ html,body,button,.pin-btn{touch-action:manipulation;}
       <button class="tb-ll" onclick="abrirLLQ()" title="Lady Lovers: sellos y registro"><img src="img/marca/sello.png" alt="">Lady Lovers</button>
       <button class="tb-btn tb-lbl" onclick="openHist()" title="Ventas del turno">📋<span>Ventas</span></button>
       <button class="tb-btn tb-hide" onclick="openCierreSheet()" title="Cierre de turno" id="btn-cierre" style="display:none;">🔐</button>
+      <button class="tb-btn" onclick="pedirAbrirCajon()" title="Abrir caja">💰</button>
       <button class="tb-btn tb-hide" onclick="abrirRetiro()" title="Registrar retiro" id="btn-retiro" style="display:none;">💸</button>
       <button class="tb-btn" onclick="openPrinterCfg()" title="Impresora" style="position:relative;">🖨️<span id="printer-dot" style="position:absolute;bottom:4px;right:4px;width:9px;height:9px;border-radius:50%;background:#aaa;border:1.5px solid #fff;"></span><span id="printer-queue-badge" style="display:none;position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;background:#B5860D;color:#fff;font-size:10px;font-weight:700;border-radius:9px;align-items:center;justify-content:center;">0</span></button>
       <button class="tb-btn tb-lbl" onclick="openHoy()" title="Ventas de hoy" id="btn-hoy" style="display:none;">📊<span>Hoy</span></button>
@@ -1503,6 +1504,7 @@ function abrirMenuPOS(){
   const it=[];
   const add=(ic,t,sub,fn,cls)=>it.push(`<button class="menu-pos-item ${cls||''}" onclick="${fn}"><span class="mi-ic">${ic}</span><b>${t}</b><small>${sub}</small></button>`);
   add('📋','Ventas del turno','Reimprimir, ver o cancelar','cerrarMenuPOS();openHist()');
+  add('💰','Abrir caja','Abre el cajón sin venta (queda registrado)','cerrarMenuPOS();pedirAbrirCajon()');
   if(p.discount) add('💸','Retiro de caja','Sacar efectivo con motivo','cerrarMenuPOS();abrirRetiro()');
   if(p.cierre) add('🔐','Corte de caja','Cerrar turno y contar billetes','cerrarMenuPOS();openCierreSheet()');
   add('🖨️','Impresora','Conectar y probar ticket','cerrarMenuPOS();openPrinterCfg()');
@@ -3229,6 +3231,41 @@ function renderCierreModal(){
 }
 
 
+
+// ── Abrir el cajón sin venta (queda registrado quién, cuándo y por qué) ──
+function pedirAbrirCajon(){
+  if(!printerListo()){ showToast('🖨️ Esta pantalla no tiene impresora configurada: el cajón se abre desde la impresora'); return; }
+  document.querySelectorAll('.lf-cajon').forEach(x=>x.remove());
+  const d=document.createElement('div'); d.className='lf-modal lf-cajon';
+  d.style.cssText='position:fixed;inset:0;background:rgba(26,5,8,0.55);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;';
+  d.onclick=e=>{ if(e.target===d) d.remove(); };
+  const b='width:100%;height:56px;border-radius:14px;border:2px solid #f0d6dc;background:#fff;color:#672626;font-size:16px;font-weight:700;cursor:pointer;margin-top:8px;';
+  d.innerHTML=`<div style="background:#fff;border-radius:22px;padding:22px;max-width:380px;width:100%;">
+    <div style="font-family:'Lilita One',serif;font-size:22px;color:#A6182E;">💰 Abrir caja</div>
+    <div style="font-size:13px;color:#9a7075;margin:4px 0 6px;">¿Para qué la abres? Queda registrado en el corte.</div>
+    <button style="${b}" onclick="abrirCajon('Dar cambio')">Dar cambio</button>
+    <button style="${b}" onclick="abrirCajon('Cambio de billetes')">Cambio de billetes / monedas</button>
+    <button style="${b}" onclick="abrirCajon('Contar caja')">Contar la caja</button>
+    <button style="${b}" onclick="const m=prompt('¿Para qué?'); if(m&&m.trim()) abrirCajon(m.trim().slice(0,60));">Otro…</button>
+    <button style="${b}border:none;color:#9a7075;" onclick="this.closest('.lf-cajon').remove()">Cancelar</button>
+  </div>`;
+  document.body.appendChild(d);
+}
+async function abrirCajon(motivo){
+  document.querySelectorAll('.lf-cajon').forEach(x=>x.remove());
+  let ok=false;
+  try{
+    const m=printerMode();
+    if(m==='imin'){ const ws=await iminConectar(); ws.send(_iminMsg(100,'')); ok=true; }
+    else if(m==='red'){ const r=await enviarXMLImpresora('<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print"><pulse drawer="drawer_1" time="pulse_100"/></epos-print></s:Body></s:Envelope>'); ok=r.ok; }
+    else { const bytes=new Uint8Array([0x1B,0x40,0x1B,0x70,0,50,250]); if(m==='rawbt'){ rawbtEnviar(bytes); ok=true; } else { await usbEnviar(bytes); ok=true; } }
+  }catch(e){ ok=false; }
+  showToast(ok?'💰 Caja abierta':'⚠️ No se pudo abrir la caja. Revisa la impresora.');
+  if(!ok) return;
+  _aperturasCaja.push({motivo,hora:new Date().toISOString()});
+  try{ fetch(SB_URL+'/rest/v1/aperturas_caja',{method:'POST',headers:SB_H,body:JSON.stringify({sucursal:currentUser?.sucursal||null,turno_id:turnoId||null,usuario_id:currentUser?.id||null,usuario:currentUser?.name||null,motivo})}).catch(()=>{}); }catch(e){}
+}
+let _aperturasCaja=[];
 // ── Ticket del CORTE DE CAJA ──
 function buildCorteXML(cd){
   const COLS=42;
@@ -3263,6 +3300,7 @@ function buildCorteXML(cd){
   x+=T(d===0?'CUADRE EXACTO':(d>0?'SOBRAN ':'FALTAN ')+$(Math.abs(d)),{a:'center',w:2,h:2,b:true});
   if((cd.retiros||[]).length){ x+=div(); x+=T('RETIROS',{b:true}); cd.retiros.forEach(r=>x+=line('- '+_t(r.motivo||'').slice(0,26),$(r.monto))); }
   if((cd.productos||[]).length){ x+=div(); x+=T('PRODUCTOS',{b:true}); cd.productos.slice(0,30).forEach(p=>x+=line(p.qty+'x '+_t(p.name),$(p.rev))); }
+  if((cd.aperturas||[]).length){ x+=div(); x+=T('CAJA ABIERTA SIN VENTA: '+cd.aperturas.length+(cd.aperturas.length===1?' vez':' veces'),{b:true}); cd.aperturas.forEach(a=>x+=line('- '+_t(a.motivo||'').slice(0,28),f(a.hora||a.created_at).split(', ').pop())); }
   if(cd.notas){ x+=div(); x+=T('Notas: '+_t(cd.notas)); }
   x+=div(); x+=T(' ',{}); x+=T('Firma: ______________________',{a:'center'}); x+=T(' ',{});
   x+=`<feed line="2"/><cut type="feed"/></epos-print></s:Body></s:Envelope>`;
@@ -3289,6 +3327,7 @@ async function imprimirCorte(cd){
   catch(e){ showToast('⚠️ No se pudo imprimir el corte'); }
 }
 async function confirmarCierre(){
+  window._turnoCorte=turnoId;
   // Capturar fondo y conteo antes de validar
   const fondo=parseFloat(document.getElementById('cierre-fondo')?.value)||0;
   const conteo=parseFloat(document.getElementById('cierre-conteo')?.value)||0;
@@ -3348,6 +3387,8 @@ async function confirmarCierre(){
     if(currentUser) localStorage.removeItem('lf_turno_suc_'+(currentUser.sucursal||'Principal'));
     turnoId=null; _cortePendiente=null; _recordarCorteDespues=0;
 
+    try{ const ap=await fetch(SB_URL+'/rest/v1/aperturas_caja?turno_id=eq.'+(window._turnoCorte||0)+'&select=motivo,created_at,usuario&order=id',{headers:SB_H}); cierreData.aperturas=ap.ok?await ap.json():_aperturasCaja; }catch(e){ cierreData.aperturas=_aperturasCaja; }
+    _aperturasCaja=[];
     window._ultimoCorte={...cierreData}; imprimirCorte(window._ultimoCorte);
     const dif=cierreData.diferencia_caja;
     const difTxt=dif===0?'Cuadre exacto ✅':dif>0?`Sobran $${Math.abs(dif).toLocaleString('es-MX')} 🔵`:`Faltan $${Math.abs(dif).toLocaleString('es-MX')} 🔴`;
