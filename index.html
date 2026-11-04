@@ -1447,7 +1447,7 @@ var comandaCfg = {};
 let _cobroPending = false;
 
 const PERMS = {
-  cajero:    { discount:false, retiro:true, cierre:true,  dashboard:false },
+  cajero:    { discount:true,  retiro:true, cierre:true,  dashboard:false },
   encargado: { discount:true,  retiro:true, cierre:true,  dashboard:false },
   gerente:   { discount:true,  retiro:true, cierre:true,  dashboard:true },
   admin:     { discount:true,  retiro:true, cierre:true,  dashboard:true },
@@ -3012,6 +3012,7 @@ function abrirRetiro(){
     <input id="retiro-monto" type="number" placeholder="0.00" min="0" step="1"
       style="width:100%;height:52px;border:1.5px solid #e0c0c8;border-radius:12px;padding:0 16px;font-size:22px;font-weight:700;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:12px;text-align:right;">
     <div style="font-size:12px;color:#9a7075;margin-bottom:6px;">Motivo</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">${['Basura','Plátano','Insumos','Hielo','Agua'].map(c=>`<button type="button" onclick="document.getElementById('retiro-motivo').value='${c}'" style="padding:8px 14px;border-radius:20px;border:1.5px solid #f0d6dc;background:#FDF6F7;color:#672626;font-size:14px;font-weight:600;cursor:pointer;">${c}</button>`).join('')}</div>
     <input id="retiro-motivo" type="text" placeholder="Ej. Compra de insumos, pago proveedor..."
       style="width:100%;height:44px;border:1.5px solid #e0c0c8;border-radius:12px;padding:0 14px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:16px;">
     <div style="display:flex;gap:8px;">
@@ -3029,6 +3030,11 @@ function guardarRetiro(){
   const motivo=(document.getElementById('retiro-motivo')?.value||'').trim();
   if(monto<=0){ showToast('Ingresa un monto válido'); return; }
   if(!motivo){ showToast('Escribe el motivo del retiro'); return; }
+  registrarRetiro(monto,motivo);
+  document.querySelector('.lf-modal')?.remove();
+}
+// Guarda un retiro/gasto en efectivo del turno (lo usan "Retiro de caja" y "Abrir caja → Pagar un gasto")
+function registrarRetiro(monto,motivo){
   const retiro={ monto, motivo, hora:new Date().toISOString(), nombre:currentUser?.name||'—' };
   retiros.push(retiro);
   // Guardar en Supabase inmediatamente con columnas correctas
@@ -3049,7 +3055,6 @@ function guardarRetiro(){
     })
   }).then(r=>{ if(!r.ok) showToast('⚠️ El retiro no se guardó en el servidor. Anótalo en las notas del corte.'); })
     .catch(()=>showToast('⚠️ Sin conexión: el retiro no se guardó en el servidor. Anótalo en las notas del corte.'));
-  document.querySelector('.lf-modal')?.remove();
   showToast('✅ Retiro de $'+monto.toLocaleString('es-MX')+' registrado');
   if(document.getElementById('sheet-cierre').classList.contains('open')){
     buildCierreData(); renderCierreModal();
@@ -3268,6 +3273,7 @@ function pedirAbrirCajon(){
   d.innerHTML=`<div style="background:#fff;border-radius:22px;padding:22px;max-width:380px;width:100%;">
     <div style="font-family:'Lilita One',serif;font-size:22px;color:#A6182E;">💰 Abrir caja</div>
     <div style="font-size:13px;color:#9a7075;margin:4px 0 6px;">¿Para qué la abres? Queda registrado en el corte.</div>
+    <button style="${b}background:#A6182E;border-color:#A6182E;color:#fff;" onclick="pedirGastoCajon()">💸 Pagar un gasto (sale dinero)</button>
     <button style="${b}" onclick="abrirCajon('Dar cambio')">Dar cambio</button>
     <button style="${b}" onclick="abrirCajon('Cambio de billetes')">Cambio de billetes / monedas</button>
     <button style="${b}" onclick="abrirCajon('Contar caja')">Contar la caja</button>
@@ -3291,6 +3297,34 @@ async function abrirCajon(motivo){
   try{ fetch(SB_URL+'/rest/v1/aperturas_caja',{method:'POST',headers:SB_H,body:JSON.stringify({sucursal:currentUser?.sucursal||null,turno_id:turnoId||null,usuario_id:currentUser?.id||null,usuario:currentUser?.name||null,motivo})}).catch(()=>{}); }catch(e){}
 }
 let _aperturasCaja=[];
+// Abrir caja para pagar algo (basura, plátano...): registra el gasto como retiro del turno y abre el cajón
+function pedirGastoCajon(){
+  document.querySelectorAll('.lf-cajon').forEach(x=>x.remove());
+  const d=document.createElement('div'); d.className='lf-modal lf-cajon';
+  d.style.cssText='position:fixed;inset:0;background:rgba(26,5,8,0.55);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;';
+  d.onclick=e=>{ if(e.target===d) d.remove(); };
+  const chip='padding:10px 16px;border-radius:20px;border:1.5px solid #f0d6dc;background:#FDF6F7;color:#672626;font-size:15px;font-weight:600;cursor:pointer;';
+  d.innerHTML=`<div style="background:#fff;border-radius:22px;padding:22px;max-width:380px;width:100%;">
+    <div style="font-family:'Lilita One',serif;font-size:22px;color:#A6182E;">💸 Pagar un gasto</div>
+    <div style="font-size:13px;color:#9a7075;margin:4px 0 12px;">Se descuenta de la caja y sale en el corte.</div>
+    <div style="font-size:12px;color:#9a7075;margin-bottom:6px;">¿Qué pagas?</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">${['Basura','Plátano','Insumos','Hielo','Agua'].map(c=>`<button type="button" style="${chip}" onclick="document.getElementById('gasto-motivo').value='${c}';document.getElementById('gasto-monto').focus()">${c}</button>`).join('')}</div>
+    <input id="gasto-motivo" type="text" placeholder="Otro: escribe qué es" maxlength="60" style="width:100%;height:44px;border:1.5px solid #e0c0c8;border-radius:12px;padding:0 14px;font-size:15px;outline:none;margin-bottom:12px;box-sizing:border-box;">
+    <div style="font-size:12px;color:#9a7075;margin-bottom:6px;">¿Cuánto sale de la caja?</div>
+    <input id="gasto-monto" type="number" inputmode="decimal" placeholder="0.00" min="0" step="0.5" style="width:100%;height:52px;border:1.5px solid #e0c0c8;border-radius:12px;padding:0 16px;font-size:22px;font-weight:700;outline:none;text-align:right;margin-bottom:14px;box-sizing:border-box;">
+    <button onclick="confirmarGastoCajon()" style="width:100%;height:56px;background:#A6182E;color:#fff;border:none;border-radius:14px;font-family:'Lilita One',serif;font-size:18px;letter-spacing:1px;cursor:pointer;">REGISTRAR Y ABRIR CAJA</button>
+    <button onclick="this.closest('.lf-cajon').remove()" style="width:100%;height:46px;margin-top:8px;background:#fff;border:none;color:#9a7075;font-size:15px;cursor:pointer;">Cancelar</button>
+  </div>`;
+  document.body.appendChild(d);
+}
+function confirmarGastoCajon(){
+  const monto=parseFloat(document.getElementById('gasto-monto')?.value)||0;
+  const motivo=(document.getElementById('gasto-motivo')?.value||'').trim();
+  if(!motivo){ showToast('Elige o escribe qué pagas'); return; }
+  if(monto<=0){ showToast('Escribe cuánto sale de la caja'); return; }
+  registrarRetiro(monto,motivo);
+  abrirCajon('Gasto: '+motivo.slice(0,40)+' $'+monto);
+}
 // ── Ticket del CORTE DE CAJA ──
 function buildCorteXML(cd){
   const COLS=42;
