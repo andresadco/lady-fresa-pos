@@ -445,7 +445,7 @@ function pintar(){
 
   $('sec-sucs').style.display=suc==='all'?'':'none';
   const bs={}; ord.forEach(o=>{ const k=o.sucursal||'—'; bs[k]=bs[k]||{t:0,n:0}; bs[k].t+=+o.total||0; bs[k].n++; });
-  if(hc.t) bs['Parrot (3 tiendas, antes del 3 nov)']={t:hc.t,n:hc.n,parrot:true};
+  (D.histDias||[]).forEach(x=>{ const k=x.suc; bs[k]=bs[k]||{t:0,n:0}; bs[k].t+=x.t; bs[k].n+=x.n; });
   const ls=Object.entries(bs).sort((a,b)=>b[1].t-a[1].t), mx=ls[0]?ls[0][1].t||1:1;
   $('por-suc').innerHTML=ls.length?ls.map(([k,v])=>`<button class="fila ${v.parrot?'':'toca'}" ${v.parrot?'':`onclick="elegirSuc('${esc(k)}')"`}><span class="nom">${esc(k)}</span><span class="val">${money(v.t)}</span><span class="sub">${v.n} órdenes, ticket de ${money(v.t/v.n)}</span><span class="sub r">${Math.round(v.t/(s.total||1)*100)}%</span><div class="barra"><i style="width:${v.t/mx*100}%"></i></div></button>`).join(''):'<div class="vacio">Todavía no hay ventas en este periodo.</div>';
 
@@ -677,7 +677,7 @@ function pintarMeses(){
   $('ds-graf').innerHTML=orden.map((w,i)=>`<div class="${i===best&&prom[i]?'pico':''}" style="height:${prom[i]/mW*100}%" title="${DSEM[w]} · ${money(prom[i])}"></div>`).join('');
   $('ds-eje').innerHTML=orden.map(w=>`<span>${DSEM[w]}</span>`).join('');
   $('ds-nota').textContent=prom[best]?`El mejor día es el ${DSEM[orden[best]].toLowerCase()} (${money(prom[best])} en promedio) y el más flojo el ${DSEM[orden[worst]].toLowerCase()} (${money(prom[worst])}).`:'Todavía no hay suficientes días para comparar.';
-  $('ms-hist').hidden=suc==='all';
+  $('ms-hist').hidden=true;
   $('ms-hist').textContent='📌 Hasta el 2 de noviembre las ventas vienen de Parrot y solo tenemos el total de las 3 tiendas juntas. Por eso, viendo una sola tienda, solo aparece lo del sistema nuevo (desde el 3 de noviembre). En "Todas" ves el año completo.';
 }
 function selMes(k){ _mesSel=_mesSel===k?null:k; pintarMeses(); }
