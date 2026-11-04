@@ -369,6 +369,13 @@ async function traerOrdenes(de,a){
   if(!r.ok) throw new Error('ordenes '+r.status);
   return r.json();
 }
+// Ventas por día (Parrot antes del corte, POS después). k = día CDMX como Date.UTC; d = medianoche CDMX real
+let CORTE=Date.parse('2026-11-03T00:00:00Z')+MX_OFF;
+async function traerDiario(de,a){
+  const r=await fetch(`${SB_URL}/rest/v1/rpc/lf_ventas_diarias`,{method:'POST',headers:{...H,'Content-Type':'application/json'},body:JSON.stringify({p_de:isoDia(de-MX_OFF),p_a:isoDia(a-MX_OFF-DIA)})});
+  if(!r.ok) return [];
+  return (await r.json()).filter(x=>suc==='all'||x.sucursal===suc).map(x=>{ const k=Date.parse(x.fecha+'T00:00:00Z'); return {k,d:k+MX_OFF,t:+x.total||0,n:+x.ordenes||0,suc:x.sucursal,fuente:x.fuente}; });
+}
 async function traerItems(ids){
   const out=[];
   for(let i=0;i<ids.length;i+=150){
@@ -393,7 +400,14 @@ async function cargar(manual){
   if(manual) $('act').textContent='Actualizando…';
   const R=rangos(periodo);
   try{
-    const [ord,cmpOrd]=await Promise.all([traerOrdenes(R.de,R.a),traerOrdenes(R.cDe,R.cA)]);
+    let [ord,cmpOrd,dCur,dCmp]=await Promise.all([traerOrdenes(R.de,R.a),traerOrdenes(R.cDe,R.cA),traerDiario(R.de,R.a),traerDiario(R.cDe,R.cA)]);
+    // Antes del corte manda Parrot: se ignoran las órdenes del POS de esos días (eran pruebas o doble captura)
+    const postCorte=o=>Date.parse(o.created_at)>=CORTE;
+    ord=ord.filter(postCorte); cmpOrd=cmpOrd.filter(postCorte);
+    const hist=dCur.filter(x=>x.fuente==='hist'), histCur={t:hist.reduce((s,x)=>s+x.t,0),n:hist.reduce((s,x)=>s+x.n,0),dias:hist.map(x=>x.k)};
+    // Comparación: Parrot por días (el día que va a la mitad se prorratea por horas de 12 a 10 pm)
+    let cmpHist={t:0,n:0,usado:false};
+    dCmp.filter(x=>x.fuente==='hist').forEach(x=>{ let f=1; if(x.d+DIA>R.cCorte){ f=x.d>=R.cCorte?0:Math.min(1,Math.max(0,(R.cCorte-x.d-12*3600e3)/(10*3600e3))); } cmpHist.t+=x.t*f; cmpHist.n+=x.n*f; cmpHist.usado=true; });
     const cmpCorte=cmpOrd.filter(o=>new Date(o.created_at).getTime()<R.cCorte);
     const [items,cmpItems]=await Promise.all([traerItems(ord.map(o=>o.id)),traerItems(cmpCorte.map(o=>o.id))]);
     if(periodo==='hoy'&&ord.length&&_ultimaId&&ord[0].id!==_ultimaId){
@@ -401,7 +415,9 @@ async function cargar(manual){
       const m=$('mascota'); m.classList.remove('salta'); void m.offsetWidth; m.classList.add('salta');
     }
     if(ord.length) _ultimaId=ord[0].id;
-    D={ord,items,cmp:stats(cmpCorte,cmpItems),cmpAll:cmpOrd,R,prods:[]};
+    const cmp=stats(cmpCorte,cmpItems); if(cmpHist.usado){ cmp.total+=cmpHist.t; cmp.n=Math.round(cmp.n+cmpHist.n); cmp.tk=cmp.n?cmp.total/cmp.n:0; cmp.pz=0; }
+    const ant={}; dCmp.forEach(x=>{ ant[x.k]=(ant[x.k]||0)+x.t; });
+    D={ord,items,cmp,ant,histCur,histDias:dCur.filter(x=>x.fuente==='hist'),R,prods:[]};
     pintar();
     if(vista==='meses') cargarMeses();
     $('act').textContent=new Date().toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',timeZone:'America/Mexico_City'})+' CDMX';
@@ -418,8 +434,9 @@ function deltaTxt(a,b){
 function vsCorto(a,b){ if(!b) return ''; const p=Math.round((a-b)/b*100); return Math.abs(p)<1?'igual':(p>0?'▲ ':'▼ ')+Math.abs(p)+'%'; }
 
 function pintar(){
-  const {ord,items,cmp,R}=D, s=stats(ord,items);
-  $('v-lbl').textContent=R.lbl+(suc!=='all'?' en '+suc:'');
+  const {ord,items,cmp,R}=D, s=stats(ord,items), hc=D.histCur||{t:0,n:0};
+  if(hc.t){ s.total+=hc.t; s.n+=hc.n; s.tk=s.n?s.total/s.n:0; }
+  $('v-lbl').textContent=R.lbl+(suc!=='all'?' en '+suc:'')+(hc.t?' (incluye '+money(hc.t)+' de Parrot)':'');
   const ent=Math.floor(s.total), cent=Math.round((s.total-ent)*100);
   $('v-total').innerHTML='$'+ent.toLocaleString('es-MX')+(cent?'<span class="venta-cent">.'+String(cent).padStart(2,'0')+'</span>':'');
   const dt=deltaTxt(s.total,cmp.total); $('v-delta').hidden=!dt; $('v-delta').textContent=dt;
@@ -428,8 +445,9 @@ function pintar(){
 
   $('sec-sucs').style.display=suc==='all'?'':'none';
   const bs={}; ord.forEach(o=>{ const k=o.sucursal||'—'; bs[k]=bs[k]||{t:0,n:0}; bs[k].t+=+o.total||0; bs[k].n++; });
+  if(hc.t) bs['Parrot (3 tiendas, antes del 3 nov)']={t:hc.t,n:hc.n,parrot:true};
   const ls=Object.entries(bs).sort((a,b)=>b[1].t-a[1].t), mx=ls[0]?ls[0][1].t||1:1;
-  $('por-suc').innerHTML=ls.length?ls.map(([k,v])=>`<button class="fila toca" onclick="elegirSuc('${esc(k)}')"><span class="nom">${esc(k)}</span><span class="val">${money(v.t)}</span><span class="sub">${v.n} órdenes, ticket de ${money(v.t/v.n)}</span><span class="sub r">${Math.round(v.t/(s.total||1)*100)}%</span><div class="barra"><i style="width:${v.t/mx*100}%"></i></div></button>`).join(''):'<div class="vacio">Todavía no hay ventas en este periodo.</div>';
+  $('por-suc').innerHTML=ls.length?ls.map(([k,v])=>`<button class="fila ${v.parrot?'':'toca'}" ${v.parrot?'':`onclick="elegirSuc('${esc(k)}')"`}><span class="nom">${esc(k)}</span><span class="val">${money(v.t)}</span><span class="sub">${v.n} órdenes, ticket de ${money(v.t/v.n)}</span><span class="sub r">${Math.round(v.t/(s.total||1)*100)}%</span><div class="barra"><i style="width:${v.t/mx*100}%"></i></div></button>`).join(''):'<div class="vacio">Todavía no hay ventas en este periodo.</div>';
 
   const porH={}; ord.forEach(o=>{ const h=mxHora(o.created_at); porH[h]=(porH[h]||0)+(+o.total||0); });
   const hs=[]; for(let h=12;h<=22;h++) hs.push(h);
@@ -568,7 +586,7 @@ function pintarDias(){
   sec.hidden=false;
   const n=mxNow(), hoy=Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate());
   const sumar=L=>{ const m={}; L.forEach(o=>{ const k=diaMx(o.created_at); m[k]=(m[k]||0)+(+o.total||0); }); return m; };
-  const act=sumar(D.ord), ant=sumar(D.cmpAll||[]);
+  const act=sumar(D.ord), ant=D.ant||{}; (D.histDias||[]).forEach(x=>{ act[x.k]=(act[x.k]||0)+x.t; });
   let B=[];
   if(periodo==='semana'){ const ini=hoy-((n.getUTCDay()+6)%7)*DIA;
     for(let i=0;i<7;i++){ const d=ini+i*DIA; B.push({d,a:act[d]||0,p:ant[d-7*DIA]||0,fut:d>hoy,eje:DSEM[new Date(d).getUTCDay()][0],lbl:DSEM[new Date(d).getUTCDay()]+' '+new Date(d).getUTCDate()}); }
@@ -623,7 +641,8 @@ function pintarMeses(){
   if(!DM) return;
   const n=mxNow(), y=n.getUTCFullYear(), m0=n.getUTCMonth(), hoyD=n.getUTCDate();
   const filas=DM.filter(r=>suc==='all'||r.sucursal===suc);
-  const tiendas=[...new Set(filas.map(r=>r.sucursal))].sort((a,b)=>SUCS.indexOf(a)-SUCS.indexOf(b));
+  const tiendas=[...new Set(filas.map(r=>r.sucursal))].sort((a,b)=>(a==='Parrot'?-1:SUCS.indexOf(a))-(b==='Parrot'?-1:SUCS.indexOf(b)));
+  const colSuc=t=>t==='Parrot'?'#e8c4cc':COL_SUC[SUCS.indexOf(t)%5];
   const M=[]; for(let i=11;i>=0;i--){ const d=new Date(Date.UTC(y,m0-i,1)); M.push({y:d.getUTCFullYear(),m:d.getUTCMonth(),t:0,n:0,porSuc:{},dias:new Set(),actual:i===0}); }
   const idx=(yy,mm)=>M.findIndex(x=>x.y===yy&&x.m===mm);
   filas.forEach(r=>{ const [yy,mm,dd]=r.fecha.split('-').map(Number), k=idx(yy,mm-1); if(k<0) return; const x=M[k]; x.t+=+r.total||0; x.n+=+r.ordenes||0; x.porSuc[r.sucursal]=(x.porSuc[r.sucursal]||0)+(+r.total||0); if(+r.total>0) x.dias.add(dd); if(r.fuente==='hist') x.hist=true; });
@@ -631,15 +650,15 @@ function pintarMeses(){
   let ini=M.findIndex(x=>x.t>0); if(ini<0) ini=11; const V=M.slice(Math.min(ini,9));
   const mx=Math.max(1,...V.map(x=>Math.max(x.t,x.proy||0)));
   $('ms-graf').innerHTML=V.map(x=>{ const k=M.indexOf(x);
-    const seg=(suc==='all'?tiendas:[suc]).map((t,j)=>{ const v=suc==='all'?(x.porSuc[t]||0):x.t; return v?`<i style="height:${v/mx*100}%;background:${suc==='all'?COL_SUC[j%5]:'var(--vino)'}"></i>`:''; }).filter(Boolean);
+    const seg=(suc==='all'?tiendas:[suc]).map((t,j)=>{ const v=suc==='all'?(x.porSuc[t]||0):x.t; return v?`<i style="height:${v/mx*100}%;background:${suc==='all'?colSuc(t):'var(--vino)'}"></i>`:''; }).filter(Boolean);
     if(seg.length) seg[seg.length-1]=seg[seg.length-1].replace('<i ','<i class="tope" ');
     const proy=x.actual&&x.proy>x.t?`<i class="proy" style="height:${(x.proy-x.t)/mx*100}%"></i>`:'';
     return `<button onclick="selMes(${k})" class="${_mesSel===k?'sel':''}" aria-label="${MESES[x.m]}">${seg.join('')}${proy}</button>`; }).join('');
   $('ms-eje').innerHTML=V.map(x=>`<span>${MESES[x.m].slice(0,3)}</span>`).join('');
-  $('ms-ley').innerHTML=(suc==='all'?tiendas.map((t,j)=>`<span><i class="punto" style="background:${COL_SUC[j%5]}"></i>${esc(t)}</span>`).join(''):'')+(act.proy>act.t?'<span><i class="punto" style="border:1.5px dashed var(--vino)"></i>A este ritmo</span>':'');
+  $('ms-ley').innerHTML=(suc==='all'?tiendas.map(t=>`<span><i class="punto" style="background:${colSuc(t)}"></i>${t==='Parrot'?'Parrot (3 tiendas)':esc(t)}</span>`).join(''):'')+(act.proy>act.t?'<span><i class="punto" style="border:1.5px dashed var(--vino)"></i>A este ritmo</span>':'');
   $('ms-aux').textContent=suc==='all'?'todas las tiendas':suc;
   const sel=_mesSel!=null?M[_mesSel]:null;
-  $('ms-nota').textContent=sel?`${MESES[sel.m][0].toUpperCase()+MESES[sel.m].slice(1)}: ${money(sel.t)}`+(suc==='all'?' · '+tiendas.filter(t=>sel.porSuc[t]).map(t=>t+' '+money(sel.porSuc[t])).join(', '):''):
+  $('ms-nota').textContent=sel?`${MESES[sel.m][0].toUpperCase()+MESES[sel.m].slice(1)}: ${money(sel.t)}`+(suc==='all'?' · '+tiendas.filter(t=>sel.porSuc[t]).map(t=>(t==='Parrot'?'Parrot':t)+' '+money(sel.porSuc[t])).join(', '):''):
     (act.t?`Este mes van ${money(act.t)} en ${hoyD} días. A este ritmo cierran en ${money(act.proy)}.`:'');
   $('ms-lista').innerHTML=[...V].reverse().map(x=>{ const k=M.indexOf(x), prev=M[k-1];
     let cmp='';
@@ -658,8 +677,8 @@ function pintarMeses(){
   $('ds-graf').innerHTML=orden.map((w,i)=>`<div class="${i===best&&prom[i]?'pico':''}" style="height:${prom[i]/mW*100}%" title="${DSEM[w]} · ${money(prom[i])}"></div>`).join('');
   $('ds-eje').innerHTML=orden.map(w=>`<span>${DSEM[w]}</span>`).join('');
   $('ds-nota').textContent=prom[best]?`El mejor día es el ${DSEM[orden[best]].toLowerCase()} (${money(prom[best])} en promedio) y el más flojo el ${DSEM[orden[worst]].toLowerCase()} (${money(prom[worst])}).`:'Todavía no hay suficientes días para comparar.';
-  const conHist=DM.some(r=>r.fuente==='hist');
-  $('ms-hist').hidden=conHist; $('ms-hist').textContent='📌 Por ahora solo se ven las ventas del sistema nuevo (desde octubre). En cuanto subamos el histórico de Parrot, aquí aparecen los meses anteriores.';
+  $('ms-hist').hidden=suc==='all';
+  $('ms-hist').textContent='📌 Hasta el 2 de noviembre las ventas vienen de Parrot y solo tenemos el total de las 3 tiendas juntas. Por eso, viendo una sola tienda, solo aparece lo del sistema nuevo (desde el 3 de noviembre). En "Todas" ves el año completo.';
 }
 function selMes(k){ _mesSel=_mesSel===k?null:k; pintarMeses(); }
 
@@ -672,8 +691,8 @@ function irA(v){ vista=v; document.querySelectorAll('.vista').forEach(x=>x.class
 let _avT; function aviso(t){ const a=$('aviso'); a.textContent=t; a.classList.add('on'); clearTimeout(_avT); _avT=setTimeout(()=>a.classList.remove('on'),3200); }
 
 async function cargarSucursales(){
-  try{ const r=await fetch(`${SB_URL}/rest/v1/sucursales?select=name&order=name.asc`,{headers:H}); if(!r.ok) return;
-    const c=$('sucs'), L=await r.json(); SUCS=L.map(s=>s.name); L.forEach(s=>{ const b=document.createElement('button'); b.textContent=s.name; b.onclick=()=>setSuc(s.name,b); c.appendChild(b); }); }catch(e){}
+  try{ const r=await fetch(`${SB_URL}/rest/v1/sucursales?select=name,pos_desde&order=name.asc`,{headers:H}); if(!r.ok) return;
+    const c=$('sucs'), L=await r.json(); SUCS=L.map(s=>s.name); const pd=L.map(s=>s.pos_desde).filter(Boolean).sort().pop(); if(pd) CORTE=Date.parse(pd+'T00:00:00Z')+MX_OFF; L.forEach(s=>{ const b=document.createElement('button'); b.textContent=s.name; b.onclick=()=>setSuc(s.name,b); c.appendChild(b); }); }catch(e){}
 }
 function arrancar(){
   if(!_arr){ _arr=true; cargarSucursales().then(()=>traerMetas()).then(()=>{ if(D.R) pintar(); }); }
