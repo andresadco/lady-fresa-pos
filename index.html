@@ -349,6 +349,8 @@ html, body {
   .bases-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 .top-chip.sel .top-price { color: var(--red); font-weight: 600; }
+.top-img { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; flex-shrink: 0; margin-bottom: 3px; box-shadow: 0 1px 4px rgba(90,42,51,.25); }
+.base-img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; flex-shrink: 0; box-shadow: 0 1px 3px rgba(90,42,51,.25); }
 .top-chip.sel-prem .top-price { color: var(--purple); font-weight: 600; }
 .top-chip.sel-shot .top-price { color: var(--green); font-weight: 600; }
 
@@ -1353,6 +1355,18 @@ function pEmoji(n) { return EMOJI_MAP[n] || '🍓'; }
 
 const TOP_EMOJI = {'Crema':'🤍','Chococrema':'🍫','Caramel cream':'🍯','Chocolate':'🍫','Caramelo':'🍬','Chocolate Blanco':'🤍','Almendra Fileteada':'🌰','Galleta Oreo':'🍪','Coco':'🥥','Choco Chips':'🍫','Amaranto Especial':'🌱','Mms':'🌈','Lechera':'🥛','Nuez Triturada':'🌰','Mazapan Especial':'🥜','Ajonjoli Especial':'🌾','Granola LMF':'🌾','Nutella Crujiente':'🥜','Guyabazo':'🍓','Girasol Dulce':'🌻','Mazapán':'🥜','Ferrero Crujiente':'🌰','Crema Pistache':'🟢','Galleta Kit Kat':'🍫','Galleta Lotus':'🌸','Dubai Crunch':'✨','Lotus Salsa':'🌸','Crumble de Ferrero':'🌰'};
 function tEmoji(n) { return TOP_EMOJI[n] || '🍬'; }
+// Fotos de toppings/bases (img/toppings). Se buscan por nombre del modificador, sin acentos ni mayúsculas.
+const TOP_IMG = {
+  'nuez triturada':'nuez','almendra fileteada':'almendra','galleta oreo':'oreo','coco':'coco','choco chips':'chips',
+  'amaranto especial':'amaranto','mms':'mm','lechera':'lechera','mazapan especial':'mazesp','ajonjoli especial':'ajonjoli',
+  'granola lmf':'granola','nutella crujiente':'nutella','guyabazo':'guayabazo','guayabazo':'guayabazo','girasol dulce':'girasol','mazapan':'mazapan',
+  'crumble matcha':'crmatcha','crumble cacao':'crcacao','crumble de canela':'crcanela','ferrero crujiente':'ferrero',
+  'crema pistache':'pistache','galleta kit kat':'kitkat','galleta lotus':'lotus','dubai crunch':'dubai','lotus salsa':'lotussalsa',
+  'crumble de ferrero':'crferrero','spread cacao':'cacaosp','spread matcha':'matchasp','crumble lotus':'crlotus','spread avellana':'avellana',
+  'chocolate':'choc','caramelo':'cara','chocolate blanco':'blanco','crema':'crema','crema sin azucar':'crema'
+};
+function tImgKey(n){ return TOP_IMG[String(n||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim()]; }
+function tIcon(n, cls){ const k=tImgKey(n); return k ? `<img class="${cls}" src="img/toppings/${k}.webp" alt="" loading="lazy" onerror="this.outerHTML='<span class=&quot;top-emoji&quot;>${tEmoji(n)}</span>'">` : `<span class="top-emoji">${tEmoji(n)}</span>`; }
 
 let MODS = {
   'Tamaño': { required:true, min:1, max:1, options:[{name:'Chico',extra:0},{name:'Mediano',extra:36},{name:'Grande',extra:50}] },
@@ -2012,7 +2026,7 @@ function renderCustomBody() {
       mod.options.forEach(o=>{
         const sel=CS.sel[modKey]===o.name;
         html+=`<div class="base-chip${sel?' sel':''}" data-mod="${sanitize(modKey)}" data-name="${sanitize(o.name)}" onclick="selSingle(this.dataset.mod,this.dataset.name)">
-          <span style="font-size:18px;">${tEmoji(o.name)}</span>
+          ${tIcon(o.name,'base-img')}
           <div class="base-name">${sanitize(o.name)}</div>
           <div class="base-extra">${o.extra===0?'incl.':'+$'+o.extra}</div>
           <div class="base-check">${sel?'✓':''}</div>
@@ -2035,7 +2049,7 @@ function renderCustomBody() {
         const cls=(isSel?(isPrem?'sel-prem':isShot?'sel-shot':'sel'):'')+(cnt>1?' doble':'');
         const priceLabel=topPrecioLabel(o,cnt);
         html+=`<div class="top-chip${cls?' '+cls:''}" data-mod="${sanitize(modKey)}" data-name="${sanitize(o.name)}" onclick="toggleTop(this.dataset.mod,this.dataset.name)">
-          <span class="top-emoji">${tEmoji(o.name)}</span>
+          ${tIcon(o.name,'top-img')}
           <span class="top-name">${sanitize(o.name)}</span>
           <span class="top-price">${priceLabel}</span>
         </div>`;
