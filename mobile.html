@@ -148,6 +148,31 @@ nav button.on span{filter:none;opacity:1}
 #lf-login .pad button{height:64px;border-radius:20px;background:rgba(255,255,255,.12);color:#fff;font-size:26px;font-family:'Lilita One',sans-serif}
 #lf-login .pad button:active{background:rgba(255,255,255,.3)}
 #lf-login .err{min-height:20px;font-size:14px;color:#fff;font-weight:600}
+.graf{background:var(--blanco);border-radius:18px;padding:16px 14px 12px}
+.dias{display:flex;align-items:flex-end;gap:3px;height:130px}
+.dias button{flex:1;height:100%;position:relative;display:flex;align-items:flex-end;justify-content:center;padding:0}
+.dias .ant{position:absolute;left:0;right:0;bottom:0;background:var(--rosa-2);border-radius:4px 4px 2px 2px}
+.dias .act{position:relative;width:64%;background:var(--vino);border-radius:4px 4px 2px 2px;min-height:2px}
+.dias .act.cero{background:var(--linea)}
+.dias button.sel .act{background:var(--vino-2)}
+.dias button.hoy::after{content:'';position:absolute;left:50%;top:-8px;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:var(--vino-2)}
+.ley-mini{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--tinta-3);margin-top:10px}
+.ley-mini span{display:flex;align-items:center;gap:6px}
+.meta-l{display:flex;align-items:baseline;gap:10px}
+.meta-l .num{font-size:30px;color:var(--vino)}
+.meta-l span:last-child{font-size:13px;color:var(--tinta-2)}
+.meta-bar{position:relative;height:14px;border-radius:99px;background:var(--rosa-2);margin-top:10px}
+.meta-bar i{display:block;height:100%;border-radius:99px;background:var(--vino);max-width:100%;transition:width .6s ease}
+.meta-bar b{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--vino-2);border-radius:2px}
+.meses{display:flex;align-items:flex-end;gap:5px;height:150px}
+.meses button{flex:1;height:100%;display:flex;flex-direction:column-reverse;padding:0;position:relative}
+.meses button i{display:block;width:100%}
+.meses button i:first-child{border-radius:0 0 3px 3px}
+.meses button .tope{border-radius:5px 5px 0 0}
+.meses button .proy{border:1.5px dashed var(--vino);border-bottom:none;border-radius:5px 5px 0 0;background:transparent}
+.meses button.sel{outline:2px solid var(--vino-2);outline-offset:2px;border-radius:5px}
+.fila .sube{color:var(--vino);font-weight:700}
+.nota-hist{margin-top:18px;padding:14px 16px;border-radius:16px;background:var(--rosa-2);color:var(--vino-2);font-size:13px}
 @media (min-width:700px){ .hero,main,.sucs{max-width:640px;margin-left:auto;margin-right:auto} }
 @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
 </style>
@@ -198,11 +223,20 @@ nav button.on span{filter:none;opacity:1}
       <div class="cifra"><span class="num" id="c-tk">$0</span><small>ticket promedio</small><div class="vs" id="c-tk-vs"></div></div>
       <div class="cifra"><span class="num" id="c-pz">0</span><small>productos</small><div class="vs" id="c-pz-vs"></div></div>
     </div>
+    <section id="sec-meta" hidden><h2>Meta <span class="aux" id="m-aux"></span></h2>
+      <div class="graf"><div class="meta-l"><span class="num" id="m-pct">0%</span><span id="m-txt"></span></div><div class="meta-bar"><i id="m-bar"></i><b id="m-esp" hidden></b></div><div class="horas-nota" id="m-nota"></div></div>
+    </section>
+    <section id="sec-dias" hidden><h2>Día por día <span class="aux" id="d-aux"></span></h2>
+      <div class="graf"><div class="dias" id="d-graf"></div><div class="horas-eje" id="d-eje"></div>
+        <div class="ley-mini"><span><i class="punto" style="background:var(--vino)"></i><b id="d-l1">Esta semana</b></span><span><i class="punto" style="background:var(--rosa-2);border:1px solid var(--rosa)"></i><b id="d-l2">Semana pasada</b></span></div>
+        <div class="horas-nota" id="d-nota"></div></div>
+    </section>
     <section id="sec-sucs"><h2>Por tienda</h2><div class="lista" id="por-suc"></div></section>
     <section><h2>Por hora <span class="aux" id="h-aux"></span></h2>
       <div class="horas"><div class="horas-graf" id="h-graf"></div><div class="horas-eje" id="h-eje"></div><div class="horas-nota" id="h-nota"></div></div>
     </section>
     <section><h2>Cómo pagaron</h2><div class="pagos"><div class="pila" id="p-pila"></div><div class="leyenda" id="p-ley"></div></div></section>
+    <section><h2>Apps y descuentos <span class="aux" id="ex-aux"></span></h2><div class="lista" id="ex-lista"></div></section>
     <section><h2>Lo más vendido <button onclick="irA('productos')">Ver todos</button></h2><div class="lista" id="top5"></div></section>
     <section><h2>Últimas órdenes <button onclick="irA('ordenes')">Ver todas</button></h2><div class="lista" id="ult"></div></section>
   </div>
@@ -221,6 +255,18 @@ nav button.on span{filter:none;opacity:1}
     </section>
   </div>
 
+  <div class="vista" id="vista-meses">
+    <section>
+      <h2>Mes a mes <span class="aux" id="ms-aux"></span></h2>
+      <div class="graf"><div class="meses" id="ms-graf"></div><div class="horas-eje" id="ms-eje"></div><div class="ley-mini" id="ms-ley"></div><div class="horas-nota" id="ms-nota"></div></div>
+    </section>
+    <section><h2>Detalle por mes</h2><div class="lista" id="ms-lista"></div></section>
+    <section><h2>Por día de la semana <span class="aux">últimas 8 semanas</span></h2>
+      <div class="horas"><div class="horas-graf" id="ds-graf"></div><div class="horas-eje" id="ds-eje"></div><div class="horas-nota" id="ds-nota"></div></div>
+    </section>
+    <div class="nota-hist" id="ms-hist" hidden></div>
+  </div>
+
   <div class="vista" id="vista-productos">
     <section>
       <h2>Productos <span class="aux" id="pr-aux"></span></h2>
@@ -235,6 +281,7 @@ nav button.on span{filter:none;opacity:1}
 
 <nav>
   <button class="on" data-v="resumen" onclick="irA('resumen')"><span>📊</span>Resumen</button>
+  <button data-v="meses" onclick="irA('meses')"><span>📈</span>Meses</button>
   <button data-v="ordenes" onclick="irA('ordenes')"><span>🧾</span>Órdenes</button>
   <button data-v="productos" onclick="irA('productos')"><span>🍓</span>Productos</button>
 </nav>
@@ -318,7 +365,7 @@ const h12=h=>(h%12||12);
 
 async function traerOrdenes(de,a){
   const s=suc!=='all'?`&sucursal=eq.${encodeURIComponent(suc)}`:'';
-  const r=await fetch(`${SB_URL}/rest/v1/orders?select=id,created_at,order_number,sucursal,service_type,client_name,pay_method,subtotal,discount_amt,promo_nombre,iva,total,cash_received,change_given,cajero_name,pago_efectivo,pago_tarjeta,pago_transferencia,pago_plataforma,canal,comision,loyalty_cliente_id&created_at=gte.${new Date(de).toISOString()}&created_at=lt.${new Date(a).toISOString()}${s}&status=neq.cancelada&order=created_at.desc&limit=5000`,{headers:H});
+  const r=await fetch(`${SB_URL}/rest/v1/orders?select=id,created_at,order_number,sucursal,service_type,client_name,pay_method,subtotal,discount_amt,promo_nombre,iva,total,cash_received,change_given,cajero_name,pago_efectivo,pago_tarjeta,pago_transferencia,pago_plataforma,canal,comision,loyalty_cliente_id,loyalty_canje,canje_monto&created_at=gte.${new Date(de).toISOString()}&created_at=lt.${new Date(a).toISOString()}${s}&status=neq.cancelada&order=created_at.desc&limit=5000`,{headers:H});
   if(!r.ok) throw new Error('ordenes '+r.status);
   return r.json();
 }
@@ -354,8 +401,9 @@ async function cargar(manual){
       const m=$('mascota'); m.classList.remove('salta'); void m.offsetWidth; m.classList.add('salta');
     }
     if(ord.length) _ultimaId=ord[0].id;
-    D={ord,items,cmp:stats(cmpCorte,cmpItems),R,prods:[]};
+    D={ord,items,cmp:stats(cmpCorte,cmpItems),cmpAll:cmpOrd,R,prods:[]};
     pintar();
+    if(vista==='meses') cargarMeses();
     $('act').textContent=new Date().toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',timeZone:'America/Mexico_City'})+' CDMX';
   }catch(e){ console.warn(e); $('act').textContent='Sin conexión'; if(manual) aviso('No se pudo actualizar. Revisa tu internet.'); }
 }
@@ -403,6 +451,7 @@ function pintar(){
   const top=[...D.prods].sort((a,b)=>b.q-a.q).slice(0,5), mq=top[0]?top[0].q:1;
   $('top5').innerHTML=top.length?top.map(p=>filaProd(p,mq,'q')).join(''):'<div class="vacio">Aquí vas a ver lo que más se vende.</div>';
   $('ult').innerHTML=ord.length?ord.slice(0,5).map(filaOrden).join(''):'<div class="vacio">Sin órdenes todavía.</div>';
+  pintarMeta(s.total); pintarDias(); pintarExtras();
   if(vista==='ordenes') pintarOrdenes();
   if(vista==='productos') pintarProductos();
 }
@@ -470,20 +519,164 @@ function cerrarOrden(){ $('velo').classList.remove('on'); $('hoja').style.transf
   document.addEventListener('keydown',e=>{ if(e.key==='Escape') cerrarOrden(); });
 })();
 
+// ═══ FECHAS DE APOYO (día CDMX como Date en UTC)
+const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const DSEM=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const diaMx=iso=>{ const d=new Date(new Date(iso).getTime()-MX_OFF); return Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()); };
+const isoDia=ms=>new Date(ms).toISOString().slice(0,10);
+const diasMes=(y,m)=>new Date(Date.UTC(y,m+1,0)).getUTCDate();
+let SUCS=[], METAS=null;
+
+// ═══ META
+async function traerMetas(){
+  if(METAS) return METAS;
+  try{ const r=await fetch(`${SB_URL}/rest/v1/lf_ventas_config?select=sucursal,meta_lunes_jueves,meta_viernes_domingo,meta_mensual_override&mostrar=eq.true`,{headers:H}); METAS=r.ok?await r.json():[]; }catch(e){ METAS=[]; }
+  return METAS;
+}
+function metaDia(ms){ // ms = día UTC
+  const lista=suc==='all'?SUCS:[suc]; if(!lista.length) return null; let t=0;
+  for(const n of lista){ const c=(METAS||[]).find(m=>m.sucursal===n); if(!c) return null; const w=new Date(ms).getUTCDay(); t+=+(w===0||w>=5?c.meta_viernes_domingo:c.meta_lunes_jueves)||0; }
+  return t;
+}
+function pintarMeta(vendido){
+  const sec=$('sec-meta'); if(!METAS||!METAS.length){ sec.hidden=true; return; }
+  const n=mxNow(), hoy=Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate());
+  let dias=[], nombre;
+  if(periodo==='hoy'){ dias=[hoy]; nombre='de hoy'; }
+  else if(periodo==='ayer'){ dias=[hoy-DIA]; nombre='de ayer'; }
+  else if(periodo==='semana'){ const ini=hoy-((n.getUTCDay()+6)%7)*DIA; for(let i=0;i<7;i++) dias.push(ini+i*DIA); nombre='de la semana'; }
+  else { const y=n.getUTCFullYear(), m=n.getUTCMonth(); for(let i=1;i<=diasMes(y,m);i++) dias.push(Date.UTC(y,m,i)); nombre='del mes'; }
+  let meta=0, esperado=0;
+  for(const d of dias){ const v=metaDia(d); if(v===null){ sec.hidden=true; return; } meta+=v; if(d<=hoy) esperado+=v; }
+  if(!meta){ sec.hidden=true; return; }
+  sec.hidden=false;
+  const pct=vendido/meta*100;
+  $('m-pct').textContent=Math.round(pct)+'%';
+  $('m-txt').textContent=`de la meta ${nombre} (${money(meta)})`;
+  $('m-bar').style.width=Math.min(100,pct)+'%';
+  const multi=dias.length>1; $('m-esp').hidden=!multi; if(multi) $('m-esp').style.left=Math.min(100,esperado/meta*100)+'%';
+  $('m-aux').textContent=suc==='all'?'todas las tiendas':suc;
+  if(vendido>=meta) $('m-nota').textContent='🍓 ¡Meta cumplida! Van '+money(vendido-meta)+' arriba.';
+  else if(multi) $('m-nota').textContent=(vendido>=esperado?'Van adelantados. ':'Para ir al día deberían llevar '+money(esperado)+'. ')+'Faltan '+money(meta-vendido)+' para la meta.';
+  else $('m-nota').textContent='Faltan '+money(meta-vendido)+' para la meta.';
+}
+
+// ═══ DÍA POR DÍA (semana y mes)
+let _diaSel=null;
+function pintarDias(){
+  const sec=$('sec-dias'); if(periodo!=='semana'&&periodo!=='mes'){ sec.hidden=true; return; }
+  sec.hidden=false;
+  const n=mxNow(), hoy=Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate());
+  const sumar=L=>{ const m={}; L.forEach(o=>{ const k=diaMx(o.created_at); m[k]=(m[k]||0)+(+o.total||0); }); return m; };
+  const act=sumar(D.ord), ant=sumar(D.cmpAll||[]);
+  let B=[];
+  if(periodo==='semana'){ const ini=hoy-((n.getUTCDay()+6)%7)*DIA;
+    for(let i=0;i<7;i++){ const d=ini+i*DIA; B.push({d,a:act[d]||0,p:ant[d-7*DIA]||0,fut:d>hoy,eje:DSEM[new Date(d).getUTCDay()][0],lbl:DSEM[new Date(d).getUTCDay()]+' '+new Date(d).getUTCDate()}); }
+    $('d-l1').textContent='Esta semana'; $('d-l2').textContent='Semana pasada';
+  } else { const y=n.getUTCFullYear(), m=n.getUTCMonth(), dm=diasMes(y,m), dp=diasMes(y,m-1);
+    for(let i=1;i<=dm;i++){ const d=Date.UTC(y,m,i), p=i<=dp?Date.UTC(y,m-1,i):null; B.push({d,a:act[d]||0,p:p?ant[p]||0:0,fut:d>hoy,eje:(i===1||i%5===0)?String(i):'',lbl:DSEM[new Date(d).getUTCDay()]+' '+i}); }
+    $('d-l1').textContent=MESES[m][0].toUpperCase()+MESES[m].slice(1); $('d-l2').textContent=MESES[(m+11)%12][0].toUpperCase()+MESES[(m+11)%12].slice(1);
+  }
+  D.dias=B;
+  const mx=Math.max(1,...B.map(b=>Math.max(b.a,b.p)));
+  $('d-graf').innerHTML=B.map((b,i)=>`<button onclick="selDia(${i})" class="${b.d===hoy?'hoy':''} ${_diaSel===b.d?'sel':''}" aria-label="${b.lbl}"><i class="ant" style="height:${b.p/mx*100}%"></i>${b.fut?'':`<i class="act ${b.a?'':'cero'}" style="height:${b.a/mx*100}%"></i>`}</button>`).join('');
+  $('d-eje').innerHTML=B.map(b=>`<span>${b.eje}</span>`).join('');
+  const hechos=B.filter(b=>!b.fut&&b.a>0), mejor=hechos.reduce((x,b)=>!x||b.a>x.a?b:x,null);
+  $('d-aux').textContent=hechos.length?'promedio '+money(hechos.reduce((s,b)=>s+b.a,0)/hechos.length)+' al día':'';
+  const sel=B.find(b=>b.d===_diaSel);
+  $('d-nota').textContent=sel?`${sel.lbl}: ${money(sel.a)}${sel.p?' (antes '+money(sel.p)+')':''}`:(mejor?`El mejor día fue ${mejor.lbl.toLowerCase()} con ${money(mejor.a)}. Toca una barra para ver el día.`:'');
+}
+function selDia(i){ const b=D.dias[i]; _diaSel=_diaSel===b.d?null:b.d; pintarDias(); }
+
+// ═══ APPS Y DESCUENTOS
+function pintarExtras(){
+  const rows=[], apps={};
+  D.ord.forEach(o=>{ if(o.canal&&CANALES[o.canal]&&o.canal!=='propio'){ const a=apps[o.canal]=apps[o.canal]||{t:0,n:0,c:0}; a.t+=+o.total||0; a.n++; a.c+=+o.comision||0; } });
+  const totApps=Object.values(apps).reduce((s,a)=>s+a.t,0), venta=D.ord.reduce((s,o)=>s+(+o.total||0),0)||1;
+  Object.entries(apps).sort((a,b)=>b[1].t-a[1].t).forEach(([k,a])=>rows.push(`<div class="fila"><span class="nom">🛵 ${CANALES[k]}</span><span class="val">${money(a.t)}</span><span class="sub">${a.n} pedido${a.n>1?'s':''}${a.c?' · comisión '+money(a.c):''}</span><span class="sub r">${Math.round(a.t/venta*100)}% de la venta</span></div>`));
+  const ds={};
+  D.ord.forEach(o=>{
+    if(o.loyalty_canje&&+o.canje_monto){ const x=ds['Lady Lovers (premio)']=ds['Lady Lovers (premio)']||{t:0,n:0}; x.t+=+o.canje_monto; x.n++; }
+    if(+o.discount_amt){ let k=o.promo_nombre||'Descuento manual'; if(k==='Descuento empleados') k='Fresero'; const x=ds[k]=ds[k]||{t:0,n:0}; x.t+=+o.discount_amt; x.n++; }
+  });
+  const totDesc=Object.values(ds).reduce((s,x)=>s+x.t,0);
+  Object.entries(ds).sort((a,b)=>b[1].t-a[1].t).forEach(([k,x])=>rows.push(`<div class="fila"><span class="nom">🎁 ${esc(k)}</span><span class="val">−${money(x.t)}</span><span class="sub">${x.n} orden${x.n>1?'es':''}</span><span></span></div>`));
+  $('ex-aux').textContent=[totApps?'apps '+money(totApps):'',totDesc?'regalado '+money(totDesc):''].filter(Boolean).join(' · ');
+  $('ex-lista').innerHTML=rows.join('')||'<div class="vacio">Sin pedidos de apps ni descuentos en este periodo.</div>';
+}
+
+// ═══ MESES
+const COL_SUC=['#A6182E','#FD9CB3','#672626','#e8c4cc','#c9566b'];
+let DM=null, _mesSel=null, _cargandoMeses=false;
+async function cargarMeses(){
+  if(_cargandoMeses) return; _cargandoMeses=true;
+  try{
+    const n=mxNow(), de=isoDia(Date.UTC(n.getUTCFullYear(),n.getUTCMonth()-11,1)), a=isoDia(Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate()));
+    if(!DM) $('ms-lista').innerHTML='<div class="vacio">Cargando…</div>';
+    const r=await fetch(`${SB_URL}/rest/v1/rpc/lf_ventas_diarias`,{method:'POST',headers:{...H,'Content-Type':'application/json'},body:JSON.stringify({p_de:de,p_a:a})});
+    if(!r.ok) throw new Error('meses '+r.status);
+    DM=await r.json(); pintarMeses();
+  }catch(e){ console.warn(e); if(!DM) $('ms-lista').innerHTML='<div class="vacio">No se pudo cargar. Revisa tu internet.</div>'; }
+  finally{ _cargandoMeses=false; }
+}
+function pintarMeses(){
+  if(!DM) return;
+  const n=mxNow(), y=n.getUTCFullYear(), m0=n.getUTCMonth(), hoyD=n.getUTCDate();
+  const filas=DM.filter(r=>suc==='all'||r.sucursal===suc);
+  const tiendas=[...new Set(filas.map(r=>r.sucursal))].sort((a,b)=>SUCS.indexOf(a)-SUCS.indexOf(b));
+  const M=[]; for(let i=11;i>=0;i--){ const d=new Date(Date.UTC(y,m0-i,1)); M.push({y:d.getUTCFullYear(),m:d.getUTCMonth(),t:0,n:0,porSuc:{},dias:new Set(),actual:i===0}); }
+  const idx=(yy,mm)=>M.findIndex(x=>x.y===yy&&x.m===mm);
+  filas.forEach(r=>{ const [yy,mm,dd]=r.fecha.split('-').map(Number), k=idx(yy,mm-1); if(k<0) return; const x=M[k]; x.t+=+r.total||0; x.n+=+r.ordenes||0; x.porSuc[r.sucursal]=(x.porSuc[r.sucursal]||0)+(+r.total||0); if(+r.total>0) x.dias.add(dd); if(r.fuente==='hist') x.hist=true; });
+  const act=M[11], hMx=n.getUTCHours()+n.getUTCMinutes()/60, transcurrido=(hoyD-1)+Math.min(1,Math.max(0,(hMx-12)/10)); act.proy=act.t&&transcurrido>=1?act.t/transcurrido*diasMes(act.y,act.m):0;
+  let ini=M.findIndex(x=>x.t>0); if(ini<0) ini=11; const V=M.slice(Math.min(ini,9));
+  const mx=Math.max(1,...V.map(x=>Math.max(x.t,x.proy||0)));
+  $('ms-graf').innerHTML=V.map(x=>{ const k=M.indexOf(x);
+    const seg=(suc==='all'?tiendas:[suc]).map((t,j)=>{ const v=suc==='all'?(x.porSuc[t]||0):x.t; return v?`<i style="height:${v/mx*100}%;background:${suc==='all'?COL_SUC[j%5]:'var(--vino)'}"></i>`:''; }).filter(Boolean);
+    if(seg.length) seg[seg.length-1]=seg[seg.length-1].replace('<i ','<i class="tope" ');
+    const proy=x.actual&&x.proy>x.t?`<i class="proy" style="height:${(x.proy-x.t)/mx*100}%"></i>`:'';
+    return `<button onclick="selMes(${k})" class="${_mesSel===k?'sel':''}" aria-label="${MESES[x.m]}">${seg.join('')}${proy}</button>`; }).join('');
+  $('ms-eje').innerHTML=V.map(x=>`<span>${MESES[x.m].slice(0,3)}</span>`).join('');
+  $('ms-ley').innerHTML=(suc==='all'?tiendas.map((t,j)=>`<span><i class="punto" style="background:${COL_SUC[j%5]}"></i>${esc(t)}</span>`).join(''):'')+(act.proy>act.t?'<span><i class="punto" style="border:1.5px dashed var(--vino)"></i>A este ritmo</span>':'');
+  $('ms-aux').textContent=suc==='all'?'todas las tiendas':suc;
+  const sel=_mesSel!=null?M[_mesSel]:null;
+  $('ms-nota').textContent=sel?`${MESES[sel.m][0].toUpperCase()+MESES[sel.m].slice(1)}: ${money(sel.t)}`+(suc==='all'?' · '+tiendas.filter(t=>sel.porSuc[t]).map(t=>t+' '+money(sel.porSuc[t])).join(', '):''):
+    (act.t?`Este mes van ${money(act.t)} en ${hoyD} días. A este ritmo cierran en ${money(act.proy)}.`:'');
+  $('ms-lista').innerHTML=[...V].reverse().map(x=>{ const k=M.indexOf(x), prev=M[k-1];
+    let cmp='';
+    if(prev&&prev.t){ if(x.actual){ // comparar contra el mes pasado a esta misma altura
+        const pa=filas.filter(r=>{ const [yy,mm,dd]=r.fecha.split('-').map(Number); return yy===prev.y&&mm-1===prev.m&&dd<=hoyD; }).reduce((s,r)=>s+(+r.total||0),0);
+        if(pa){ const p=Math.round((x.t-pa)/pa*100); cmp=`<span class="${p>=0?'sube':''}">${p>=0?'▲':'▼'} ${Math.abs(p)}%</span> vs ${MESES[prev.m].slice(0,3)} al día ${hoyD}`; }
+      } else { const p=Math.round((x.t-prev.t)/prev.t*100); cmp=`<span class="${p>=0?'sube':''}">${p>=0?'▲':'▼'} ${Math.abs(p)}%</span> vs ${MESES[prev.m].slice(0,3)}`; } }
+    const nm=MESES[x.m][0].toUpperCase()+MESES[x.m].slice(1)+(x.y!==y?' '+x.y:'');
+    const sub=x.t?(x.n?`${x.n} órdenes · ticket ${money(x.t/x.n)}`:'')+(x.dias.size?` · ${money(x.t/x.dias.size)} al día`:''):'Sin ventas registradas';
+    return `<div class="fila"><span class="nom">${nm}${x.actual?' (va)':''}</span><span class="val">${money(x.t)}</span><span class="sub">${sub}${x.actual&&x.proy?' · cierra en ~'+money(x.proy):''}</span><span class="sub r">${cmp}</span></div>`; }).join('');
+  // Por día de la semana: promedio de los días con venta en las últimas 8 semanas (sin hoy)
+  const hoyMs=Date.UTC(y,m0,hoyD), desde=hoyMs-56*DIA, porDia={};
+  filas.forEach(r=>{ const d=Date.parse(r.fecha+'T00:00:00Z'); if(d<desde||d>=hoyMs) return; porDia[d]=(porDia[d]||0)+(+r.total||0); });
+  const W={}; Object.entries(porDia).forEach(([d,t])=>{ if(!t) return; const w=new Date(+d).getUTCDay(); W[w]=W[w]||{t:0,n:0}; W[w].t+=t; W[w].n++; });
+  const orden=[1,2,3,4,5,6,0], prom=orden.map(w=>W[w]?W[w].t/W[w].n:0), mW=Math.max(1,...prom), best=prom.indexOf(Math.max(...prom)), worst=prom.indexOf(Math.min(...prom.filter(v=>v>0)));
+  $('ds-graf').innerHTML=orden.map((w,i)=>`<div class="${i===best&&prom[i]?'pico':''}" style="height:${prom[i]/mW*100}%" title="${DSEM[w]} · ${money(prom[i])}"></div>`).join('');
+  $('ds-eje').innerHTML=orden.map(w=>`<span>${DSEM[w]}</span>`).join('');
+  $('ds-nota').textContent=prom[best]?`El mejor día es el ${DSEM[orden[best]].toLowerCase()} (${money(prom[best])} en promedio) y el más flojo el ${DSEM[orden[worst]].toLowerCase()} (${money(prom[worst])}).`:'Todavía no hay suficientes días para comparar.';
+  const conHist=DM.some(r=>r.fuente==='hist');
+  $('ms-hist').hidden=conHist; $('ms-hist').textContent='📌 Por ahora solo se ven las ventas del sistema nuevo (desde octubre). En cuanto subamos el histórico de Parrot, aquí aparecen los meses anteriores.';
+}
+function selMes(k){ _mesSel=_mesSel===k?null:k; pintarMeses(); }
+
 // ═══ CONTROLES
-function setPeriodo(p){ periodo=p; document.querySelectorAll('.periodos button').forEach(b=>b.classList.toggle('on',b.dataset.p===p)); _ultimaId=null; cargar(true); }
-function setSuc(s,btn){ suc=s; document.querySelectorAll('#sucs button').forEach(b=>b.classList.toggle('on',b===btn)); _ultimaId=null; cargar(true); }
+function setPeriodo(p){ periodo=p; _diaSel=null; document.querySelectorAll('.periodos button').forEach(b=>b.classList.toggle('on',b.dataset.p===p)); _ultimaId=null; cargar(true); }
+function setSuc(s,btn){ suc=s; _mesSel=null; document.querySelectorAll('#sucs button').forEach(b=>b.classList.toggle('on',b===btn)); _ultimaId=null; cargar(true); }
 function setFiltroPago(f,btn){ filtroPago=f; document.querySelectorAll('#o-chips button').forEach(b=>b.classList.toggle('on',b===btn)); pintarOrdenes(); }
 function setOrdenProd(o,btn){ ordenProd=o; btn.parentNode.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b===btn)); pintarProductos(); }
-function irA(v){ vista=v; document.querySelectorAll('.vista').forEach(x=>x.classList.toggle('on',x.id==='vista-'+v)); document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v)); if(v==='ordenes') pintarOrdenes(); if(v==='productos') pintarProductos(); window.scrollTo({top:0}); }
+function irA(v){ vista=v; document.querySelectorAll('.vista').forEach(x=>x.classList.toggle('on',x.id==='vista-'+v)); document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v)); if(v==='ordenes') pintarOrdenes(); if(v==='productos') pintarProductos(); if(v==='meses'){ if(DM) pintarMeses(); cargarMeses(); } window.scrollTo({top:0}); }
 let _avT; function aviso(t){ const a=$('aviso'); a.textContent=t; a.classList.add('on'); clearTimeout(_avT); _avT=setTimeout(()=>a.classList.remove('on'),3200); }
 
 async function cargarSucursales(){
   try{ const r=await fetch(`${SB_URL}/rest/v1/sucursales?select=name&order=name.asc`,{headers:H}); if(!r.ok) return;
-    const c=$('sucs'); (await r.json()).forEach(s=>{ const b=document.createElement('button'); b.textContent=s.name; b.onclick=()=>setSuc(s.name,b); c.appendChild(b); }); }catch(e){}
+    const c=$('sucs'), L=await r.json(); SUCS=L.map(s=>s.name); L.forEach(s=>{ const b=document.createElement('button'); b.textContent=s.name; b.onclick=()=>setSuc(s.name,b); c.appendChild(b); }); }catch(e){}
 }
 function arrancar(){
-  if(!_arr){ _arr=true; cargarSucursales(); }
+  if(!_arr){ _arr=true; cargarSucursales().then(()=>traerMetas()).then(()=>{ if(D.R) pintar(); }); }
   cargar(); clearInterval(_poll); _poll=setInterval(()=>{ if(LF_AUTH&&!document.hidden&&periodo==='hoy') cargar(); },30000);
 }
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&LF_AUTH) cargar(); });
