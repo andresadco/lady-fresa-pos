@@ -127,7 +127,12 @@ html, body {
 .tb-meta-bar b { display: block; height: 100%; width: 0; background: var(--red); border-radius: 3px; transition: width .6s ease; }
 .tb-meta.lista { background: var(--red); border-color: var(--red); color: #fff; }
 .tb-meta.lista .tb-meta-bar { background: rgba(255,255,255,.35); } .tb-meta.lista .tb-meta-bar b { background: #fff; }
-@media (max-width: 560px) { .tb-meta { min-width: 70px; padding: 0 9px; font-size: 11px; } }
+.tb-meta-linea { position: absolute; left: 0; right: 0; bottom: -1px; height: 4px; background: var(--red-light); cursor: pointer; z-index: 2; }
+.tb-meta-linea::before { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 14px; }
+.tb-meta-linea b { display: block; height: 100%; width: 0; background: var(--red); border-radius: 0 3px 3px 0; transition: width .8s ease; }
+.tb-meta-linea.lista b { background: linear-gradient(90deg, var(--red), #FD9CB3, var(--red)); background-size: 200% 100%; animation: metaBrillo 2.5s linear infinite; }
+@keyframes metaBrillo { to { background-position: -200% 0; } }
+@media (max-width: 1099px) { .tb-meta { display: none !important; } }
 @media (max-width: 1400px) { body.pos-active .tb-badge { display: none; } }
 .tb-app { height: 38px; padding: 0 12px; border-radius: 19px; border: 2px solid var(--red); background: #fff; color: var(--red); font-family: 'Lilita One', serif; font-size: 14px; letter-spacing: .5px; display: flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
 .tb-app.on { background: var(--red); color: #fff; }
@@ -969,6 +974,7 @@ html,body,button,.pin-btn{touch-action:manipulation;}
       <button class="tb-btn tb-lbl tb-mas" onclick="abrirMenuPOS()" title="Más opciones">☰<span>Más</span></button>
       <div class="tb-badge" id="tb-badge-turno">● Turno</div>
     </div>
+    <div class="tb-meta-linea" id="tb-meta-linea" onclick="verMeta()" title="Meta de hoy" style="display:none;"><b id="tb-meta-linea-fill"></b></div>
   </div>
 
   <div id="cat-tabs">
@@ -5503,9 +5509,10 @@ let _meta={meta:0,venta:0,n:0};
 async function cargarMeta(){
   const el=document.getElementById('tb-meta'); const suc=currentUser&&currentUser.sucursal; if(!el||!suc) return;
   const cfg=await sbGet('lf_ventas_config','select=meta_lunes_jueves,meta_viernes_domingo&mostrar=eq.true&sucursal=eq.'+encodeURIComponent(suc));
-  if(!Array.isArray(cfg)||!cfg.length){ el.style.display='none'; return; }
+  const ln=document.getElementById('tb-meta-linea');
+  if(!Array.isArray(cfg)||!cfg.length){ el.style.display='none'; if(ln) ln.style.display='none'; return; }
   const mx=new Date(Date.now()-6*3600e3), w=mx.getUTCDay();
-  const meta=+(w===0||w>=5?cfg[0].meta_viernes_domingo:cfg[0].meta_lunes_jueves)||0; if(!meta){ el.style.display='none'; return; }
+  const meta=+(w===0||w>=5?cfg[0].meta_viernes_domingo:cfg[0].meta_lunes_jueves)||0; if(!meta){ el.style.display='none'; if(ln) ln.style.display='none'; return; }
   const ini=new Date(Date.UTC(mx.getUTCFullYear(),mx.getUTCMonth(),mx.getUTCDate())+6*3600e3).toISOString();
   const ords=await sbGet('orders','select=total&status=neq.cancelada&sucursal=eq.'+encodeURIComponent(suc)+'&created_at=gte.'+ini);
   if(!Array.isArray(ords)) return;
@@ -5514,6 +5521,7 @@ async function cargarMeta(){
   el.style.display='flex'; el.classList.toggle('lista',pct>=100);
   document.getElementById('tb-meta-txt').textContent=pct>=100?'🎉 ¡Meta!':'🎯 '+Math.floor(pct)+'%';
   document.getElementById('tb-meta-fill').style.width=Math.min(100,pct)+'%';
+  if(ln){ ln.style.display='block'; ln.classList.toggle('lista',pct>=100); document.getElementById('tb-meta-linea-fill').style.width=Math.min(100,pct)+'%'; }
   if(pct>=100){ const k='lf_meta_ok_'+suc+'_'+ini.slice(0,10); let ya=false; try{ ya=!!localStorage.getItem(k); localStorage.setItem(k,'1'); }catch(e){} if(!ya||antes<100&&antes>0) showToast('🎉 ¡Llegaron a la meta de hoy! Gracias equipo 🍓'); }
 }
 function verMeta(){
