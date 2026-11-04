@@ -1447,10 +1447,10 @@ var comandaCfg = {};
 let _cobroPending = false;
 
 const PERMS = {
-  cajero:    { discount:false, cierre:true,  dashboard:false },
-  encargado: { discount:true,  cierre:true,  dashboard:false },
-  gerente:   { discount:true,  cierre:true,  dashboard:true },
-  admin:     { discount:true,  cierre:true,  dashboard:true },
+  cajero:    { discount:false, retiro:true, cierre:true,  dashboard:false },
+  encargado: { discount:true,  retiro:true, cierre:true,  dashboard:false },
+  gerente:   { discount:true,  retiro:true, cierre:true,  dashboard:true },
+  admin:     { discount:true,  retiro:true, cierre:true,  dashboard:true },
 };
 
 // ═══════════════════════════════
@@ -1527,7 +1527,7 @@ function abrirMenuPOS(){
   const add=(ic,t,sub,fn,cls)=>it.push(`<button class="menu-pos-item ${cls||''}" onclick="${fn}"><span class="mi-ic">${ic}</span><b>${t}</b><small>${sub}</small></button>`);
   add('📋','Ventas del turno','Reimprimir, ver o cancelar','cerrarMenuPOS();openHist()');
   add('💰','Abrir caja','Abre el cajón sin venta (queda registrado)','cerrarMenuPOS();pedirAbrirCajon()');
-  if(p.discount) add('💸','Retiro de caja','Sacar efectivo con motivo','cerrarMenuPOS();abrirRetiro()');
+  if(p.retiro) add('💸','Retiro de caja','Sacar efectivo con motivo','cerrarMenuPOS();abrirRetiro()');
   if(p.cierre) add('🔐','Corte de caja','Cerrar turno y contar billetes','cerrarMenuPOS();openCierreSheet()');
   add('🖨️','Impresora','Conectar y probar ticket','cerrarMenuPOS();openPrinterCfg()');
   add('📲','QR Lady Lovers','Que la clienta se registre sola','cerrarMenuPOS();mostrarQRRegistro()');
@@ -1692,7 +1692,7 @@ function showPOS() {
   const p = PERMS[currentUser.role] || PERMS.cajero;
   window._hasDiscount = p.discount;
   document.getElementById('btn-cierre').style.display = p.cierre ? 'flex' : 'none';
-  document.getElementById('btn-retiro').style.display = p.discount ? 'flex' : 'none';
+  document.getElementById('btn-retiro').style.display = p.retiro ? 'flex' : 'none';
   document.getElementById('btn-admin').style.display = p.dashboard ? 'flex' : 'none';
   document.getElementById('btn-loyalty-admin').style.display = p.dashboard ? 'flex' : 'none';
   document.getElementById('btn-hoy').style.display = p.dashboard ? 'flex' : 'none';
@@ -2999,9 +2999,9 @@ function closeHist(){closeSheet('hist');}
 let retiros = [];
 
 function abrirRetiro(){
-  // Solo encargado/gerente/admin
+  // Cajeras, encargado, gerente y admin (permiso retiro)
   const p=PERMS[currentUser?.role]||PERMS.cajero;
-  if(!p.discount){ showToast('No tienes permiso para registrar retiros'); return; }
+  if(!p.retiro){ showToast('No tienes permiso para registrar retiros'); return; }
   const div=document.createElement('div');
   div.className='lf-modal';
   div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;display:flex;align-items:flex-end;';
