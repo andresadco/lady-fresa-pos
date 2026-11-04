@@ -1897,7 +1897,7 @@ function construirCatalogo(prods,grupos,opciones,pm){
     const mods=(Array.isArray(pm)?pm.filter(x=>x.producto_id===p.id).sort((a,b)=>a.orden-b.orden):[])
       .map(x=>grupos.find(g=>g.id===x.grupo_id)?.nombre).filter(Boolean);
     const pt=parseFloat(p.precio), pa=p.precio_app!=null&&p.precio_app!==''?parseFloat(p.precio_app):pt;
-    PRODUCTS.push({id:p.id,name:p.nombre,cat:p.categoria,price:pt,priceTienda:pt,priceApp:isNaN(pa)?pt:pa,desc:p.descripcion||'',emoji:p.emoji||'🍓',img:p.imagen||'',mods});
+    PRODUCTS.push({id:p.id,name:p.nombre,cat:p.categoria,price:pt,priceTienda:pt,priceApp:isNaN(pa)?pt:pa,desc:p.descripcion||'',emoji:p.emoji||'🍓',img:p.imagen||'',mods,soloApp:!!p.solo_app});
     EMOJI_MAP[p.nombre]=p.emoji||'🍓';
   });
   _listaApp=null; aplicarListaPrecios();
@@ -1947,7 +1947,8 @@ function filterCat(cat,btn) {
 }
 
 function renderProducts() {
-  const list=PRODUCTS.filter(p=>catFilter==='all'||p.cat===catFilter);
+  const enApp=typeof esApp==='function'&&esApp();
+  const list=PRODUCTS.filter(p=>(catFilter==='all'||p.cat===catFilter)&&(!p.soloApp||enApp));
   const grid=document.getElementById('products-grid');
   if(!list.length){grid.innerHTML='<div class="empty-state" style="grid-column:1/-1"><div class="e-icon">🔍</div><p>Sin productos</p></div>';return;}
   grid.innerHTML=list.map(p=>{
@@ -1992,6 +1993,8 @@ function openCustom(pid, editIdx=null) {
   if(p.mods.includes('Tamaño')&&sel['Tamaño']===null) sel['Tamaño']='Chico';
   if(p.mods.includes('Bases')&&sel['Bases']===null) sel['Bases']='Crema';
   if(p.mods.includes('Tipo de Crema')&&sel['Tipo de Crema']===null) sel['Tipo de Crema']='Crema';
+  // Otros grupos de base (ej. combos: "Vaso 1 · Base") arrancan en Crema
+  p.mods.forEach(m=>{ const md=MODS[m]; if(md&&md.max===1&&sel[m]===null&&md.options.some(o=>o.name==='Crema')) sel[m]='Crema'; });
   CS={p,sel,editIdx};
   if(editIdx!==null) CS.sel=JSON.parse(JSON.stringify(order[editIdx].sel));
   document.getElementById('cust-emoji').textContent=pEmoji(p.name);
@@ -2839,6 +2842,11 @@ async function descontarInventario(saleData){
         [].concat(sel[g]||[]).forEach(t=>{ if(t) add('*top|'+t,q); });
       });
       [].concat(sel['Shots Extra']||[]).forEach(t=>{ if(t) add('*shot|'+t,q); });
+      // Combos con vasos propios: cada "Vaso N · Base" es un vaso más con su base; sus toppings se descuentan igual
+      let vasoYaContado=!!tam; // si el nombre ya dio el tamaño, ese primer vaso ya se contó arriba
+      Object.keys(sel).filter(k=>!_MODS_STD.includes(k)).forEach(k=>{ const v=[].concat(sel[k]||[]).filter(Boolean);
+        if(/base/i.test(k)){ const t2=tam||'Chico'; v.forEach(b=>{ if(vasoYaContado) vasoYaContado=false; else add('*vaso|'+t2,q); add('*base|'+t2+' · '+b,q); }); }
+        else if(/topping/i.test(k)) v.forEach(t=>add('*top|'+t,q)); });
     });
     const p_keys=Object.entries(keys).map(([k,q])=>({k,q}));
     if(!p_keys.length) return;
@@ -4720,6 +4728,7 @@ function buildTicketXML(saleData,type='ticket'){
       (sel['Doble Topping']||[]).forEach(t=>mod('+ DOBLE '+t));
       const shots=sel['Shots Extra']||[];
       if(shots.length) mod('Shot: '+shots.join(', '));
+      modsExtra(sel).forEach(([k,v])=>{ if(/base/i.test(k)) mod(k+': '+v.join(', ')); else v.forEach(t=>mod(k.replace(/\s*·\s*Toppings?/i,'')+' + '+t)); });
       if(item.note) wrap('>> '+item.note,'   ').forEach(l=>{ xml+=T(l,{b:true,...fontOpts(ccGet('comanda_font_notas','normal'))}); });
       if(idx<saleData.items.length-1) xml+=feed(itemSpace);
     });
@@ -4763,6 +4772,7 @@ function buildTicketXML(saleData,type='ticket'){
         if(base) wrap(base).forEach(l=>{ xml+=T(l); });
         const tops=[...(sel['Toppings Incluidos']||[]),...(sel['Toppings Extra Básicos']||[]),...(sel['Toppings Extra Premium']||[]),...(sel['Doble Topping']||[]).map(t=>'doble '+t),...(sel['Shots Extra']||[]).map(t=>'shot '+t)];
         if(tops.length) wrap('+ '+tops.join(', ')).forEach(l=>{ xml+=T(l); });
+        modsExtra(sel).forEach(([k,v])=>wrap(k+': '+v.join(', ')).forEach(l=>{ xml+=T(l); }));
       }
       if(mostrarNotas&&item.note) wrap('Nota: '+item.note).forEach(l=>{ xml+=T(l); });
     });
@@ -4977,6 +4987,7 @@ function buildTicketText(saleData){
     if(item.sel?.['Bases']) text+=`  Base: ${item.sel['Bases']}\n`;
     const tops=[...(item.sel?.['Toppings Incluidos']||[]),...(item.sel?.['Toppings Extra Básicos']||[]),...(item.sel?.['Toppings Extra Premium']||[])];
     if(tops.length) text+=`  + ${tops.join(', ')}\n`;
+    modsExtra(item.sel).forEach(([k,v])=>{ text+=`  ${k}: ${v.join(', ')}\n`; });
     if(item.note) text+=`  📝 ${item.note}\n`;
   });
   text+=`─────────────────\n`;
@@ -5509,6 +5520,10 @@ function savePrinterCfg(){
 }
 
 // ── TOAST ──
+// Grupos que no son los estándar (ej. "Vaso 1 · Base" de un combo): se imprimen tal cual
+const _MODS_STD=['Tamaño','Bases','Tipo de Crema','Toppings Incluidos','Toppings Extra Básicos','Toppings Extra Premium','Doble Topping','Shots Extra'];
+function modsExtra(sel){ return Object.keys(sel||{}).filter(k=>!_MODS_STD.includes(k)).map(k=>{ const v=[].concat(sel[k]||[]).filter(Boolean); const c={}; v.forEach(x=>c[x]=(c[x]||0)+1); return [k,Object.entries(c).map(([n,q])=>q>1?n+' x'+q:n)]; }).filter(([k,v])=>v.length); }
+
 // ═══ META DEL DÍA DE LA TIENDA (la configura el admin; se ve en el POS y en el tablero)
 let _meta={meta:0,venta:0,n:0};
 async function cargarMeta(){
