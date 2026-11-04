@@ -1080,6 +1080,7 @@ html,body,button,.pin-btn{touch-action:manipulation;}
           <option value="encargado">Encargado</option>
           <option value="gerente">Gerente</option>
           <option value="admin">Admin</option>
+          <option value="socio">Socio (solo ve ventas)</option>
         </select>
       </div>
       <div class="form-group full"><label class="form-label">Sucursal</label>
@@ -1799,7 +1800,7 @@ async function guardarUsuarioRPC(id,data){
   return true;
 }
 function renderUsuarios(){
-  const roleClr = { cajero:'badge-cajero', encargado:'badge-encargado', gerente:'badge-gerente', admin:'badge-admin' };
+  const roleClr = { cajero:'badge-cajero', encargado:'badge-encargado', gerente:'badge-gerente', admin:'badge-admin', socio:'badge-gerente' };
   const sucs=[...new Set(allUsuarios.map(u=>u.sucursal||'—'))].sort();
   document.getElementById('usr-filter').innerHTML=['all',...sucs].map(s=>`<button class="chip ${usrFiltro===s?'on':''}" onclick="usrFiltro=${escH(JSON.stringify(s))};renderUsuarios()">${s==='all'?'Todas':escH(s)}<small>${allUsuarios.filter(u=>s==='all'||(u.sucursal||'—')===s).length}</small></button>`).join('');
   const rep=pinRepetidos();
@@ -1824,7 +1825,7 @@ function renderUsuarios(){
         <button class="btn ${u.active?'btn-danger':'btn-secondary'} btn-sm" onclick="toggleUsuario(${u.id},${u.active})">${u.active?'Desactivar':'Activar'}</button></div>
     </div>`; }).join('');
 }
-const ROL_HELP={cajero:'Cobra y usa su turno.',encargado:'Cobra, aplica descuentos y hace el corte de caja.',gerente:'Todo lo del encargado + pantalla Hoy, Lady Lovers, cambiar de sucursal y entrar a este panel. No puede cambiar admins ni gerentes.',admin:'Acceso completo, incluido este panel.'};
+const ROL_HELP={cajero:'Cobra y usa su turno.',encargado:'Cobra, aplica descuentos y hace el corte de caja.',gerente:'Todo lo del encargado + pantalla Hoy, Lady Lovers, cambiar de sucursal y entrar a este panel. No puede cambiar admins ni gerentes.',admin:'Acceso completo, incluido este panel.',socio:'Solo ve las ventas en app.ladyfresa.com/mobile.html. No entra al POS ni a este panel.'};
 function pintarRolHelp(){ const r=document.getElementById('u-role').value; document.getElementById('u-role-help').textContent=ROL_HELP[r]||''; revisarPinModal(); }
 function revisarPinModal(){
   const pin=document.getElementById('u-pin').value, el=document.getElementById('u-pin-msg');

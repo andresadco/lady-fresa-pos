@@ -280,10 +280,10 @@ function mostrarPin(msg){ _pin=''; dots(); document.getElementById('lf-err').tex
 async function entrar(){
   const err=document.getElementById('lf-err'); err.textContent='Entrando…';
   try{
-    const r=await _f(SB_URL+'/functions/v1/lf-login',{method:'POST',headers:{'Content-Type':'application/json',...H},body:JSON.stringify({pin:_pin,origen:'admin'})});
+    const r=await _f(SB_URL+'/functions/v1/lf-login',{method:'POST',headers:{'Content-Type':'application/json',...H},body:JSON.stringify({pin:_pin,origen:'ventas'})});
     const j=await r.json().catch(()=>({ok:false}));
     if(!(j&&j.ok&&j.session&&j.user)){ mostrarPin(j&&j.error==='bloqueado'?'Demasiados intentos. Espera 5 minutos.':(j&&j.error==='pin'?'PIN incorrecto':'No se pudo entrar, intenta otra vez')); return; }
-    if(!['admin','gerente'].includes(j.user.role)){ mostrarPin('Este PIN no tiene acceso a las ventas'); return; }
+    if(!['admin','gerente','socio'].includes(j.user.role)){ mostrarPin('Este PIN no tiene acceso a las ventas'); return; }
     lfAuthSet({...j.session,nombre:j.user.name});
     document.getElementById('lf-login').style.display='none'; _pin=''; dots(); arrancar();
   }catch(e){ mostrarPin('Sin conexión. Revisa tu internet e intenta otra vez.'); }

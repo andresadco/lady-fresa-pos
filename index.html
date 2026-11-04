@@ -1647,7 +1647,7 @@ async function pinEnter() {
     const j = await lfLogin(pinBuffer,'pos');
     const users = j&&j.ok ? [j.user] : [];
     if (!users.length) {
-      errEl.textContent = j&&j.error==='bloqueado' ? 'Demasiados intentos. Espera 5 minutos.' : (j&&j.error==='pin' ? 'PIN incorrecto' : 'No se pudo entrar, intenta otra vez');
+      errEl.textContent = j&&j.error==='sin_acceso' ? 'Este PIN solo ve ventas en el celular' : j&&j.error==='bloqueado' ? 'Demasiados intentos. Espera 5 minutos.' : (j&&j.error==='pin' ? 'PIN incorrecto' : 'No se pudo entrar, intenta otra vez');
       pinBuffer=''; updateDots();
       // Vibración de error en dispositivos que lo soporten
       if(navigator.vibrate) navigator.vibrate([80,30,80]);
