@@ -307,6 +307,13 @@ html, body {
 .size-extra { font-size: 11px; color: var(--text-3); margin-top: 2px; }
 .size-card.sel .size-name { color: var(--red-dark); }
 .size-card.sel .size-extra { color: var(--red); }
+.size-card { display: flex; flex-direction: column; align-items: center; padding: 10px 6px 10px; border-radius: 18px; background: #fff; }
+.size-cup { height: 76px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 4px; }
+.size-cup img { width: auto; display: block; filter: drop-shadow(0 4px 5px rgba(90,42,51,.18)); transition: transform .25s cubic-bezier(.3,1.5,.5,1); }
+.size-card.sel .size-cup img { transform: scale(1.1) rotate(-4deg); }
+.size-letter { font-family: 'Lilita One', sans-serif; font-size: 26px; line-height: 1; color: var(--red); }
+.size-card .size-name { font-size: 12px; margin-top: 2px; }
+.size-card.sel { background: var(--red-light); }
 
 .bases-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .base-chip .base-name { min-width: 0; overflow-wrap: break-word; }
@@ -1363,7 +1370,8 @@ const TOP_IMG = {
   'crumble matcha':'crmatcha','crumble cacao':'crcacao','crumble de canela':'crcanela','ferrero crujiente':'ferrero',
   'crema pistache':'pistache','galleta kit kat':'kitkat','galleta lotus':'lotus','dubai crunch':'dubai','lotus salsa':'lotussalsa',
   'crumble de ferrero':'crferrero','spread cacao':'cacaosp','spread matcha':'matchasp','crumble lotus':'crlotus','spread avellana':'avellana',
-  'chocolate':'choc','caramelo':'cara','chocolate blanco':'blanco','crema':'crema','crema sin azucar':'crema'
+  'chocolate':'choc','caramelo':'cara','chocolate blanco':'blanco','crema':'crema','crema sin azucar':'crema',
+  'chococrema':'chococrema','chococrema - (crema sin azucar)':'chococrema','caramel cream':'caramelcream','caramelcream (crema sin azucar)':'caramelcream','caramelcream':'caramelcream','yogurt griego':'yogurt'
 };
 function tImgKey(n){ return TOP_IMG[String(n||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim()]; }
 function tIcon(n, cls){ const k=tImgKey(n); return k ? `<img class="${cls}" src="img/toppings/${k}.webp" alt="" loading="lazy" onerror="this.outerHTML='<span class=&quot;top-emoji&quot;>${tEmoji(n)}</span>'">` : `<span class="top-emoji">${tEmoji(n)}</span>`; }
@@ -1976,6 +1984,7 @@ function openCustom(pid, editIdx=null) {
 function renderCustomBody() {
   const p=CS.p; let html='';
   const icons={Chico:'🫙',Mediano:'🥤',Grande:'🪣'};
+  const SIZE_INFO={Chico:{l:'CH',oz:12,h:46},Mediano:{l:'M',oz:16,h:58},Grande:{l:'G',oz:24,h:72}};
 
   // Preservar qué secciones tiene abiertas el usuario antes de re-renderizar
   const openSections={};
@@ -2014,10 +2023,12 @@ function renderCustomBody() {
       html+=`<div class="sizes-row">`;
       mod.options.forEach(o=>{
         const sel=CS.sel['Tamaño']===o.name;
+        const sz=SIZE_INFO[o.name]||{l:o.name.slice(0,2).toUpperCase(),oz:'',h:56};
         html+=`<div class="size-card${sel?' sel':''}" data-name="${sanitize(o.name)}" onclick="selSingle('Tamaño',this.dataset.name)">
-          <div class="size-icon">${icons[o.name]||'🥤'}</div>
+          <div class="size-cup"><img src="img/toppings/vaso.webp" alt="" style="height:${sz.h}px"></div>
+          <div class="size-letter">${sz.l}</div>
           <div class="size-name">${sanitize(o.name)}</div>
-          <div class="size-extra">${o.extra===0?'Base':'+$'+o.extra}</div>
+          <div class="size-extra">${sz.oz?sz.oz+' oz · ':''}${o.extra===0?'incluido':'+$'+o.extra}</div>
         </div>`;
       });
       html+=`</div>`;
