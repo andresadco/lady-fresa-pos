@@ -1956,7 +1956,9 @@ function renderProducts() {
   grid.innerHTML=list.map(p=>{
     const qty=order.filter(i=>i.productId===p.id).reduce((s,i)=>s+i.qty,0);
     const isSpec=p.cat==='Especiales LFM';
-    return `<div class="prod-card${qty?' in-order':''}" onclick="openCustom(${p.id})">
+    const lq=prodQuedan(p.id);
+    return `<div class="prod-card${qty?' in-order':''}${lq!==null&&lq<=0?' agotada':''}" onclick="openCustom(${p.id})">
+      ${lq!==null?`<div class="prod-lim${lq<=5?' poco':''}">${lq<=0?'Agotada hoy':'Quedan '+lq}</div>`:''}
       ${qty?`<div class="prod-qty-badge">${qty}</div>`:''}
       ${isSpec?'<div class="prod-cat-badge">Especial</div>':''}
       ${p.img?`<img class="prod-img" src="${sanitize(p.img)}" alt="" loading="lazy" onerror="this.style.display='none'">`:`<div class="prod-emoji">${sanitize(pEmoji(p.name))}</div>`}
@@ -1990,6 +1992,7 @@ const MOD_LABELS = {
 
 function openCustom(pid, editIdx=null) {
   const p=PRODUCTS.find(x=>x.id===pid); if(!p) return;
+  if(editIdx===null){ const lq=prodQuedan(pid); if(lq!==null&&lq<=0){ showToast('🎃 '+p.name+' ya se agotó hoy en esta tienda'); return; } }
   const sel={};
   p.mods.forEach(m=>{const mod=MODS[m];if(!mod) return; sel[m]=mod.max===1?null:[];});
   if(p.mods.includes('Tamaño')&&sel['Tamaño']===null) sel['Tamaño']='Chico';
@@ -5624,6 +5627,10 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator
 
 <style>
 .tb-web{position:relative}
+.prod-lim{position:absolute;top:28px;left:8px;z-index:2;background:#A6182E;color:#fff;font-size:11px;font-weight:700;border-radius:10px;padding:3px 8px;font-family:'DM Sans',sans-serif}
+.prod-lim.poco{background:#7A0F20}
+.prod-card.agotada{opacity:.45;filter:grayscale(.6)}
+.prod-card.agotada .prod-lim{background:#555}
 .wp-masc{height:30px;width:auto;margin:-2px -2px -2px -4px;display:block;flex-shrink:0}
 .tb-web.hay .wp-masc,#wp-dock.hay .wp-masc-dock{animation:wpSaluda 1.1s ease-in-out infinite;transform-origin:50% 90%}
 @keyframes wpSaluda{0%,100%{transform:rotate(0)}25%{transform:rotate(-10deg)}75%{transform:rotate(10deg)}}
@@ -5692,7 +5699,7 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator
 const WP_IC='<img src="img/marca/mascota-web.png" alt="" style="height:40px;width:auto;display:block">';
 let WP={estado:'off',lista:[],vistos:new Set(),t:null,primera:true,abiertas:new Set(),elegir:null,cobrando:null,apartada:null};
 function wpSuc(){ return currentUser?.sucursal||''; }
-async function webPedInit(){ clearInterval(WP.t); WP.primera=true; await wpCargar(); WP.t=setInterval(()=>{ if(!document.hidden) wpCargar(); },15000); }
+async function webPedInit(){ clearInterval(WP.t); clearInterval(LIM_T); cargarLimites(); LIM_T=setInterval(()=>{ if(!document.hidden) cargarLimites(); },60000); WP.primera=true; await wpCargar(); WP.t=setInterval(()=>{ if(!document.hidden) wpCargar(); },15000); }
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&currentUser) wpCargar(); });
 function wpPanelAbierto(){ return document.getElementById('wp-panel').classList.contains('open'); }
 async function wpCargar(){
@@ -5836,8 +5843,18 @@ async function wpCobrar(id,modo){
   if(Number(r.total)!==tot) showToast('Ojo: el precio cambió desde que hizo el pedido ($'+r.total+' → $'+tot+')');
   else showToast('Pedido '+r.folio+' en la cuenta. Cóbralo y luego prepáralo 💳'+(modo==='apartar'?' · la otra cuenta quedó apartada':''));
 }
+// ═══ LÍMITE DIARIO POR PRODUCTO (p. ej. La Pumpking: 20 al día por tienda) ═══
+let LIM={}, LIM_T=null;
+async function cargarLimites(){
+  const suc=wpSuc(); if(!suc) return;
+  try{ const r=await fetch(SB_URL+'/rest/v1/rpc/productos_limite_hoy',{method:'POST',headers:SB_H,body:JSON.stringify({p_sucursal:suc})});
+    if(!r.ok) return; const rows=await r.json(); const n={}; (rows||[]).forEach(x=>{ n[x.producto_id]=x.quedan; });
+    const cambio=JSON.stringify(n)!==JSON.stringify(LIM); LIM=n; if(cambio) renderProducts(); }catch(e){}
+}
+function prodQuedan(pid){ if(!(pid in LIM)||LIM[pid]===null) return null; const enOrden=order.filter(i=>i.productId===pid).reduce((a,i)=>a+i.qty,0); return LIM[pid]-enOrden; }
 // Llamado al confirmar un pago: el pedido web se marca entregado solo cuando de verdad se cobró
 function wpTrasPago(sale){
+  setTimeout(cargarLimites,800);
   const c=WP.cobrando; WP.cobrando=null;
   if(c) sbPatch('pedidos_web','id=eq.'+c.id,{estado:'entregado',cerrado_at:new Date().toISOString(),order_id:sale?.id||null}).then(()=>wpCargar());
   if(WP.apartada) setTimeout(()=>wpRegresar(),1600);
