@@ -2488,6 +2488,7 @@ async function cancelOrder(){
   if(document.getElementById('ov-cobro')?.classList.contains('open')) closeSheet('cobro');
   closeSheet('order'); renderOrderItems(); renderOrderBar(); renderProducts();
   showToast('Orden cancelada');
+  try{ wpTrasCancelar(); }catch(e){}
 }
 
 function closeOrderSheet(){
@@ -2686,6 +2687,7 @@ async function confirmarPago(){
     document.querySelectorAll('.svc-btn')[0].click();
     document.querySelectorAll('.pay-btn')[0].click();
     renderOrderBar(); renderProducts();
+    try{ wpTrasPago(saleData); }catch(e){}
 
   } catch(err) {
     // Mostrar error al cajero sin avanzar
@@ -5627,9 +5629,33 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator
 .tb-web.hay b{display:inline-flex;background:#fff;color:var(--red)}
 .tb-web.pausa{opacity:.6}
 @keyframes wpPulse{0%,100%{box-shadow:0 0 0 0 rgba(166,24,46,.5)}50%{box-shadow:0 0 0 8px rgba(166,24,46,0)}}
-#wp-modal{position:fixed;inset:0;background:rgba(40,10,15,.45);z-index:9000;display:none;align-items:center;justify-content:center;padding:14px}
-#wp-modal.open{display:flex}
-#wp-box{background:#fff;border-radius:22px;width:min(560px,100%);max-height:92dvh;overflow:auto;padding:18px}
+#wp-panel{position:fixed;left:0;top:0;bottom:0;width:min(390px,100vw);background:#fff;z-index:8600;box-shadow:10px 0 34px -12px rgba(60,10,20,.35);transform:translateX(-105%);transition:transform .22s ease;display:flex;flex-direction:column}
+#wp-panel.open{transform:none}
+@media (max-width:700px){#wp-panel{top:auto;right:0;width:auto;height:80dvh;border-radius:22px 22px 0 0;transform:translateY(105%)}#wp-panel.open{transform:none}}
+#wp-panel .wp-head{padding:14px 14px 10px;margin:0;border-bottom:1px solid var(--border)}
+#wp-panel .wp-head h3{font-size:19px;line-height:1.1}
+#wp-list{flex:1;overflow:auto;padding:12px 12px calc(16px + var(--safe-bottom))}
+.wp-min{border:none;background:#F6D6DA;color:#7A0F20;border-radius:14px;padding:7px 12px;font-weight:700;font-size:13px;cursor:pointer}
+#wp-dock{position:fixed;left:14px;bottom:calc(96px + var(--safe-bottom));z-index:8500;display:none;align-items:center;gap:8px;background:#A6182E;color:#fff;border:none;border-radius:999px;padding:11px 16px 11px 14px;font-weight:700;font-size:15px;font-family:'DM Sans',sans-serif;box-shadow:0 10px 22px -8px rgba(122,15,32,.55);cursor:pointer}
+@media (min-width:980px){#wp-dock{bottom:18px}}
+#wp-dock.show{display:flex}
+#wp-dock.hay{animation:wpPulse 1.2s ease-in-out infinite}
+#wp-dock .n{background:#fff;color:#A6182E;border-radius:11px;min-width:22px;height:22px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;font-size:13px}
+#wp-dock small{font-weight:600;opacity:.85;font-size:12.5px}
+#wp-ret{position:fixed;left:14px;bottom:calc(150px + var(--safe-bottom));z-index:8500;display:none;background:#fff;color:#7A0F20;border:2px solid #A6182E;border-radius:999px;padding:9px 14px;font-weight:700;font-size:14px;font-family:'DM Sans',sans-serif;box-shadow:0 8px 18px -8px rgba(0,0,0,.3);cursor:pointer}
+@media (min-width:980px){#wp-ret{bottom:72px}}
+#wp-ret.show{display:block}
+.wp-row{display:flex;align-items:center;gap:10px;cursor:pointer}
+.wp-pos{flex:0 0 30px;height:30px;border-radius:50%;background:#F6D6DA;color:#7A0F20;font-family:'Lilita One',serif;font-size:16px;display:flex;align-items:center;justify-content:center}
+.wp-card.nuevo .wp-pos{background:#A6182E;color:#fff}
+.wp-mid{flex:1;min-width:0}
+.wp-mid .l1{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wp-mid .l2{font-size:12.5px;color:var(--text-3)}
+.wp-amt{font-family:'Lilita One',serif;font-size:18px;color:#A6182E}
+.wp-det{margin-top:10px}
+.wp-card.caja{border-color:#A6182E;border-style:dashed}
+.wp-elegir{background:#FFF4F5;border-radius:12px;padding:10px;margin-top:8px}
+.wp-elegir p{margin:0 0 8px;font-size:13.5px;font-weight:600;color:#7A0F20}
 .wp-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
 .wp-head h3{margin:0;font-family:'Lilita One',serif;color:#A6182E;font-size:22px;letter-spacing:.5px}
 .wp-pausa{border:2px solid #A6182E;background:#fff;color:#A6182E;border-radius:16px;padding:6px 12px;font-weight:700;font-size:13px;cursor:pointer}
@@ -5650,17 +5676,20 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator
 .wp-act button.gris{border-color:var(--border-2);color:var(--text-2)}
 .wp-empty{text-align:center;color:var(--text-3);padding:30px 10px;font-size:14px}
 </style>
-<div id="wp-modal" onclick="if(event.target===this)cerrarWebPed()"><div id="wp-box" role="dialog" aria-modal="true" aria-label="Pedidos web"></div></div>
+<aside id="wp-panel" aria-label="Fila de pedidos web"><div id="wp-box"></div></aside>
+<button id="wp-dock" onclick="abrirWebPed()" aria-label="Abrir fila de pedidos web">🌐 <span>Fila web</span><span class="n" id="wp-dock-n">0</span><small id="wp-dock-s"></small></button>
+<button id="wp-ret" onclick="wpRegresar()">↩ Regresar cuenta apartada</button>
 
 <script>
 // ═══════════════════════════════
 // PEDIDOS WEB (ladyfresa.com/arma-tu-lady): llegan aquí, se aceptan, se marcan listos y se cobran en el POS
 // Se activa por sucursal en config: web_pedidos_<Sucursal> = on / pausa / off
 // ═══════════════════════════════
-let WP={estado:'off',lista:[],vistos:new Set(),t:null,primera:true};
+let WP={estado:'off',lista:[],vistos:new Set(),t:null,primera:true,abiertas:new Set(),elegir:null,cobrando:null,apartada:null};
 function wpSuc(){ return currentUser?.sucursal||''; }
 async function webPedInit(){ clearInterval(WP.t); WP.primera=true; await wpCargar(); WP.t=setInterval(()=>{ if(!document.hidden) wpCargar(); },15000); }
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&currentUser) wpCargar(); });
+function wpPanelAbierto(){ return document.getElementById('wp-panel').classList.contains('open'); }
 async function wpCargar(){
   const suc=wpSuc(); if(!suc) return;
   const cfg=await sbGet('config','key=eq.web_pedidos_'+encodeURIComponent(suc)+'&select=value');
@@ -5668,24 +5697,37 @@ async function wpCargar(){
   const btn=document.getElementById('tb-web'); if(!btn) return;
   btn.style.display=WP.estado==='off'?'none':'';
   btn.classList.toggle('pausa',WP.estado==='pausa');
-  if(WP.estado==='off'){ WP.lista=[]; return; }
+  if(WP.estado==='off'){ WP.lista=[]; wpDock(); return; }
   const desde=new Date(Date.now()-12*3600e3).toISOString();
   const rows=await sbGet('pedidos_web','sucursal=eq.'+encodeURIComponent(suc)+'&estado=in.(nuevo,aceptado,listo)&created_at=gte.'+desde+'&order=created_at.asc&select=*');
-  WP.lista=Array.isArray(rows)?rows:[];
+  if(Array.isArray(rows)) WP.lista=rows;
   const nuevos=WP.lista.filter(r=>r.estado==='nuevo');
   const nb=document.getElementById('tb-web-n'); nb.textContent=WP.lista.length||'';
   btn.classList.toggle('hay',nuevos.length>0);
   const recien=nuevos.filter(r=>!WP.vistos.has(r.id));
   nuevos.forEach(r=>WP.vistos.add(r.id));
-  if(recien.length&&!WP.primera){ wpSonar(); showToast('🌐 Pedido web nuevo: '+recien.map(r=>r.folio).join(', ')); if(navigator.vibrate) navigator.vibrate([200,100,200]); }
+  if(recien.length&&!WP.primera){ wpSonar(); showToast('🌐 Pedido web nuevo: '+recien.map(r=>r.folio).join(', ')+' · está en la fila'); if(navigator.vibrate) navigator.vibrate([200,100,200]); }
   if(recien.length&&WP.primera) wpSonar();
   WP.primera=false;
-  if(document.getElementById('wp-modal').classList.contains('open')) wpPintar();
+  wpDock();
+  if(wpPanelAbierto()) wpPintar();
+}
+function wpDock(){
+  const d=document.getElementById('wp-dock'); if(!d) return;
+  const n=WP.lista.length, nuevos=WP.lista.filter(r=>r.estado==='nuevo').length;
+  d.classList.toggle('show',WP.estado!=='off'&&n>0&&!wpPanelAbierto());
+  d.classList.toggle('hay',nuevos>0);
+  document.getElementById('wp-dock-n').textContent=n;
+  document.getElementById('wp-dock-s').textContent=nuevos?(nuevos===1?'1 nuevo':nuevos+' nuevos'):(WP.cobrando?'1 en caja':'');
+  const r=document.getElementById('wp-ret');
+  if(r){ r.classList.toggle('show',!!WP.apartada&&!wpPanelAbierto()); if(WP.apartada) r.textContent='↩ Regresar cuenta apartada'+(WP.apartada.cliente?' de '+WP.apartada.cliente:'')+' ('+WP.apartada.order.reduce((a,x)=>a+(x.qty||1),0)+')'; }
 }
 function wpSonar(){ try{ const c=new (window.AudioContext||window.webkitAudioContext)(); [0,.22,.44].forEach((d,i)=>{ const o=c.createOscillator(),g=c.createGain(); o.frequency.value=[880,1175,1568][i]; g.gain.setValueAtTime(.0001,c.currentTime+d); g.gain.exponentialRampToValueAtTime(.35,c.currentTime+d+.02); g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+d+.2); o.connect(g).connect(c.destination); o.start(c.currentTime+d); o.stop(c.currentTime+d+.22); }); }catch(e){} }
-function abrirWebPed(){ document.getElementById('wp-modal').classList.add('open'); wpPintar(); wpCargar(); }
-function cerrarWebPed(){ document.getElementById('wp-modal').classList.remove('open'); }
+function abrirWebPed(){ const p=document.getElementById('wp-panel'); if(p.classList.contains('open')){ cerrarWebPed(); return; } p.classList.add('open'); wpPintar(); wpDock(); wpCargar(); }
+function cerrarWebPed(){ document.getElementById('wp-panel').classList.remove('open'); WP.elegir=null; wpDock(); }
+function wpToggle(id){ WP.abiertas.has(id)?WP.abiertas.delete(id):WP.abiertas.add(id); wpPintar(); }
 function wpItems(r){ return Array.isArray(r.items)&&r.items.length?r.items:[{...(r.item||{}),tipo:'arma',qty:r.qty||1}]; }
+function wpResumen(r){ return wpItems(r).map(it=>(it.qty>1?it.qty+'× ':'')+(it.tipo==='prod'?it.producto:(it.producto+' '+(it.tamano||'')))).join(' · '); }
 function wpItemTxt(r){
   return wpItems(r).map(it=>{
     if(it.tipo==='prod') return `<p class="wp-it"><b>${it.qty>1?it.qty+' × ':''}${sanitize(it.producto)}</b>${it.crema&&it.crema!=='Crema'?' · '+sanitize(it.crema):''}</p>`;
@@ -5695,22 +5737,36 @@ function wpItemTxt(r){
 }
 function wpPintar(){
   const box=document.getElementById('wp-box');
-  const est={nuevo:'Nuevo',aceptado:'Esperando que pague',listo:'Esperando que pague'};
-  let h=`<div class="wp-head"><h3>🌐 Pedidos web · ${sanitize(wpSuc())}</h3><div style="display:flex;gap:6px;align-items:center"><button class="wp-pausa${WP.estado==='pausa'?' on':''}" onclick="wpPausa()">${WP.estado==='pausa'?'▶ Reanudar':'⏸ Pausar'}</button><button class="tb-btn" onclick="cerrarWebPed()" aria-label="Cerrar">✕</button></div></div>`;
+  const nNuevos=WP.lista.filter(r=>r.estado==='nuevo').length;
+  let h=`<div class="wp-head"><h3>🌐 Fila web · ${sanitize(wpSuc())}</h3><div style="display:flex;gap:6px;align-items:center"><button class="wp-pausa${WP.estado==='pausa'?' on':''}" onclick="wpPausa()">${WP.estado==='pausa'?'▶ Reanudar':'⏸ Pausar'}</button><button class="wp-min" onclick="cerrarWebPed()">Minimizar ⌄</button></div></div><div id="wp-list">`;
   if(WP.estado==='pausa') h+=`<p style="margin:0 0 10px;font-size:13px;color:#7A0F20;background:#FFF4F5;border-radius:10px;padding:8px 10px">Pausado: la página no deja mandar pedidos nuevos a esta sucursal.</p>`;
-  if(!WP.lista.length) h+=`<div class="wp-empty">No hay pedidos web por ahora.<br>Aquí te aparecen y suena cuando llegue uno.</div>`;
-  WP.lista.forEach(r=>{
+  if(WP.apartada) h+=`<p style="margin:0 0 10px;font-size:13px;color:#7A0F20;background:#FFF4F5;border-radius:10px;padding:8px 10px">Tienes una cuenta apartada${WP.apartada.cliente?' de <b>'+sanitize(WP.apartada.cliente)+'</b>':''}. Regresa sola al terminar de cobrar. <a href="#" onclick="wpRegresar();return false" style="color:#A6182E;font-weight:700">Regresarla ya</a></p>`;
+  if(!WP.lista.length) h+=`<div class="wp-empty">No hay pedidos web por ahora.<br>Aquí se forman en fila y suena cuando llega uno.<br>Puedes minimizar esto y seguir cobrando.</div>`;
+  else if(nNuevos) h+=`<p style="margin:0 0 10px;font-size:13px;color:var(--text-3)">Tócalos para ver el detalle. Puedes minimizar y seguir cobrando; la fila no se pierde.</p>`;
+  WP.lista.forEach((r,i)=>{
     const hace=Math.max(0,Math.round((Date.now()-new Date(r.created_at))/60000));
-    h+=`<div class="wp-card ${r.estado}"><div class="wp-top"><span class="wp-folio">${sanitize(r.folio)}</span><span class="wp-est">${est[r.estado]||r.estado}</span></div>
-      <p class="wp-who">${sanitize(r.nombre||'')} <small>· ${sanitize(r.telefono||'')} · hace ${hace} min</small></p>${wpItemTxt(r)}
-      <p class="wp-it" style="color:var(--text-3);font-size:12.5px">No se prepara hasta que pague en mostrador.</p><div class="wp-tot">Cobrar $${Number(r.total).toLocaleString('es-MX')}</div><div class="wp-act">`;
-    if(r.estado==='nuevo') h+=`<button class="fill" onclick="wpAceptar(${r.id})">✓ Recibido</button><button class="gris" onclick="wpRechazar(${r.id})">Rechazar</button>`;
-    if(r.estado==='aceptado'||r.estado==='listo') h+=`<button class="fill" onclick="wpCobrar(${r.id})">💳 Llegó: pasar a cobrar</button><button class="gris" onclick="wpNoVino(${r.id})">No vino</button>`;
-    h+=`</div></div>`;
+    const enCaja=WP.cobrando&&WP.cobrando.id===r.id;
+    const abierta=r.estado==='nuevo'||enCaja||WP.abiertas.has(r.id)||WP.elegir===r.id;
+    const est=enCaja?'En caja ahora':(r.estado==='nuevo'?'Nuevo':'Esperando que llegue');
+    h+=`<div class="wp-card ${r.estado}${enCaja?' caja':''}"><div class="wp-row" onclick="wpToggle(${r.id})"><span class="wp-pos">${i+1}</span><div class="wp-mid"><div class="l1">${sanitize(r.folio)} · ${sanitize((r.nombre||'').split(' ')[0])}</div><div class="l2">${est} · hace ${hace} min${abierta?'':' · '+sanitize(wpResumen(r))}</div></div><span class="wp-amt">$${Number(r.total).toLocaleString('es-MX')}</span></div>`;
+    if(abierta){
+      h+=`<div class="wp-det"><p class="wp-who" style="margin:0 0 6px"><small>${sanitize(r.nombre||'')} · ${sanitize(r.telefono||'')}</small></p>${wpItemTxt(r)}
+        <p class="wp-it" style="color:var(--text-3);font-size:12.5px">No se prepara hasta que pague.</p><div class="wp-act">`;
+      if(r.estado==='nuevo') h+=`<button class="fill" onclick="wpAceptar(${r.id})">✓ Recibido</button><button class="gris" onclick="wpRechazar(${r.id})">Rechazar</button>`;
+      else if(enCaja) h+=`<button class="gris" onclick="cerrarWebPed()">Está en la cuenta: cóbralo</button>`;
+      else if(WP.elegir!==r.id) h+=`<button class="fill" onclick="wpCobrar(${r.id})">💳 Llegó: pasar a cobrar</button><button class="gris" onclick="wpNoVino(${r.id})">No vino</button>`;
+      h+=`</div>`;
+      if(WP.elegir===r.id){
+        const n=order.reduce((a,x)=>a+(x.qty||1),0), cli=(document.getElementById('client-input')?.value||loyaltyCliente?.nombre||'').trim();
+        h+=`<div class="wp-elegir"><p>Estás cobrando otra cuenta (${n} producto${n===1?'':'s'}${cli?' · '+sanitize(cli):''}). ¿Qué hago?</p><div class="wp-act"><button class="fill" onclick="wpCobrar(${r.id},'apartar')">Apartar la otra y cobrar este</button><button onclick="wpCobrar(${r.id},'juntar')">Juntar en la misma cuenta</button><button class="gris" onclick="WP.elegir=null;wpPintar()">Cancelar</button></div></div>`;
+      }
+      h+=`</div>`;
+    }
+    h+=`</div>`;
   });
-  box.innerHTML=h;
+  box.innerHTML=h+'</div>';
 }
-async function wpPatch(id,data){ const r=await sbPatch('pedidos_web','id=eq.'+id,data); if(!r||!r.ok){ showToast('No se pudo actualizar. Revisa internet.'); return false; } await wpCargar(); wpPintar(); return true; }
+async function wpPatch(id,data){ const r=await sbPatch('pedidos_web','id=eq.'+id,data); if(!r||!r.ok){ showToast('No se pudo actualizar. Revisa internet.'); return false; } await wpCargar(); if(wpPanelAbierto()) wpPintar(); return true; }
 function wpAceptar(id){ wpPatch(id,{estado:'aceptado',aceptado_at:new Date().toISOString(),atendio:currentUser?.name||null}).then(ok=>{ if(ok){ showToast('Recibido ✓ Le avisamos que pase a pagar'); } }); }
 function wpListo(id){ wpPatch(id,{estado:'listo',listo_at:new Date().toISOString()}).then(ok=>ok&&showToast('Listo ✓ Ya le avisamos que pase')); }
 function wpRechazar(id){
@@ -5739,18 +5795,54 @@ function wpArmarItem(it,folio){
     names.forEach(n=>{ const o=mod.options.find(x=>x.name===n); const ex=o?o.extra:0; tot+=ex; tags.push({modKey:k,name:n,extra:ex}); }); });
   return {uid:Date.now()+Math.random(),productId:p.id,name:p.name,emoji:pEmoji(p.name),sel,tags,note:'Web '+folio,unitPrice:tot,qty:it.qty||1};
 }
-async function wpCobrar(id){
+function wpRefrescarOrden(){ try{ renderLoyaltyCard(); }catch(e){} try{ renderOrderItems(); }catch(e){} renderOrderBar(); renderProducts(); }
+function wpApartar(){
+  const ci=document.getElementById('client-input');
+  WP.apartada={order:order.slice(),cliente:(ci?.value||loyaltyCliente?.nombre||'').trim(),clienteTxt:ci?.value||'',loyalty:loyaltyCliente,discount,discountMonto,promoActiva};
+  order=[]; discount=0; discountMonto=0; promoActiva=null;
+  if(ci) ci.value=''; loyaltyCliente=null; loyaltyAplicarCanje=false;
+  document.querySelectorAll('.disc-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
+  const dm=document.getElementById('disc-monto-input'); if(dm) dm.value='';
+  { const t=document.getElementById('client-toggle-text'), b=document.getElementById('client-toggle'); if(t) t.textContent='+ Agregar cliente'; if(b) b.classList.remove('has-value'); }
+}
+function wpRegresar(){
+  const a=WP.apartada; if(!a) return;
+  if(order.length&&!confirm('Hay productos en la cuenta actual. ¿Juntarlos con la cuenta apartada?')) return;
+  order=order.concat(a.order); discount=a.discount||0; discountMonto=a.discountMonto||0; promoActiva=a.promoActiva||null;
+  const ci=document.getElementById('client-input'); if(ci&&!ci.value) ci.value=a.clienteTxt||'';
+  if(ci&&ci.value){ const t=document.getElementById('client-toggle-text'), b=document.getElementById('client-toggle'); if(t) t.textContent='✍️ '+ci.value; if(b) b.classList.add('has-value'); }
+  loyaltyCliente=a.loyalty||null; loyaltyAplicarCanje=false;
+  WP.apartada=null; wpRefrescarOrden(); wpDock(); if(wpPanelAbierto()) wpPintar();
+  showToast('↩ Regresó la cuenta'+(a.cliente?' de '+a.cliente:'')+(a.discount||a.discountMonto?'. Revisa el descuento':''));
+}
+async function wpCobrar(id,modo){
   const r=WP.lista.find(x=>x.id===id); if(!r) return;
   if(typeof esApp==='function'&&esApp()){ showToast('Quita el modo App antes de cobrar un pedido web'); return; }
-  if(order.length&&!confirm('Ya hay productos en la orden. ¿Agregar el pedido web a la misma cuenta?')) return;
+  if(WP.cobrando&&WP.cobrando.id!==id){ showToast('Primero termina de cobrar el pedido '+WP.cobrando.folio); return; }
+  if(order.length&&!modo){ WP.elegir=id; wpPintar(); return; }
+  if(modo==='apartar'){ if(WP.apartada){ showToast('Ya hay una cuenta apartada. Regrésala o cóbrala primero.'); return; } wpApartar(); }
+  WP.elegir=null;
   const items=wpItems(r).map(it=>wpArmarItem(it,r.folio)); if(items.some(x=>!x)){ showToast('No encontré un producto en el menú'); return; }
-  items.forEach(x=>order.push(x)); const item={unitPrice:items.reduce((a,x)=>a+x.unitPrice*x.qty,0),qty:1};
+  items.forEach(x=>order.push(x)); const tot=items.reduce((a,x)=>a+x.unitPrice*x.qty,0);
   const ci=document.getElementById('client-input'); if(ci&&!ci.value) ci.value=(r.nombre||'')+' · '+r.folio;
-  try{ const c=await sbGet('lf_loyalty_cliente_resumen','id=eq.'+r.cliente_id+'&select=*'); if(Array.isArray(c)&&c[0]) selectCliente(c[0]); }catch(e){}
-  await wpPatch(id,{estado:'entregado',cerrado_at:new Date().toISOString()});
-  cerrarWebPed(); renderOrderBar(); renderProducts();
-  if(Number(r.total)!==item.unitPrice*item.qty) showToast('Ojo: el precio cambió desde que hizo el pedido ($'+r.total+' → $'+(item.unitPrice*item.qty)+')');
-  else showToast('Pedido '+r.folio+' en la cuenta. Cóbralo y luego prepáralo 💳');
+  WP.cobrando={id:r.id,folio:r.folio};
+  try{ const c=await sbGet('lf_loyalty_cliente_resumen','id=eq.'+r.cliente_id+'&select=*'); if(Array.isArray(c)&&c[0]&&!loyaltyCliente) selectCliente(c[0]); }catch(e){}
+  cerrarWebPed(); wpRefrescarOrden();
+  if(Number(r.total)!==tot) showToast('Ojo: el precio cambió desde que hizo el pedido ($'+r.total+' → $'+tot+')');
+  else showToast('Pedido '+r.folio+' en la cuenta. Cóbralo y luego prepáralo 💳'+(modo==='apartar'?' · la otra cuenta quedó apartada':''));
+}
+// Llamado al confirmar un pago: el pedido web se marca entregado solo cuando de verdad se cobró
+function wpTrasPago(sale){
+  const c=WP.cobrando; WP.cobrando=null;
+  if(c) sbPatch('pedidos_web','id=eq.'+c.id,{estado:'entregado',cerrado_at:new Date().toISOString(),order_id:sale?.id||null}).then(()=>wpCargar());
+  if(WP.apartada) setTimeout(()=>wpRegresar(),1600);
+  wpDock();
+}
+// Llamado al cancelar la orden: el pedido web vuelve a la fila
+function wpTrasCancelar(){
+  if(WP.cobrando){ showToast('El pedido '+WP.cobrando.folio+' regresó a la fila'); WP.cobrando=null; }
+  if(WP.apartada) setTimeout(()=>wpRegresar(),400);
+  wpDock();
 }
 function wpComanda(id){
   // Imprime comanda si la impresora está lista, usando la misma función de comandas del POS si existe
