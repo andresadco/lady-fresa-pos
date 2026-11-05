@@ -691,13 +691,23 @@ function setOrdenProd(o,btn){ ordenProd=o; btn.parentNode.querySelectorAll('butt
 function irA(v){ vista=v; document.querySelectorAll('.vista').forEach(x=>x.classList.toggle('on',x.id==='vista-'+v)); document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v)); if(v==='ordenes') pintarOrdenes(); if(v==='productos') pintarProductos(); if(v==='meses'){ if(DM) pintarMeses(); cargarMeses(); } window.scrollTo({top:0}); }
 let _avT; function aviso(t){ const a=$('aviso'); a.textContent=t; a.classList.add('on'); clearTimeout(_avT); _avT=setTimeout(()=>a.classList.remove('on'),3200); }
 
+// Cada 45 s solo pregunta por la última orden; recarga todo únicamente si hubo una venta nueva (ahorra base de datos)
+async function revisarNuevas(){
+  if(!LF_AUTH||document.hidden||periodo!=='hoy') return;
+  try{
+    const sf=suc!=='all'?`&sucursal=eq.${encodeURIComponent(suc)}`:'';
+    const r=await fetch(`${SB_URL}/rest/v1/orders?select=id&status=neq.cancelada${sf}&created_at=gte.${new Date(rangos('hoy').de).toISOString()}&order=created_at.desc&limit=1`,{headers:H});
+    if(!r.ok) return; const j=await r.json(); const id=j[0]&&j[0].id;
+    if((id||null)!==(_ultimaId||null)) cargar(); else $('act').textContent=new Date().toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',timeZone:'America/Mexico_City'})+' CDMX';
+  }catch(e){}
+}
 async function cargarSucursales(){
   try{ const r=await fetch(`${SB_URL}/rest/v1/sucursales?select=name,pos_desde&order=name.asc`,{headers:H}); if(!r.ok) return;
     const c=$('sucs'), L=await r.json(); SUCS=L.map(s=>s.name); const pd=L.map(s=>s.pos_desde).filter(Boolean).sort().pop(); if(pd) CORTE=Date.parse(pd+'T00:00:00Z')+MX_OFF; L.forEach(s=>{ const b=document.createElement('button'); b.textContent=s.name; b.onclick=()=>setSuc(s.name,b); c.appendChild(b); }); }catch(e){}
 }
 function arrancar(){
   if(!_arr){ _arr=true; cargarSucursales().then(()=>traerMetas()).then(()=>{ if(D.R) pintar(); }); }
-  cargar(); clearInterval(_poll); _poll=setInterval(()=>{ if(LF_AUTH&&!document.hidden&&periodo==='hoy') cargar(); },30000);
+  cargar(); clearInterval(_poll); _poll=setInterval(revisarNuevas,45000);
 }
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&LF_AUTH) cargar(); });
 if(LF_AUTH){ document.getElementById('lf-login').style.display='none'; arrancar(); } else mostrarPin('');

@@ -1721,7 +1721,7 @@ function showPOS() {
   loadCatalog();
   cargarPromos();
   loadTicketComandaConfig();
-  cargarMeta(); clearInterval(window._metaInt); window._metaInt=setInterval(()=>{ if(!document.hidden) cargarMeta(); },60000);
+  cargarMeta(); clearInterval(window._metaInt); window._metaInt=setInterval(()=>{ if(!document.hidden) cargarMeta(); },180000);
   // MEJORA: arrancar heartbeat de impresora y flush de cola de impresión
   if(printerListo()){
     checkPrinterStatus();
