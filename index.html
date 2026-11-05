@@ -5693,24 +5693,23 @@ function wpItemTxt(r){
 }
 function wpPintar(){
   const box=document.getElementById('wp-box');
-  const est={nuevo:'Nuevo',aceptado:'Preparando',listo:'Listo para recoger'};
+  const est={nuevo:'Nuevo',aceptado:'Esperando que pague',listo:'Esperando que pague'};
   let h=`<div class="wp-head"><h3>🌐 Pedidos web · ${sanitize(wpSuc())}</h3><div style="display:flex;gap:6px;align-items:center"><button class="wp-pausa${WP.estado==='pausa'?' on':''}" onclick="wpPausa()">${WP.estado==='pausa'?'▶ Reanudar':'⏸ Pausar'}</button><button class="tb-btn" onclick="cerrarWebPed()" aria-label="Cerrar">✕</button></div></div>`;
   if(WP.estado==='pausa') h+=`<p style="margin:0 0 10px;font-size:13px;color:#7A0F20;background:#FFF4F5;border-radius:10px;padding:8px 10px">Pausado: la página no deja mandar pedidos nuevos a esta sucursal.</p>`;
   if(!WP.lista.length) h+=`<div class="wp-empty">No hay pedidos web por ahora.<br>Aquí te aparecen y suena cuando llegue uno.</div>`;
   WP.lista.forEach(r=>{
     const hace=Math.max(0,Math.round((Date.now()-new Date(r.created_at))/60000));
-    h+=`<div class="wp-card ${r.estado}"><div class="wp-top"><span class="wp-folio">${sanitize(r.folio)}</span><span class="wp-est">${est[r.estado]||r.estado}${r.estado==='aceptado'&&r.minutos?' · '+r.minutos+' min':''}</span></div>
+    h+=`<div class="wp-card ${r.estado}"><div class="wp-top"><span class="wp-folio">${sanitize(r.folio)}</span><span class="wp-est">${est[r.estado]||r.estado}</span></div>
       <p class="wp-who">${sanitize(r.nombre||'')} <small>· ${sanitize(r.telefono||'')} · hace ${hace} min</small></p>${wpItemTxt(r)}
-      <div class="wp-tot">Cobrar $${Number(r.total).toLocaleString('es-MX')}</div><div class="wp-act">`;
-    if(r.estado==='nuevo') h+=[5,10,15,20].map(m=>`<button class="fill" onclick="wpAceptar(${r.id},${m})">Aceptar · ${m} min</button>`).join('')+`<button class="gris" onclick="wpRechazar(${r.id})">Rechazar</button>`;
-    if(r.estado==='aceptado') h+=`<button class="fill" onclick="wpListo(${r.id})">✓ Ya está listo</button><button class="gris" onclick="wpRechazar(${r.id})">Cancelar</button>`;
-    if(r.estado==='listo') h+=`<button class="fill" onclick="wpCobrar(${r.id})">💳 Llegó: pasar a cobrar</button><button class="gris" onclick="wpNoVino(${r.id})">No vino</button>`;
+      <p class="wp-it" style="color:var(--text-3);font-size:12.5px">No se prepara hasta que pague en mostrador.</p><div class="wp-tot">Cobrar $${Number(r.total).toLocaleString('es-MX')}</div><div class="wp-act">`;
+    if(r.estado==='nuevo') h+=`<button class="fill" onclick="wpAceptar(${r.id})">✓ Recibido</button><button class="gris" onclick="wpRechazar(${r.id})">Rechazar</button>`;
+    if(r.estado==='aceptado'||r.estado==='listo') h+=`<button class="fill" onclick="wpCobrar(${r.id})">💳 Llegó: pasar a cobrar</button><button class="gris" onclick="wpNoVino(${r.id})">No vino</button>`;
     h+=`</div></div>`;
   });
   box.innerHTML=h;
 }
 async function wpPatch(id,data){ const r=await sbPatch('pedidos_web','id=eq.'+id,data); if(!r||!r.ok){ showToast('No se pudo actualizar. Revisa internet.'); return false; } await wpCargar(); wpPintar(); return true; }
-function wpAceptar(id,m){ wpPatch(id,{estado:'aceptado',minutos:m,aceptado_at:new Date().toISOString(),atendio:currentUser?.name||null}).then(ok=>{ if(ok){ showToast('Aceptado ✓ La clienta ya lo ve en su cel'); try{ wpComanda(id); }catch(e){} } }); }
+function wpAceptar(id){ wpPatch(id,{estado:'aceptado',aceptado_at:new Date().toISOString(),atendio:currentUser?.name||null}).then(ok=>{ if(ok){ showToast('Recibido ✓ Le avisamos que pase a pagar'); } }); }
 function wpListo(id){ wpPatch(id,{estado:'listo',listo_at:new Date().toISOString()}).then(ok=>ok&&showToast('Listo ✓ Ya le avisamos que pase')); }
 function wpRechazar(id){
   const m=prompt('¿Por qué no se puede? (lo verá la clienta)','Se nos acabó un ingrediente, pídelo directo en barra');
@@ -5746,7 +5745,7 @@ async function wpCobrar(id){
   await wpPatch(id,{estado:'entregado',cerrado_at:new Date().toISOString()});
   cerrarWebPed(); renderOrderBar(); renderProducts();
   if(Number(r.total)!==item.unitPrice*item.qty) showToast('Ojo: el precio cambió desde que hizo el pedido ($'+r.total+' → $'+(item.unitPrice*item.qty)+')');
-  else showToast('Pedido '+r.folio+' en la cuenta. Cóbralo como siempre 💳');
+  else showToast('Pedido '+r.folio+' en la cuenta. Cóbralo y luego prepáralo 💳');
 }
 function wpComanda(id){
   // Imprime comanda si la impresora está lista, usando la misma función de comandas del POS si existe
