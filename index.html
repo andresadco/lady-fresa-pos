@@ -5685,11 +5685,13 @@ async function wpCargar(){
 function wpSonar(){ try{ const c=new (window.AudioContext||window.webkitAudioContext)(); [0,.22,.44].forEach((d,i)=>{ const o=c.createOscillator(),g=c.createGain(); o.frequency.value=[880,1175,1568][i]; g.gain.setValueAtTime(.0001,c.currentTime+d); g.gain.exponentialRampToValueAtTime(.35,c.currentTime+d+.02); g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+d+.2); o.connect(g).connect(c.destination); o.start(c.currentTime+d); o.stop(c.currentTime+d+.22); }); }catch(e){} }
 function abrirWebPed(){ document.getElementById('wp-modal').classList.add('open'); wpPintar(); wpCargar(); }
 function cerrarWebPed(){ document.getElementById('wp-modal').classList.remove('open'); }
+function wpItems(r){ return Array.isArray(r.items)&&r.items.length?r.items:[{...(r.item||{}),tipo:'arma',qty:r.qty||1}]; }
 function wpItemTxt(r){
-  const it=r.item||{}; const tops=[...(it.incluidos||[]).map(x=>x),...(it.basicos||[]).map(x=>x+' (+)'),...(it.premium||[]).map(x=>x+' ★'),...(it.shots||[]).map(x=>'Shot '+x)];
-  return `<p class="wp-it"><b>${r.qty>1?r.qty+' × ':''}${sanitize(it.producto)} ${sanitize(it.tamano)}</b> · ${sanitize(it.base)}</p>`+
-    (tops.length?`<p class="wp-it">${tops.map(sanitize).join(' · ')}</p>`:'')+
-    (r.nota?`<p class="wp-it" style="color:#A6182E">📝 ${sanitize(r.nota)}</p>`:'');
+  return wpItems(r).map(it=>{
+    if(it.tipo==='prod') return `<p class="wp-it"><b>${it.qty>1?it.qty+' × ':''}${sanitize(it.producto)}</b>${it.crema&&it.crema!=='Crema'?' · '+sanitize(it.crema):''}</p>`;
+    const tops=[...(it.incluidos||[]),...(it.basicos||[]).map(x=>x+' (+)'),...(it.premium||[]).map(x=>x+' ★'),...(it.shots||[]).map(x=>'Shot '+x)];
+    return `<p class="wp-it"><b>${it.qty>1?it.qty+' × ':''}${sanitize(it.producto)} ${sanitize(it.tamano)}</b> · ${sanitize(it.base)}</p>`+(tops.length?`<p class="wp-it" style="padding-left:10px">${tops.map(sanitize).join(' · ')}</p>`:'');
+  }).join('')+(r.nota?`<p class="wp-it" style="color:#A6182E">📝 ${sanitize(r.nota)}</p>`:'');
 }
 function wpPintar(){
   const box=document.getElementById('wp-box');
@@ -5722,24 +5724,27 @@ async function wpPausa(){
   if(!r||!r.ok){ showToast('No se pudo cambiar'); return; }
   showToast(nuevo==='pausa'?'⏸ Pedidos web en pausa':'▶ Pedidos web activos'); await wpCargar(); wpPintar();
 }
-function wpArmarItem(r){
-  const it=r.item||{}; const p=PRODUCTS.find(x=>x.name===it.producto); if(!p) return null;
+function wpArmarItem(it,folio){
+  const p=it.tipo==='prod'?PRODUCTS.find(x=>x.id===it.id||x.name===it.producto):PRODUCTS.find(x=>x.name===it.producto); if(!p) return null;
   const sel={}; p.mods.forEach(k=>{ const m=MODS[k]; if(m) sel[k]=m.max===1?null:[]; });
-  if('Tamaño' in sel) sel['Tamaño']=it.tamano||'Chico';
-  if('Bases' in sel) sel['Bases']=it.base||'Crema';
-  const put=(k,arr)=>{ if(k in sel&&Array.isArray(arr)) sel[k]=arr.slice(); };
-  put('Toppings Incluidos',it.incluidos); put('Toppings Extra Básicos',it.basicos); put('Toppings Extra Premium',it.premium); put('Shots Extra',it.shots);
+  if(it.tipo==='prod'){ if('Tipo de Crema' in sel) sel['Tipo de Crema']=it.crema||'Crema'; }
+  else{
+    if('Tamaño' in sel) sel['Tamaño']=it.tamano||'Chico';
+    if('Bases' in sel) sel['Bases']=it.base||'Crema';
+    const put=(k,arr)=>{ if(k in sel&&Array.isArray(arr)) sel[k]=arr.slice(); };
+    put('Toppings Incluidos',it.incluidos); put('Toppings Extra Básicos',it.basicos); put('Toppings Extra Premium',it.premium); put('Shots Extra',it.shots);
+  }
   let tot=p.price; const tags=[];
   p.mods.forEach(k=>{ const mod=MODS[k]; if(!mod) return; const v=sel[k]; const names=mod.max===1?(v?[v]:[]):(v||[]);
     names.forEach(n=>{ const o=mod.options.find(x=>x.name===n); const ex=o?o.extra:0; tot+=ex; tags.push({modKey:k,name:n,extra:ex}); }); });
-  return {uid:Date.now()+Math.random(),productId:p.id,name:p.name,emoji:pEmoji(p.name),sel,tags,note:('Web '+r.folio+(r.nota?' · '+r.nota:'')).slice(0,120),unitPrice:tot,qty:r.qty||1};
+  return {uid:Date.now()+Math.random(),productId:p.id,name:p.name,emoji:pEmoji(p.name),sel,tags,note:'Web '+folio,unitPrice:tot,qty:it.qty||1};
 }
 async function wpCobrar(id){
   const r=WP.lista.find(x=>x.id===id); if(!r) return;
   if(typeof esApp==='function'&&esApp()){ showToast('Quita el modo App antes de cobrar un pedido web'); return; }
   if(order.length&&!confirm('Ya hay productos en la orden. ¿Agregar el pedido web a la misma cuenta?')) return;
-  const item=wpArmarItem(r); if(!item){ showToast('No encontré el producto en el menú'); return; }
-  order.push(item);
+  const items=wpItems(r).map(it=>wpArmarItem(it,r.folio)); if(items.some(x=>!x)){ showToast('No encontré un producto en el menú'); return; }
+  items.forEach(x=>order.push(x)); const item={unitPrice:items.reduce((a,x)=>a+x.unitPrice*x.qty,0),qty:1};
   const ci=document.getElementById('client-input'); if(ci&&!ci.value) ci.value=(r.nombre||'')+' · '+r.folio;
   try{ const c=await sbGet('lf_loyalty_cliente_resumen','id=eq.'+r.cliente_id+'&select=*'); if(Array.isArray(c)&&c[0]) selectCliente(c[0]); }catch(e){}
   await wpPatch(id,{estado:'entregado',cerrado_at:new Date().toISOString()});
@@ -5750,7 +5755,7 @@ async function wpCobrar(id){
 function wpComanda(id){
   // Imprime comanda si la impresora está lista, usando la misma función de comandas del POS si existe
   const r=WP.lista.find(x=>x.id===id); if(!r||typeof imprimirComandaItems!=='function'||!printerListo()) return;
-  const it=wpArmarItem(r); if(it) imprimirComandaItems([it],'WEB '+r.folio+' · '+(r.nombre||''));
+  const its=wpItems(r).map(x=>wpArmarItem(x,r.folio)).filter(Boolean); if(its.length) imprimirComandaItems(its,'WEB '+r.folio+' · '+(r.nombre||''));
 }
 </script>
 </body>
