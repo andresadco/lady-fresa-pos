@@ -1899,7 +1899,7 @@ function construirCatalogo(prods,grupos,opciones,pm){
     const mods=(Array.isArray(pm)?pm.filter(x=>x.producto_id===p.id).sort((a,b)=>a.orden-b.orden):[])
       .map(x=>grupos.find(g=>g.id===x.grupo_id)?.nombre).filter(Boolean);
     const pt=parseFloat(p.precio), pa=p.precio_app!=null&&p.precio_app!==''?parseFloat(p.precio_app):pt;
-    PRODUCTS.push({id:p.id,name:p.nombre,cat:p.categoria,price:pt,priceTienda:pt,priceApp:isNaN(pa)?pt:pa,desc:p.descripcion||'',emoji:p.emoji||'🍓',img:p.imagen||'',mods,soloApp:!!p.solo_app});
+    PRODUCTS.push({id:p.id,name:p.nombre,cat:p.categoria,price:pt,priceTienda:pt,priceApp:isNaN(pa)?pt:pa,desc:p.descripcion||'',emoji:p.emoji||'🍓',img:p.imagen||'',mods,soloApp:!!p.solo_app,extrasTienda:!!p.extras_app_tienda});
     EMOJI_MAP[p.nombre]=p.emoji||'🍓';
   });
   _listaApp=null; aplicarListaPrecios();
@@ -1907,6 +1907,8 @@ function construirCatalogo(prods,grupos,opciones,pm){
 }
 // Precios de apps (Uber/DiDi/Rappi): al elegir la app, el catálogo y la orden cambian a la lista de apps
 let _listaApp=null;
+// Algunos productos (ej. La Dubai) en las apps cobran los extras a precio de tienda: así está su menú en Uber
+function exO(o,p){ if(!o) return 0; p=p||(typeof CS!=='undefined'&&CS?CS.p:null); return (p&&p.extrasTienda&&_listaApp&&o.extraTienda!=null)?o.extraTienda:o.extra; }
 function aplicarListaPrecios(){
   const app=typeof esApp==='function'&&esApp();
   if(_listaApp===app) return; _listaApp=app;
@@ -1918,7 +1920,7 @@ function aplicarListaPrecios(){
     const p=PRODUCTS.find(x=>x.id===it.productId); if(!p) return;
     let tot=p.price; const tags=[];
     p.mods.forEach(k=>{ const mod=MODS[k]; if(!mod) return; const v=it.sel?.[k]; const names=mod.max===1?(v?[v]:[]):(v||[]);
-      names.forEach(n=>{ const o=mod.options.find(x=>x.name===n); const ex=o?o.extra:0; tot+=ex; tags.push({modKey:k,name:n,extra:ex}); }); });
+      names.forEach(n=>{ const o=mod.options.find(x=>x.name===n); const ex=o?exO(o,p):0; tot+=ex; tags.push({modKey:k,name:n,extra:ex}); }); });
     if(tot!==it.unitPrice){ it.unitPrice=tot; it.tags=tags; cambio=true; }
   });
   if(cambio&&order.length) showToast(app?'🛵 Precios de app aplicados':'Precios de mostrador');
@@ -2057,7 +2059,7 @@ function renderCustomBody() {
           <div class="size-cup"><img src="img/toppings/vaso.webp" alt="" style="height:${sz.h}px"></div>
           <div class="size-letter">${sz.l}</div>
           <div class="size-name">${sanitize(o.name)}</div>
-          <div class="size-extra">${sz.oz?sz.oz+' oz · ':''}${o.extra===0?'incluido':'+$'+o.extra}</div>
+          <div class="size-extra">${sz.oz?sz.oz+' oz · ':''}${exO(o)===0?'incluido':'+$'+exO(o)}</div>
         </div>`;
       });
       html+=`</div>`;
@@ -2068,7 +2070,7 @@ function renderCustomBody() {
         html+=`<div class="base-chip${sel?' sel':''}" data-mod="${sanitize(modKey)}" data-name="${sanitize(o.name)}" onclick="selSingle(this.dataset.mod,this.dataset.name)">
           ${tIcon(o.name,'base-img')}
           <div class="base-name">${sanitize(o.name)}</div>
-          <div class="base-extra">${o.extra===0?'incl.':'+$'+o.extra}</div>
+          <div class="base-extra">${exO(o)===0?'incl.':'+$'+exO(o)}</div>
           <div class="base-check">${sel?'✓':''}</div>
         </div>`;
       });
@@ -2175,8 +2177,9 @@ function selSingle(modKey, val) {
 }
 
 function topPrecioLabel(o,cnt){
-  if(cnt>0) return o.extra===0 ? (cnt>1?'gratis ×'+cnt:'gratis ✓') : `+$${o.extra*cnt}${cnt>1?` ×${cnt}`:''}`;
-  return o.extra===0 ? 'gratis' : '+$'+o.extra;
+  const ex=exO(o);
+  if(cnt>0) return ex===0 ? (cnt>1?'gratis ×'+cnt:'gratis ✓') : `+$${ex*cnt}${cnt>1?` ×${cnt}`:''}`;
+  return ex===0 ? 'gratis' : '+$'+ex;
 }
 // Botón +1 sobre un topping ya elegido: agrega otra porción del mismo (ej. nuez ×2 en los gratis)
 function masTop(modKey, name){
@@ -2251,8 +2254,8 @@ function calcItemPrice(){
   let total=CS.p.price;
   CS.p.mods.forEach(modKey=>{
     const mod=MODS[modKey]; if(!mod) return;
-    if(mod.max===1){const opt=mod.options.find(o=>o.name===CS.sel[modKey]);if(opt) total+=opt.extra;}
-    else{(CS.sel[modKey]||[]).forEach(name=>{const opt=mod.options.find(o=>o.name===name);if(opt) total+=opt.extra;});}
+    if(mod.max===1){const opt=mod.options.find(o=>o.name===CS.sel[modKey]);if(opt) total+=exO(opt);}
+    else{(CS.sel[modKey]||[]).forEach(name=>{const opt=mod.options.find(o=>o.name===name);if(opt) total+=exO(opt);});}
   });
   return total;
 }
@@ -2269,8 +2272,8 @@ function addToOrder(){
   const tags=[];
   p.mods.forEach(modKey=>{
     const mod=MODS[modKey]; if(!mod) return;
-    if(mod.max===1&&CS.sel[modKey]){const opt=mod.options.find(o=>o.name===CS.sel[modKey]);tags.push({modKey,name:CS.sel[modKey],extra:opt?opt.extra:0});}
-    else{(CS.sel[modKey]||[]).forEach(name=>{const opt=mod.options.find(o=>o.name===name);tags.push({modKey,name,extra:opt?opt.extra:0});});}
+    if(mod.max===1&&CS.sel[modKey]){const opt=mod.options.find(o=>o.name===CS.sel[modKey]);tags.push({modKey,name:CS.sel[modKey],extra:opt?exO(opt):0});}
+    else{(CS.sel[modKey]||[]).forEach(name=>{const opt=mod.options.find(o=>o.name===name);tags.push({modKey,name,extra:opt?exO(opt):0});});}
   });
   const item={uid:Date.now()+Math.random(),productId:p.id,name:p.name,emoji:pEmoji(p.name),sel:JSON.parse(JSON.stringify(CS.sel)),tags,note:nota,unitPrice:price,qty:1};
   if(CS.editIdx!==null){const q=order[CS.editIdx].qty;item.qty=q;order[CS.editIdx]=item;}
