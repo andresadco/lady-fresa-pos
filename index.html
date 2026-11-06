@@ -4194,7 +4194,7 @@ async function renderLaClientes(filter=''){
     if(!_laClientes.length){
       // Todas las clientas (antes solo cargaba 200 y no encontraba a las más viejas)
       let out=[], from=0;
-      for(;;){ const r=await fetch(`${SB_URL}/rest/v1/lf_loyalty_cliente_resumen?select=id,nombre,telefono,sellos_actuales,ultima_actividad,fecha_alta,activo,puede_canjear,sucursal_alta,canjes_hechos&order=ultima_actividad.desc.nullslast,id.asc`,{headers:{...SB_H,'Range-Unit':'items',Range:`${from}-${from+999}`}});
+      for(;;){ const r=await fetch(`${SB_URL}/rest/v1/lf_loyalty_cliente_resumen?select=id,nombre,telefono,qr_code,sellos_actuales,sellos_ganados_total,ultima_actividad,fecha_alta,activo,puede_canjear,sucursal_alta,canjes_hechos&order=ultima_actividad.desc.nullslast,id.asc`,{headers:{...SB_H,'Range-Unit':'items',Range:`${from}-${from+999}`}});
         if(!r.ok) break; const j=await r.json(); if(!Array.isArray(j)) break; out=out.concat(j); if(j.length<1000) break; from+=1000; if(from>20000) break; }
       _laClientes=out;
     }
@@ -4309,8 +4309,9 @@ async function laVerCliente(clienteId){
   const cli=_laClientes.find(c=>c.id===clienteId);
   if(!cli) return;
   try {
-    const movs=await sbGet('lf_loyalty_sellos',
-      `cliente_id=eq.${clienteId}&select=*&order=created_at.desc&limit=50`);
+    const [movs,ladies]=await Promise.all([
+      sbGet('lf_loyalty_sellos',`cliente_id=eq.${clienteId}&select=*&order=created_at.desc&limit=50`),
+      sbGet('lf_ladies_guardadas',`cliente_id=eq.${clienteId}&select=nombre,descripcion,creador&order=created_at.desc`)]);
     let html=`<div class="la-empty" style="padding:14px 0; text-align:left;">
       <div style="font-size:15px; font-weight:600; color:var(--text);">${sanitize(cli.nombre)}</div>
       <div style="font-size:12px; color:var(--text-3); margin-top:2px;">${sanitize(cli.telefono)} · QR: ${sanitize(cli.qr_code||'—')}</div>
@@ -4321,6 +4322,12 @@ async function laVerCliente(clienteId){
     <div class="la-toolbar">
       <button class="la-mini-btn ghost" onclick="renderLaClientes()">← Volver</button>
     </div>`;
+    if(Array.isArray(ladies)&&ladies.length){
+      html+=`<div style="margin:4px 0 12px;padding:10px 12px;border-radius:12px;background:var(--red-light);">
+        <div style="font-size:13px;font-weight:700;color:var(--red-dark);margin-bottom:6px;">🍓 Sus Ladies guardadas</div>
+        ${ladies.map(l=>`<div style="font-size:13px;margin:4px 0;"><b>${sanitize(l.nombre)}</b>${l.creador?` <span style="color:var(--text-3)">· de ${sanitize(l.creador)}</span>`:''}<div style="font-size:12px;color:var(--text-2)">${sanitize(l.descripcion||'')}</div></div>`).join('')}
+      </div>`;
+    }
     if(!movs.length){
       html+=`<div class="la-empty"><div class="la-empty-icon">📋</div>Sin movimientos aún</div>`;
     } else {
