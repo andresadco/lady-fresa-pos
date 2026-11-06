@@ -4191,15 +4191,24 @@ async function renderLaClientes(filter=''){
   const body=document.getElementById('la-body');
   try {
     // Si es la primera vez o filtro vacío, recarga la lista
-    if(!filter || !_laClientes.length){
-      const rows=await sbGet('lf_loyalty_cliente_resumen',
-        'select=*&order=ultima_actividad.desc.nullslast&limit=200');
-      _laClientes=rows||[];
+    if(!_laClientes.length){
+      // Todas las clientas (antes solo cargaba 200 y no encontraba a las más viejas)
+      let out=[], from=0;
+      for(;;){ const r=await fetch(`${SB_URL}/rest/v1/lf_loyalty_cliente_resumen?select=id,nombre,telefono,sellos_actuales,ultima_actividad,fecha_alta,activo,puede_canjear,sucursal_alta,canjes_hechos&order=ultima_actividad.desc.nullslast,id.asc`,{headers:{...SB_H,'Range-Unit':'items',Range:`${from}-${from+999}`}});
+        if(!r.ok) break; const j=await r.json(); if(!Array.isArray(j)) break; out=out.concat(j); if(j.length<1000) break; from+=1000; if(from>20000) break; }
+      _laClientes=out;
     }
-    // Stats
-    const total=_laClientes.length;
+    // Panel: números de todo el club
     const req=loyaltyConfig?.sellos_requeridos||10;
-    const listosCanjear=_laClientes.filter(c=>c.sellos_actuales>=req).length;
+    const act=_laClientes.filter(c=>c.activo!==false);
+    const total=act.length;
+    const listosCanjear=act.filter(c=>c.sellos_actuales>=req).length;
+    const diasDe=d=>d?Math.floor((Date.now()-new Date(d))/864e5):null;
+    const activas=act.filter(c=>{ const d=diasDe(c.ultima_actividad||c.fecha_alta); return d!=null&&d<30; }).length;
+    const dormidas=total-activas;
+    const mesMX=new Date(Date.now()-6*3600e3).toISOString().slice(0,7);
+    const nuevas=act.filter(c=>c.fecha_alta&&new Date(new Date(c.fecha_alta).getTime()-6*3600e3).toISOString().slice(0,7)===mesMX).length;
+    const suc=currentUser?.sucursal, deMiTienda=suc?act.filter(c=>c.sucursal_alta===suc).length:0;
     // Cargar conteos del mes
     const desde=new Date(); desde.setDate(1); desde.setHours(0,0,0,0);
     const desdeISO=desde.toISOString();
@@ -4217,20 +4226,26 @@ async function renderLaClientes(filter=''){
     // Render
     let html=`
       <div class="la-stats">
-        <div class="la-stat"><div class="la-stat-v">${total}</div><div class="la-stat-l">Clientes</div></div>
-        <div class="la-stat"><div class="la-stat-v">${sellosMes}</div><div class="la-stat-l">Sellos mes</div></div>
-        <div class="la-stat"><div class="la-stat-v">${canjesMes}</div><div class="la-stat-l">Canjes mes</div></div>
-        <div class="la-stat"><div class="la-stat-v">${listosCanjear}</div><div class="la-stat-l">Listos canje</div></div>
+        <div class="la-stat"><div class="la-stat-v">${total.toLocaleString('es-MX')}</div><div class="la-stat-l">Lady Lovers</div></div>
+        <div class="la-stat"><div class="la-stat-v">${nuevas}</div><div class="la-stat-l">Nuevas este mes</div></div>
+        <div class="la-stat"><div class="la-stat-v">${activas}</div><div class="la-stat-l">Vinieron en 30 días</div></div>
+        <div class="la-stat"><div class="la-stat-v">${dormidas}</div><div class="la-stat-l">Dormidas +30 días</div></div>
+        <div class="la-stat"><div class="la-stat-v">${sellosMes}</div><div class="la-stat-l">Sellos este mes</div></div>
+        <div class="la-stat"><div class="la-stat-v">${canjesMes}</div><div class="la-stat-l">Canjes este mes</div></div>
+        <div class="la-stat"><div class="la-stat-v">${listosCanjear}</div><div class="la-stat-l">🎁 Premio listo</div></div>
+        ${suc?`<div class="la-stat"><div class="la-stat-v">${deMiTienda}</div><div class="la-stat-l">Registradas en ${sanitize(suc)}</div></div>`:''}
       </div>
       <div class="la-toolbar">
         <input class="la-search" id="la-search-input" placeholder="🔍 Buscar nombre o teléfono" oninput="renderLaClientes(this.value)" value="${sanitize(filter)}">
         <button class="la-mini-btn" onclick="laReload()">↻</button>
       </div>
     `;
+    const MAXV=150, visibles=filtered.slice(0,MAXV);
+    if(filtered.length>MAXV) html+=`<div style="font-size:12px;color:var(--text-3);margin:2px 2px 8px;">${filtered.length.toLocaleString('es-MX')} ${q?'coincidencias':'clientas'} · mostrando las ${MAXV} más recientes. Busca por nombre o teléfono para encontrar a cualquiera.</div>`;
     if(!filtered.length){
       html+=`<div class="la-empty"><div class="la-empty-icon">🍓</div>${q?'Sin coincidencias':'Aún no hay clientes en el club'}</div>`;
     } else {
-      html+=filtered.map(c=>{
+      html+=visibles.map(c=>{
         const initials=(c.nombre||'?').trim().split(/\s+/).slice(0,2).map(p=>p[0]||'').join('').toUpperCase()||'?';
         const ultima=c.ultima_actividad?fmtMX(c.ultima_actividad):'sin actividad';
         const pillCls=c.sellos_actuales>=req?'canje':'';
