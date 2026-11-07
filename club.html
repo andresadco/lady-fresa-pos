@@ -220,6 +220,9 @@ html, body { background: var(--bg); color: var(--text); font-family: 'DM Sans', 
 .avisos-t { font-family: 'Lilita One', sans-serif; color: var(--red); font-size: 20px; }
 .avisos-s { font-size: 13px; color: #6b4a50; margin: 6px 0 12px; line-height: 1.4; }
 .avisos .cta-btn { background: var(--red); }
+.pasos { text-align:left; margin:10px 0 2px; padding-left:22px; font-size:15px; color:#5a2a33; line-height:1.45; }
+.pasos li { margin-bottom:8px; }
+.pasos b { color: var(--red); }
 .avisos.ok .cta-btn { background: #fff; color: var(--red); border: 1.5px solid var(--red); }
 .cta-btn.share {
   background: var(--red);
@@ -596,7 +599,16 @@ function pintarAvisos(estado){
   const box=document.getElementById('avisos-box'), btn=document.getElementById('avisos-btn'), s=document.getElementById('avisos-s');
   if(!box) return;
   if(estado==='ok'){ box.classList.add('ok'); btn.textContent='✓ Avisos activados'; btn.disabled=true; s.textContent='Listo, te vamos a avisar de tus regalos y promos.'; }
-  else if(estado==='ios'){ btn.textContent='Cómo activarlos en iPhone'; s.innerHTML='En iPhone primero guarda tu tarjeta: toca <b>Compartir</b> ⬆️ y luego <b>"Agregar a pantalla de inicio"</b>. Ábrela desde ese ícono y aquí activas los avisos.'; }
+  else if(estado==='ios'){
+    btn.style.display='none';
+    const ua=navigator.userAgent, enApp=!/Safari\//.test(ua)&&!/CriOS|FxiOS/.test(ua), enChrome=/CriOS/.test(ua);
+    let pasos='';
+    if(enApp) pasos+='<li>Pica los <b>tres puntitos (···)</b> arriba a la derecha y elige <b>"Abrir en Safari"</b>.</li>';
+    if(enChrome) pasos+='<li>Pica los <b>tres puntitos (···)</b> y elige <b>"Agregar a pantalla de inicio"</b>.</li>';
+    else pasos+='<li>Pica el botón <b>Compartir ⬆️</b> (el cuadrito con flechita, abajo en el centro).</li><li>Baja y pica <b>"Agregar a pantalla de inicio"</b> → <b>Agregar</b>.</li>';
+    pasos+='<li>Abre tu tarjeta desde el <b>nuevo ícono 🍓</b> en tu pantalla y pica <b>Activar avisos</b>.</li>';
+    s.innerHTML='En iPhone es así de fácil:<ol class="pasos">'+pasos+'</ol>';
+  }
   else if(estado==='bloqueado'){ btn.textContent='Avisos bloqueados'; btn.disabled=true; s.textContent='Bloqueaste los avisos en este navegador. Puedes volver a permitirlos en la configuración del navegador.'; }
   else if(estado==='no'){ box.style.display='none'; }
 }
