@@ -4750,6 +4750,7 @@ function buildTicketXML(saleData,type='ticket'){
       xml+=T(String(CANALES[saleData.canal]||'').toUpperCase(),{a:'center',w:2,h:2,b:true});
       if(saleData.pagoRef) xml+=T('#'+String(saleData.pagoRef).slice(0,12),{a:'center',w:2,h:2,b:true});
     }
+    if(saleData._web) xml+=T(saleData._web,{a:'center',w:2,h:2,b:true});
     if(saleData.client) xml+=T(saleData.client.substring(0,21),{a:'center',w:2,h:2,b:true});
     xml+=T(servicio+'  ·  '+timeMX(saleData.date),{a:'center',...fontOpts(ccGet('comanda_font_tipo','bold'))});
     if(saleData._reprint) xml+=center('** REIMPRESIÓN **',true);
@@ -5011,7 +5012,7 @@ async function printSale(saleData){
     const r=await printEpson(saleData,'ticket');
     if(!r.ok&&!printerListo()) avisoSinImpresora();
   }
-  if(printerCfg.comanda!==false){await printEpson(saleData,'comanda');}
+  if(printerCfg.comanda!==false&&saleData.canal!=='web'){await printEpson(saleData,'comanda');}   // los pagados en línea ya imprimieron su comanda al llegar
 }
 
 function buildTicketText(saleData){
@@ -5754,6 +5755,7 @@ async function wpCargar(){
   if(recien.length&&!WP.primera){ wpSonar(); showToast('🍓 Pedido web nuevo: '+recien.map(r=>r.folio).join(', ')+' · está en la fila'); if(navigator.vibrate) navigator.vibrate([200,100,200]); }
   if(recien.length&&WP.primera) wpSonar();
   WP.primera=false;
+  wpComandasPendientes();
   wpDock();
   if(wpPanelAbierto()) wpPintar();
 }
@@ -5797,11 +5799,11 @@ function wpPintar(){
     h+=`<div class="wp-card ${r.estado}${enCaja?' caja':''}"><div class="wp-row" onclick="wpToggle(${r.id})"><span class="wp-pos">${i+1}</span><div class="wp-mid"><div class="l1">${sanitize(r.folio)} · ${sanitize((r.nombre||'').split(' ')[0])}</div><div class="l2">${est} · hace ${hace} min${abierta?'':' · '+sanitize(wpResumen(r))}</div></div><span class="wp-amt">${pg?'<small style="display:block;font-size:10.5px;letter-spacing:.3px;color:#1f7a3a;font-weight:800">PAGADO</small>':''}$${Number(r.total).toLocaleString('es-MX')}</span></div>`;
     if(abierta){
       h+=`<div class="wp-det"><p class="wp-who" style="margin:0 0 6px"><small>${sanitize(r.nombre||'')} · ${sanitize(r.telefono||'')}</small></p>${wpItemTxt(r)}
-        ${pg?'<p class="wp-it" style="color:#1f7a3a;font-weight:700">✅ Ya pagó en línea (Mercado Pago). Prepárala; al entregar no se cobra nada.</p>':'<p class="wp-it" style="color:var(--text-3);font-size:12.5px">No se prepara hasta que pague.</p>'}<div class="wp-act">`;
+        ${pg?'<p class="wp-it" style="color:#1f7a3a;font-weight:700">✅ Ya pagó en línea (Mercado Pago). Prepárala; al entregar no se cobra nada.'+(r.comanda_at?' 🖨️ La comanda ya salió.':'')+'</p>':'<p class="wp-it" style="color:var(--text-3);font-size:12.5px">No se prepara hasta que pague.</p>'}<div class="wp-act">`;
       if(pg&&r.estado==='nuevo') h+=`<button class="fill" onclick="wpAceptar(${r.id})">✓ Recibido: prepárala</button><button class="gris" onclick="wpRechazar(${r.id})">Rechazar</button>`;
       else if(r.estado==='nuevo') h+=`<button class="fill" onclick="wpAceptar(${r.id})">✓ Recibido</button><button class="gris" onclick="wpRechazar(${r.id})">Rechazar</button>`;
       else if(enCaja) h+=`<button class="gris" onclick="cerrarWebPed()">${pg?'Está en la cuenta: confírmala (ya pagada)':'Está en la cuenta: cóbralo'}</button>`;
-      else if(pg&&WP.elegir!==r.id) h+=(r.estado==='aceptado'?`<button onclick="wpListo(${r.id})">Ya está lista</button>`:'')+`<button class="fill" onclick="wpCobrar(${r.id})">🛍️ Llegó: entregar</button>`;
+      else if(pg&&WP.elegir!==r.id) h+=(r.estado==='aceptado'?`<button onclick="wpListo(${r.id})">Ya está lista</button>`:'')+`<button class="fill" onclick="wpCobrar(${r.id})">🛍️ Llegó: entregar</button><button class="gris" onclick="wpComanda(${r.id},true)">🖨️ Comanda</button>`;
       else if(WP.elegir!==r.id) h+=`<button class="fill" onclick="wpCobrar(${r.id})">💳 Llegó: pasar a cobrar</button><button class="gris" onclick="wpNoVino(${r.id})">No vino</button>`;
       h+=`</div>`;
       if(WP.elegir===r.id){
@@ -5815,7 +5817,7 @@ function wpPintar(){
   box.innerHTML=h+'</div>';
 }
 async function wpPatch(id,data){ const r=await sbPatch('pedidos_web','id=eq.'+id,data); if(!r||!r.ok){ showToast('No se pudo actualizar. Revisa internet.'); return false; } await wpCargar(); if(wpPanelAbierto()) wpPintar(); return true; }
-function wpAceptar(id){ const r=WP.lista.find(x=>x.id===id); const pg=wpEsPagado(r); wpPatch(id,{estado:'aceptado',aceptado_at:new Date().toISOString(),atendio:currentUser?.name||null}).then(ok=>{ if(ok){ showToast(pg?'Recibido ✓ Ya pagó: prepárala. Le avisamos que ya se está haciendo':'Recibido ✓ Le avisamos que pase a pagar'); if(pg) wpComanda(id); } }); }
+function wpAceptar(id){ const r=WP.lista.find(x=>x.id===id); const pg=wpEsPagado(r); wpPatch(id,{estado:'aceptado',aceptado_at:new Date().toISOString(),atendio:currentUser?.name||null}).then(ok=>{ if(ok){ showToast(pg?'Recibido ✓ Ya pagó: prepárala. Le avisamos que ya se está haciendo':'Recibido ✓ Le avisamos que pase a pagar'); if(pg&&!r.comanda_at) wpComanda(id); } }); }
 function wpListo(id){ wpPatch(id,{estado:'listo',listo_at:new Date().toISOString()}).then(ok=>ok&&showToast('Listo ✓ Ya le avisamos que pase')); }
 function wpRechazar(id){
   const r=WP.lista.find(x=>x.id===id);
@@ -5905,11 +5907,20 @@ function wpTrasCancelar(){
   if(WP.apartada) setTimeout(()=>wpRegresar(),400);
   wpDock();
 }
-function wpComanda(id){
-  // Imprime comanda si la impresora está lista, usando la misma función de comandas del POS si existe
-  const r=WP.lista.find(x=>x.id===id); if(!r||typeof imprimirComandaItems!=='function'||!printerListo()) return;
-  const its=wpItems(r).map(x=>wpArmarItem(x,r.folio)).filter(Boolean); if(its.length) imprimirComandaItems(its,'WEB '+r.folio+' · '+(r.nombre||''));
+// Comanda de pedido web pagado: se imprime sola al llegar (una sola tablet la imprime: la que "gana" el pedido en la base)
+async function wpComanda(id,reimp){
+  const r=WP.lista.find(x=>x.id===id); if(!r||!printerListo()) return false;
+  if(!reimp){
+    try{ const res=await fetch(`${SB_URL}/rest/v1/pedidos_web?id=eq.${id}&comanda_at=is.null`,{method:'PATCH',headers:{...SB_H,Prefer:'return=representation'},body:JSON.stringify({comanda_at:new Date().toISOString()})});
+      const d=res.ok?await res.json():[]; if(!d.length) return false; r.comanda_at=d[0].comanda_at; }catch(e){ return false; }
+  }
+  const its=wpItems(r).map(x=>wpArmarItem(x,r.folio)).filter(Boolean); if(!its.length) return false;
+  const sale={id:r.folio,items:its,date:new Date(),svcType:'para-llevar',client:(r.nombre||'').split(' ')[0],_web:'WEB · YA PAGADO',_reprint:!!reimp};
+  const out=await printEpson(sale,'comanda');
+  if(out&&out.ok) showToast('🖨️ Comanda del pedido web '+r.folio+(reimp?' reimpresa':' impresa: prepárala'));
+  return !!(out&&out.ok);
 }
+function wpComandasPendientes(){ WP.lista.filter(r=>wpEsPagado(r)&&r.estado==='nuevo'&&!r.comanda_at).forEach(r=>wpComanda(r.id)); }
 </script>
 </body>
 </html>
