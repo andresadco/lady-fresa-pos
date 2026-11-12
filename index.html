@@ -1458,6 +1458,7 @@ let svcType = 'mostrador';
 // Delivery: de qué app viene el pedido. Uber/DiDi/Rappi ya vienen pagados en la app.
 let canal=null, _llPreguntado=false, _appRef=null;
 const CANALES={uber:'Uber Eats',didi:'DiDi Food',rappi:'Rappi',propio:'Delivery propio'};
+const CANAL_NOM=c=>c==='web'?'Pagado en línea':(CANALES[c]||'App');
 const esApp=()=>svcType==='delivery'&&['uber','didi','rappi'].includes(canal);
 let catFilter = 'all';
 let CS = {};
@@ -1638,7 +1639,7 @@ async function reconstruirTurnoDesdeDB() {
     const pendientes=offlineQueue.filter(q=>q._turno===turnoId&&!q._server_id);
     sales = dbOrders.map(o=>({
       id:o.order_number||o.id, _server_id:o.id, total:parseFloat(o.total)||0, iva:parseFloat(o.iva)||0,
-      payMethod:o.pay_method, pagos:_pagosOrden(o),
+      payMethod:o.pay_method, pagos:_pagosOrden(o), canal:o.canal||null,
       items:allItems.filter(i=>i.order_id===o.id).map(i=>({
         name:i.product_name, qty:i.qty, unitPrice:parseFloat(i.unit_price)||0, emoji:EMOJI_MAP[i.product_name]||'🍓'
       }))
@@ -2509,6 +2510,7 @@ function closeOrderSheet(){
 const r2=n=>Math.round((Number(n)||0)*100)/100;
 // Cómo se reparte el total entre efectivo, tarjeta y transferencia
 function partesPago(total){
+  if(wpPagado()) return {ef:0,ta:0,tr:0,pl:total};
   if(esApp()) return {ef:0,ta:0,tr:0,pl:total};
   if(payMethod==='tarjeta') return {ef:0,ta:total,tr:0,pl:0};
   if(payMethod==='transferencia') return {ef:0,ta:0,tr:total,pl:0};
@@ -2523,6 +2525,7 @@ function cobroValido(){
   if(p.ef<0||p.ta<0||p.tr<0) return false;
   if(svcType==='delivery'&&!canal) return false;
   if(esApp()&&(document.getElementById('pago-ref')?.value||'').trim().length<3) return false;   // número de pedido de la app: obligatorio para cuadrar con el reporte de la app
+  if(wpPagado()) return true;
   if(payMethod==='mixto'&&!(p.ta>0||p.tr>0)) return false;
   if(p.ef>0){ const con=parseFloat(document.getElementById('efec-input').value)||0; if(con<p.ef) return false; }
   return true;
@@ -2558,14 +2561,15 @@ function openCobro(){
   const{total}=calcTotals();
   document.getElementById('cobro-total').textContent='$'+total.toLocaleString('es-MX',{minimumFractionDigits:2});
   document.getElementById('cobro-sub').textContent=order.reduce((s,i)=>s+i.qty,0)+' productos';
-  document.getElementById('cobro-pay-label').textContent=esApp()?'🛵 Pagado en '+CANALES[canal]:payMethod==='efectivo'?'💵 Efectivo':payMethod==='tarjeta'?'💳 Tarjeta Santander':payMethod==='mixto'?'🔀 Pago mixto':'📲 Transferencia';
+  document.getElementById('cobro-pay-label').textContent=wpPagado()?'✅ Ya pagado en línea (Mercado Pago) · no se cobra nada':esApp()?'🛵 Pagado en '+CANALES[canal]:payMethod==='efectivo'?'💵 Efectivo':payMethod==='tarjeta'?'💳 Tarjeta Santander':payMethod==='mixto'?'🔀 Pago mixto':'📲 Transferencia';
   const refLbl=document.querySelector('#ref-section .efec-label'), refInp=document.getElementById('pago-ref');
   if(refLbl) refLbl.textContent=esApp()?'Número de pedido en '+CANALES[canal]+' (obligatorio, viene en la tablet de la app)':'Referencia (opcional): últimos 4 dígitos de la tarjeta o folio de la transferencia';
   if(refInp){ refInp.placeholder=esApp()?'Ej. #A1B2':'Ej. 4821 o folio SPEI'; refInp.style.textTransform=esApp()?'uppercase':''; }
   document.getElementById('cobro-error-banner').classList.remove('show');
   ['mix-tarjeta','mix-transfer','efec-input','pago-ref'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-  document.getElementById('mixto-section').style.display=payMethod==='mixto'?'block':'none';
-  document.getElementById('ref-section').style.display=payMethod==='efectivo'?'none':'block';
+  document.getElementById('mixto-section').style.display=payMethod==='mixto'&&!wpPagado()?'block':'none';
+  document.getElementById('ref-section').style.display=payMethod==='efectivo'||wpPagado()?'none':'block';
+  { const es=document.getElementById('efec-section'); if(es&&wpPagado()) es.style.display='none'; }
   calcCambio();
   closeSheet('order'); openSheet('cobro');
 }
@@ -2638,8 +2642,8 @@ async function confirmarPago(){
     idempotency_key:_ventaKey, _suc:currentUser?.sucursal||'Principal', _cajero_id:currentUser?.id||null, _cajero_name:currentUser?.name||'', _turno:turnoId||null,
     promoId:promoActiva?.id||null, promoNombre:promoActiva?.nombre||null, canjeItem:canjeItem||null,
     id:orderN, date:new Date(), items:JSON.parse(JSON.stringify(order)), sub,desc,iva,total,
-    payMethod,svcType,client,cambio,discount:discountMonto>0?0:discount,discountMonto:discountMonto>0?discountMonto:0,
-    cashReceived:con, paid_at:new Date().toISOString(), pagos, pagoRef, canal:svcType==='delivery'?canal:null,
+    payMethod:wpPagado()?'en_linea':payMethod,svcType,client,cambio,discount:discountMonto>0?0:discount,discountMonto:discountMonto>0?discountMonto:0,
+    cashReceived:con, paid_at:new Date().toISOString(), pagos, pagoRef:wpPagado()?('MP '+(WP.cobrando.mp||'')):pagoRef, canal:wpPagado()?'web':(svcType==='delivery'?canal:null),
     loyaltyClienteId:loyaltyCliente?.id||null, loyaltyClienteQR:loyaltyCliente?.qr_code||null,
     loyaltyReq:loyaltyConfig?.sellos_requeridos||10, loyaltySellos:loyaltyCliente?((loyaltyCliente.sellos_actuales||0)-(loyaltyAplicarCanje&&loyaltyCliente.puede_canjear?(loyaltyConfig?.sellos_requeridos||10):0)+1):null,
     loyaltyCanje:!!loyaltyAplicarCanje, canjeAmt:canjeAmt||0,
@@ -3120,8 +3124,8 @@ function buildCierreData(){
   const totalOrdenes=sales.length;
   const ticketProm=totalOrdenes>0?totalVentas/totalOrdenes:0;
   const totalIva=sales.reduce((s,v)=>s+v.iva,0);
-  const byPay={efectivo:0,tarjeta:0,transferencia:0,apps:0};
-  sales.forEach(s=>{ const p=_pagosDe(s); byPay.efectivo+=p.ef; byPay.tarjeta+=p.ta; byPay.transferencia+=p.tr; byPay.apps+=p.pl||0; });
+  const byPay={efectivo:0,tarjeta:0,transferencia:0,apps:0,en_linea:0};
+  sales.forEach(s=>{ const p=_pagosDe(s); byPay.efectivo+=p.ef; byPay.tarjeta+=p.ta; byPay.transferencia+=p.tr; if(s.canal==='web'||s.payMethod==='en_linea') byPay.en_linea+=p.pl||0; else byPay.apps+=p.pl||0; });
   const byProd={};
   sales.forEach(sale=>{
     sale.items.forEach(item=>{
@@ -3137,7 +3141,7 @@ function buildCierreData(){
     cajero_id:currentUser.id, cajero_name:turnoAbiertoPor||currentUser.name, cerrado_por:currentUser.name,
     total_ventas:totalVentas, total_ordenes:totalOrdenes,
     ticket_promedio:ticketProm,
-    efectivo:byPay.efectivo||0, tarjeta:byPay.tarjeta||0, transferencia:byPay.transferencia||0, apps:byPay.apps||0,
+    efectivo:byPay.efectivo||0, tarjeta:byPay.tarjeta||0, transferencia:byPay.transferencia||0, apps:byPay.apps||0, en_linea:byPay.en_linea||0,
     total_iva:totalIva,
     productos:topProds.map(([name,d])=>({name,qty:d.qty,rev:d.rev,emoji:d.emoji})),
     retiros:[...retiros],
@@ -3206,6 +3210,7 @@ function renderCierreModal(){
     {label:'💳 Tarjeta Santander',amt:d.tarjeta,color:'var(--blue)'},
     {label:'📲 Transferencia',amt:d.transferencia,color:'var(--purple)'},
     {label:'🛵 Apps (ya pagado en la app)',amt:d.apps||0,color:'var(--red-dark)'},
+    {label:'🌐 Pagado en línea (Mercado Pago)',amt:d.en_linea||0,color:'var(--red-dark)'},
   ].filter(r=>r.amt>0);
 
   // Fondo de caja: el último que usó esta tablet, o el de configuración (default $2,000 como en Parrot)
@@ -3391,6 +3396,7 @@ function buildCorteXML(cd){
   x+=line('Efectivo',$(cd.efectivo)); x+=line('Tarjeta',$(cd.tarjeta));
   if(cd.transferencia) x+=line('Transferencia',$(cd.transferencia));
   if(cd.apps) x+=line('Apps (Uber/DiDi/Rappi)',$(cd.apps));
+  if(cd.en_linea) x+=line('Pagado en linea (Mercado Pago)',$(cd.en_linea));
   x+=div();
   x+=T('EFECTIVO EN CAJA',{b:true});
   x+=line('Fondo inicial',$(cd.fondo_inicial)); x+=line('+ Ventas en efectivo',$(cd.efectivo)); x+=line('- Retiros',$(cd.total_retiros));
@@ -4817,7 +4823,7 @@ function buildTicketXML(saleData,type='ticket'){
     if(mostrarIva) xml+=T('IVA incluido '+fmtD(saleData.iva),{a:'right'});
     xml+=feed(1);
     const pp=_pagosDe(saleData);
-    const partes=[['Efectivo',pp.ef],['Tarjeta',pp.ta],['Transferencia',pp.tr],[CANALES[saleData.canal]||'App',pp.pl||0]].filter(x=>x[1]>0);
+    const partes=[['Efectivo',pp.ef],['Tarjeta',pp.ta],['Transferencia',pp.tr],[CANAL_NOM(saleData.canal),pp.pl||0]].filter(x=>x[1]>0);
     if(partes.length>1){ xml+=T('Pago mixto',{b:true}); partes.forEach(([k,v])=>{ xml+=line('  '+k,fmtD(v)); }); }
     else xml+=line('Pago',partes.length?partes[0][0]:(saleData.payMethod||''));
     if(saleData.pagoRef) xml+=line(saleData.canal&&CANALES[saleData.canal]?'Pedido '+CANALES[saleData.canal]:'Referencia',(saleData.canal?'#':'')+String(saleData.pagoRef).slice(0,24));
@@ -5026,7 +5032,7 @@ function buildTicketText(saleData){
   if(saleData.desc>0) text+=`Descuento: -${fmtD(saleData.desc)}\n`;
   text+=`Total: ${fmtD(saleData.total)}\n`;
   const pp=_pagosDe(saleData);
-  const partes=[['Efectivo',pp.ef],['Tarjeta',pp.ta],['Transferencia',pp.tr],[CANALES[saleData.canal]||'App',pp.pl||0]].filter(x=>x[1]>0);
+  const partes=[['Efectivo',pp.ef],['Tarjeta',pp.ta],['Transferencia',pp.tr],[CANAL_NOM(saleData.canal),pp.pl||0]].filter(x=>x[1]>0);
   text+=`Pago: ${partes.length>1?partes.map(([k,v])=>k+' '+fmtD(v)).join(' + '):(partes[0]?.[0]||'')}\n`;
   if(pp.ef>0&&saleData.cambio>0){
     text+=`Recibió: ${fmtD(saleData.cashReceived||saleData.total)}\n`;
@@ -5726,6 +5732,8 @@ let WP={estado:'off',lista:[],vistos:new Set(),t:null,primera:true,abiertas:new 
 function wpSuc(){ return currentUser?.sucursal||''; }
 async function webPedInit(){ clearInterval(WP.t); clearInterval(LIM_T); cargarLimites(); LIM_T=setInterval(()=>{ if(!document.hidden) cargarLimites(); },60000); WP.primera=true; await wpCargar(); WP.t=setInterval(()=>{ if(!document.hidden) wpCargar(); },15000); }
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&currentUser) wpCargar(); });
+function wpPagado(){ return !!(WP.cobrando&&WP.cobrando.pagado); }
+function wpEsPagado(r){ return r&&r.pago==='en_linea'&&r.pago_estado==='aprobado'; }
 function wpPanelAbierto(){ return document.getElementById('wp-panel').classList.contains('open'); }
 async function wpCargar(){
   const suc=wpSuc(); if(!suc) return;
@@ -5784,13 +5792,16 @@ function wpPintar(){
     const hace=Math.max(0,Math.round((Date.now()-new Date(r.created_at))/60000));
     const enCaja=WP.cobrando&&WP.cobrando.id===r.id;
     const abierta=r.estado==='nuevo'||enCaja||WP.abiertas.has(r.id)||WP.elegir===r.id;
-    const est=enCaja?'En caja ahora':(r.estado==='nuevo'?'Nuevo':'Esperando que llegue');
-    h+=`<div class="wp-card ${r.estado}${enCaja?' caja':''}"><div class="wp-row" onclick="wpToggle(${r.id})"><span class="wp-pos">${i+1}</span><div class="wp-mid"><div class="l1">${sanitize(r.folio)} · ${sanitize((r.nombre||'').split(' ')[0])}</div><div class="l2">${est} · hace ${hace} min${abierta?'':' · '+sanitize(wpResumen(r))}</div></div><span class="wp-amt">$${Number(r.total).toLocaleString('es-MX')}</span></div>`;
+    const pg=wpEsPagado(r);
+    const est=enCaja?'En caja ahora':(r.estado==='nuevo'?'Nuevo':(pg?(r.estado==='listo'?'Lista, esperando que llegue':'Preparando'):'Esperando que llegue'));
+    h+=`<div class="wp-card ${r.estado}${enCaja?' caja':''}"><div class="wp-row" onclick="wpToggle(${r.id})"><span class="wp-pos">${i+1}</span><div class="wp-mid"><div class="l1">${sanitize(r.folio)} · ${sanitize((r.nombre||'').split(' ')[0])}</div><div class="l2">${est} · hace ${hace} min${abierta?'':' · '+sanitize(wpResumen(r))}</div></div><span class="wp-amt">${pg?'<small style="display:block;font-size:10.5px;letter-spacing:.3px;color:#1f7a3a;font-weight:800">PAGADO</small>':''}$${Number(r.total).toLocaleString('es-MX')}</span></div>`;
     if(abierta){
       h+=`<div class="wp-det"><p class="wp-who" style="margin:0 0 6px"><small>${sanitize(r.nombre||'')} · ${sanitize(r.telefono||'')}</small></p>${wpItemTxt(r)}
-        <p class="wp-it" style="color:var(--text-3);font-size:12.5px">No se prepara hasta que pague.</p><div class="wp-act">`;
-      if(r.estado==='nuevo') h+=`<button class="fill" onclick="wpAceptar(${r.id})">✓ Recibido</button><button class="gris" onclick="wpRechazar(${r.id})">Rechazar</button>`;
-      else if(enCaja) h+=`<button class="gris" onclick="cerrarWebPed()">Está en la cuenta: cóbralo</button>`;
+        ${pg?'<p class="wp-it" style="color:#1f7a3a;font-weight:700">✅ Ya pagó en línea (Mercado Pago). Prepárala; al entregar no se cobra nada.</p>':'<p class="wp-it" style="color:var(--text-3);font-size:12.5px">No se prepara hasta que pague.</p>'}<div class="wp-act">`;
+      if(pg&&r.estado==='nuevo') h+=`<button class="fill" onclick="wpAceptar(${r.id})">✓ Recibido: prepárala</button><button class="gris" onclick="wpRechazar(${r.id})">Rechazar</button>`;
+      else if(r.estado==='nuevo') h+=`<button class="fill" onclick="wpAceptar(${r.id})">✓ Recibido</button><button class="gris" onclick="wpRechazar(${r.id})">Rechazar</button>`;
+      else if(enCaja) h+=`<button class="gris" onclick="cerrarWebPed()">${pg?'Está en la cuenta: confírmala (ya pagada)':'Está en la cuenta: cóbralo'}</button>`;
+      else if(pg&&WP.elegir!==r.id) h+=(r.estado==='aceptado'?`<button onclick="wpListo(${r.id})">Ya está lista</button>`:'')+`<button class="fill" onclick="wpCobrar(${r.id})">🛍️ Llegó: entregar</button>`;
       else if(WP.elegir!==r.id) h+=`<button class="fill" onclick="wpCobrar(${r.id})">💳 Llegó: pasar a cobrar</button><button class="gris" onclick="wpNoVino(${r.id})">No vino</button>`;
       h+=`</div>`;
       if(WP.elegir===r.id){
@@ -5804,9 +5815,11 @@ function wpPintar(){
   box.innerHTML=h+'</div>';
 }
 async function wpPatch(id,data){ const r=await sbPatch('pedidos_web','id=eq.'+id,data); if(!r||!r.ok){ showToast('No se pudo actualizar. Revisa internet.'); return false; } await wpCargar(); if(wpPanelAbierto()) wpPintar(); return true; }
-function wpAceptar(id){ wpPatch(id,{estado:'aceptado',aceptado_at:new Date().toISOString(),atendio:currentUser?.name||null}).then(ok=>{ if(ok){ showToast('Recibido ✓ Le avisamos que pase a pagar'); } }); }
+function wpAceptar(id){ const r=WP.lista.find(x=>x.id===id); const pg=wpEsPagado(r); wpPatch(id,{estado:'aceptado',aceptado_at:new Date().toISOString(),atendio:currentUser?.name||null}).then(ok=>{ if(ok){ showToast(pg?'Recibido ✓ Ya pagó: prepárala. Le avisamos que ya se está haciendo':'Recibido ✓ Le avisamos que pase a pagar'); if(pg) wpComanda(id); } }); }
 function wpListo(id){ wpPatch(id,{estado:'listo',listo_at:new Date().toISOString()}).then(ok=>ok&&showToast('Listo ✓ Ya le avisamos que pase')); }
 function wpRechazar(id){
+  const r=WP.lista.find(x=>x.id===id);
+  if(wpEsPagado(r)&&!confirm('Este pedido ya está pagado en línea. Si lo rechazas, se le devuelve su dinero completo automáticamente. ¿Rechazar?')) return;
   const m=prompt('¿Por qué no se puede? (lo verá la clienta)','Se nos acabó un ingrediente, pídelo directo en barra');
   if(m===null) return; wpPatch(id,{estado:'rechazado',motivo:(m||'La tienda no pudo tomar tu pedido').slice(0,140),cerrado_at:new Date().toISOString(),atendio:currentUser?.name||null});
 }
@@ -5862,10 +5875,11 @@ async function wpCobrar(id,modo){
   const items=wpItems(r).map(it=>wpArmarItem(it,r.folio)); if(items.some(x=>!x)){ showToast('No encontré un producto en el menú'); return; }
   items.forEach(x=>order.push(x)); const tot=items.reduce((a,x)=>a+x.unitPrice*x.qty,0);
   const ci=document.getElementById('client-input'); if(ci&&!ci.value) ci.value=(r.nombre||'')+' · '+r.folio;
-  WP.cobrando={id:r.id,folio:r.folio};
+  WP.cobrando={id:r.id,folio:r.folio,pagado:wpEsPagado(r),mp:r.mp_payment_id||''};
   try{ const c=await sbGet('lf_loyalty_cliente_resumen','id=eq.'+r.cliente_id+'&select=*'); if(Array.isArray(c)&&c[0]&&!loyaltyCliente) selectCliente(c[0]); }catch(e){}
   cerrarWebPed(); wpRefrescarOrden();
   if(Number(r.total)!==tot) showToast('Ojo: el precio cambió desde que hizo el pedido ($'+r.total+' → $'+tot+')');
+  else if(WP.cobrando.pagado){ showToast('Pedido '+r.folio+' ya pagado en línea ✅ Dale COBRAR y confirma: no se cobra nada'); if(Number(r.total)!==tot) showToast('Ojo: el menú cambió de precio; se registra lo que pagó ($'+r.total+')'); }
   else showToast('Pedido '+r.folio+' en la cuenta. Cóbralo y luego prepáralo 💳'+(modo==='apartar'?' · la otra cuenta quedó apartada':''));
 }
 // ═══ LÍMITE DIARIO POR PRODUCTO (p. ej. La Pumpking: 20 al día por tienda) ═══
