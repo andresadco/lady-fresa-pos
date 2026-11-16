@@ -3323,19 +3323,26 @@ async function cierreInvPintar(){
   const lista=_cierreInv||[];
   if(!lista.length){ el.innerHTML=''; return; }
   const campo=(k,label)=>`<div>
-      <div style="font-size:11px;color:var(--text-3);margin-bottom:5px;">${sanitize(label)}</div>
+      <div style="font-size:11px;color:var(--text-3);margin-bottom:5px;">${label}</div>
       <input type="number" inputmode="decimal" min="0" step="0.5" placeholder="—" data-k="${k}" value="${sanitize(_cierreInvVals[k]??'')}"
         oninput="_cierreInvVals[this.dataset.k]=this.value"
         style="width:100%;height:46px;border:1.5px solid var(--border-2);border-radius:10px;padding:0 12px;font-size:18px;font-weight:700;font-family:'DM Sans',sans-serif;outline:none;text-align:right;color:var(--text);box-sizing:border-box;">
     </div>`;
-  const campos=[];
-  lista.forEach(i=>{
-    if((i.cajas||[]).length) i.cajas.forEach(c=>campos.push(campo(i.insumo_id+':'+c.id, i.nombre+' · '+c.nombre)));
-    else campos.push(campo(i.insumo_id, i.nombre+' ('+i.unidad+')'));
+  const bloques=lista.map(i=>{
+    const u=sanitize(i.unidad||'');
+    if(i.envase) return `<div style="margin-bottom:12px;">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px;">${sanitize(i.nombre)}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          ${campo(i.insumo_id+':c', sanitize(i.envase)+'s cerrad'+(i.envase==='caja'?'as':'os')+' (de '+Number(i.contenido)+' '+u+')')}
+          ${campo(i.insumo_id+':a', u+' de'+(i.envase==='caja'?' la abierta':'l abierto'))}
+        </div></div>`;
+    return `<div style="margin-bottom:12px;">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px;">${sanitize(i.nombre)}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">${campo(i.insumo_id, i.unidad==='bote'?'botes':u)}</div></div>`;
   });
   el.innerHTML=`<div class="cierre-section-title">🍓 ¿Cuánto quedó al cerrar?</div>
-    <div style="font-size:12px;color:var(--text-3);margin:-2px 0 10px;">Cuenta lo que queda en la tienda. Si no quedó nada, pon 0.</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;">${campos.join('')}</div>`;
+    <div style="font-size:12px;color:var(--text-3);margin:-2px 0 12px;">Cuenta lo cerrado y pesa o mide lo abierto. Si no quedó nada, pon 0.</div>
+    ${bloques.join('')}`;
 }
 function cierreInvLeer(){
   const lista=_cierreInv||[];
@@ -3343,14 +3350,13 @@ function cierreInvLeer(){
   const num=k=>{ const v=_cierreInvVals[k]; if(v===undefined||v===null||String(v).trim()==='') return null; const n=parseFloat(v); return isFinite(n)&&n>=0?n:null; };
   const items=[], faltan=[];
   lista.forEach(i=>{
-    if((i.cajas||[]).length){
-      const d={}; let alguno=false;
-      i.cajas.forEach(c=>{ const n=num(i.insumo_id+':'+c.id); if(n!==null) alguno=true; d[c.id]=n===null?0:n; });
-      if(alguno) items.push({insumo_id:i.insumo_id,contado:true,desglose:d}); else { items.push({insumo_id:i.insumo_id,contado:false}); faltan.push(i.nombre); }
-    } else {
-      const n=num(i.insumo_id);
-      if(n!==null) items.push({insumo_id:i.insumo_id,contado:true,cantidad:n}); else { items.push({insumo_id:i.insumo_id,contado:false}); faltan.push(i.nombre); }
-    }
+    let cant=null;
+    if(i.envase){
+      const c=num(i.insumo_id+':c'), a=num(i.insumo_id+':a');
+      if(c!==null||a!==null) cant=Math.round(((c||0)*(Number(i.contenido)||1)+(a||0))*1000)/1000;
+    } else cant=num(i.insumo_id);
+    if(cant!==null) items.push({insumo_id:i.insumo_id,contado:true,cantidad:cant});
+    else { items.push({insumo_id:i.insumo_id,contado:false}); faltan.push(i.nombre); }
   });
   return {items,faltan};
 }
