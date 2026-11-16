@@ -3294,6 +3294,8 @@ function renderCierreModal(){
       <div class="cierre-prod-rev">$${Math.round(p.rev).toLocaleString('es-MX')}</div>
     </div>`).join('')}`:''}
 
+    <div id="cierre-inv"></div>
+
     <div class="cierre-section-title">Notas del turno</div>
     <textarea class="cierre-notas" id="cierre-notas" placeholder="Incidencias, faltante, observaciones..."></textarea>
   `;
@@ -3303,6 +3305,68 @@ function renderCierreModal(){
 
   const btn=document.getElementById('btn-cierre-ok');
   btn.disabled=false; btn.textContent='✓ CONFIRMAR CIERRE';
+  cierreInvPintar();
+}
+
+// ── Conteo de fresa y cremas al cierre: va directo al app de inventario ──
+let _cierreInv=null, _cierreInvVals={}, _cierreInvTurno=null;
+async function cierreInvPintar(){
+  if(_cierreInvTurno!==turnoId){ _cierreInv=null; _cierreInvVals={}; _cierreInvTurno=turnoId; }
+  if(_cierreInv===null){
+    try{
+      const r=await fetch(SB_URL+'/rest/v1/rpc/pos_cierre_insumos',{method:'POST',headers:SB_H,body:JSON.stringify({p_sucursal:currentUser?.sucursal||''})});
+      const j=r.ok?await r.json():null;
+      if(Array.isArray(j)) _cierreInv=j;
+    }catch(e){}
+  }
+  const el=document.getElementById('cierre-inv'); if(!el) return;
+  const lista=_cierreInv||[];
+  if(!lista.length){ el.innerHTML=''; return; }
+  const campo=(k,label)=>`<div>
+      <div style="font-size:11px;color:var(--text-3);margin-bottom:5px;">${sanitize(label)}</div>
+      <input type="number" inputmode="decimal" min="0" step="0.5" placeholder="—" data-k="${k}" value="${sanitize(_cierreInvVals[k]??'')}"
+        oninput="_cierreInvVals[this.dataset.k]=this.value"
+        style="width:100%;height:46px;border:1.5px solid var(--border-2);border-radius:10px;padding:0 12px;font-size:18px;font-weight:700;font-family:'DM Sans',sans-serif;outline:none;text-align:right;color:var(--text);box-sizing:border-box;">
+    </div>`;
+  const campos=[];
+  lista.forEach(i=>{
+    if((i.cajas||[]).length) i.cajas.forEach(c=>campos.push(campo(i.insumo_id+':'+c.id, i.nombre+' · '+c.nombre)));
+    else campos.push(campo(i.insumo_id, i.nombre+' ('+i.unidad+')'));
+  });
+  el.innerHTML=`<div class="cierre-section-title">🍓 ¿Cuánto quedó al cerrar?</div>
+    <div style="font-size:12px;color:var(--text-3);margin:-2px 0 10px;">Cuenta lo que queda en la tienda. Si no quedó nada, pon 0.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;">${campos.join('')}</div>`;
+}
+function cierreInvLeer(){
+  const lista=_cierreInv||[];
+  if(!lista.length) return null;
+  const num=k=>{ const v=_cierreInvVals[k]; if(v===undefined||v===null||String(v).trim()==='') return null; const n=parseFloat(v); return isFinite(n)&&n>=0?n:null; };
+  const items=[], faltan=[];
+  lista.forEach(i=>{
+    if((i.cajas||[]).length){
+      const d={}; let alguno=false;
+      i.cajas.forEach(c=>{ const n=num(i.insumo_id+':'+c.id); if(n!==null) alguno=true; d[c.id]=n===null?0:n; });
+      if(alguno) items.push({insumo_id:i.insumo_id,contado:true,desglose:d}); else { items.push({insumo_id:i.insumo_id,contado:false}); faltan.push(i.nombre); }
+    } else {
+      const n=num(i.insumo_id);
+      if(n!==null) items.push({insumo_id:i.insumo_id,contado:true,cantidad:n}); else { items.push({insumo_id:i.insumo_id,contado:false}); faltan.push(i.nombre); }
+    }
+  });
+  return {items,faltan};
+}
+async function cierreInvGuardar(inv,suc,turno){
+  if(!inv) return;
+  try{
+    const r=await fetch(SB_URL+'/rest/v1/rpc/pos_cierre_conteo',{method:'POST',headers:SB_H,
+      body:JSON.stringify({p_sucursal:suc,p_turno:turno||null,p_conteo:inv.items,p_por:'POS · '+(currentUser?.name||'')})});
+    const j=r.ok?await r.json().catch(()=>null):null;
+    if(!j||j.ok===false){ showToast('⚠️ No se guardó el conteo de fresa y crema. Avisa a Andrés.'); return; }
+    _cierreInv=null; _cierreInvVals={};
+    if(inv.faltan.length){
+      fetch(SB_URL+'/functions/v1/lfi-push',{method:'POST',headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY},
+        body:JSON.stringify({tipo:'pedido',sucursal:String(suc||'').toLowerCase(),titulo:'🍓 Cierre sin conteo · '+suc,cuerpo:'No contaron: '+inv.faltan.join(', ')+' ('+(currentUser?.name||'')+')'})}).catch(()=>{});
+    }
+  }catch(e){ showToast('⚠️ Sin conexión: no se guardó el conteo de fresa y crema. Avisa a Andrés.'); }
 }
 
 
@@ -3450,6 +3514,19 @@ async function confirmarCierre(){
     if(!ok) return;
   }
 
+  const invCierre=cierreInvLeer();
+  if(invCierre && invCierre.faltan.length){
+    const ok=await lfConfirm({
+      title:'Falta contar',
+      message:'No pusiste cuánto quedó de: '+invCierre.faltan.join(', ')+'. Si cierras así, se le avisa a dirección.',
+      okText:'Cerrar sin contar',
+      cancelText:'Volver a contar',
+      icon:'🍓',
+      danger:true,
+    });
+    if(!ok) return;
+  }
+
   await reconstruirTurnoDesdeDB(); buildCierreData();   // por si cobraron en otra tablet mientras se contaba
   cierreData.notas=notas;
   cierreData.fondo_inicial=fondo;
@@ -3480,6 +3557,7 @@ async function confirmarCierre(){
       res=await sbPost('turnos',payload);
     }
     if(!res.ok) throw new Error('Error guardando turno');
+    await cierreInvGuardar(invCierre, cierreData.sucursal||currentUser?.sucursal||'', window._turnoCorte);
     // Mandar la venta del día al app de gastos (solo sucursales activadas en Configuración)
     let gastosMsg='';
     if(gastosActivoPara(cierreData.sucursal)){
