@@ -364,10 +364,18 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 const h12=h=>(h%12||12);
 
 async function traerOrdenes(de,a){
+  // El servidor entrega máximo 1,000 filas por petición: se pide por páginas hasta traer todo el periodo
   const s=suc!=='all'?`&sucursal=eq.${encodeURIComponent(suc)}`:'';
-  const r=await fetch(`${SB_URL}/rest/v1/orders?select=id,created_at,order_number,sucursal,service_type,client_name,pay_method,subtotal,discount_amt,promo_nombre,iva,total,cash_received,change_given,cajero_name,pago_efectivo,pago_tarjeta,pago_transferencia,pago_plataforma,canal,comision,loyalty_cliente_id,loyalty_canje,canje_monto&created_at=gte.${new Date(de).toISOString()}&created_at=lt.${new Date(a).toISOString()}${s}&status=neq.cancelada&order=created_at.desc&limit=5000`,{headers:H});
-  if(!r.ok) throw new Error('ordenes '+r.status);
-  return r.json();
+  const base=`${SB_URL}/rest/v1/orders?select=id,created_at,order_number,sucursal,service_type,client_name,pay_method,subtotal,discount_amt,promo_nombre,iva,total,cash_received,change_given,cajero_name,pago_efectivo,pago_tarjeta,pago_transferencia,pago_plataforma,canal,comision,loyalty_cliente_id,loyalty_canje,canje_monto&created_at=gte.${new Date(de).toISOString()}&created_at=lt.${new Date(a).toISOString()}${s}&status=neq.cancelada&order=created_at.desc,id.desc`;
+  const PAG=1000, out=[];
+  for(let off=0; off<50000; off+=PAG){
+    const r=await fetch(`${base}&limit=${PAG}&offset=${off}`,{headers:H});
+    if(!r.ok) throw new Error('ordenes '+r.status);
+    const lote=await r.json();
+    out.push(...lote);
+    if(lote.length<PAG) break;
+  }
+  return out;
 }
 // Ventas por día (Parrot antes del corte, POS después). k = día CDMX como Date.UTC; d = medianoche CDMX real
 let CORTE=Date.parse('2026-11-03T00:00:00Z')+MX_OFF;
